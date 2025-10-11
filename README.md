@@ -55,7 +55,8 @@ pdflatex XSS-notes.tex
 
 ---
 
-**Updates:** Notes are refreshed periodically — new material, corrections, and examples will be added over time.
+## Updates
+Notes are refreshed periodically — new material, corrections, and examples will be added over time.
 
 ---
 
