@@ -1,6 +1,15 @@
+# Ignore VS Code settings
+.vscode/
+
 # Ignore LaTeX build files
 *.aux
 *.log
 *.out
 *.synctex.gz
-.vscode/
+*.toc
+*.fls
+*.fdb_latexmk
+
+# Ignore OS-specific junk
+.DS_Store
+Thumbs.db
