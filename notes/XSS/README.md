@@ -11,7 +11,10 @@ This folder contains a detailed technical writeup about Cross-Site Scripting (XS
 - `XSS-notes.tex` — LaTeX source (editable).
 - `XSS-notes.pdf` — Compiled PDF (readable version). :contentReference[oaicite:1]{index=1}
 - `evilsvgfile.svg` — Example SVG payload demonstrating script execution via an image file.
-- `cheatsheet.md` — Quick reference / payload snippets.
+
+## Payloads
+- [https://portswigger.net/web-security/cross-site-scripting/cheat-sheet](https://portswigger.net/web-security/cross-site-scripting/cheat-sheet)
+- [https://github.com/payloadbox/xss-payload-list](https://github.com/payloadbox/xss-payload-list)
 
 ---
 
