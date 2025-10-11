@@ -5,7 +5,7 @@ A personal collection of detailed notes, examples, and experiments on common web
 Each folder contains:
 - 📘 LaTeX source (`.tex`) and exported PDF notes  
 - 🧪 Example files (payloads, vulnerable snippets, etc.)  
-- 🧾 Optional cheat sheets for quick reference  
+- 🧾 Readme file for demonstration
 
 > ⚠️ **Disclaimer:** These materials are for **educational and ethical learning** only.  
 > Do **not** use any of this knowledge for unauthorized testing or exploitation.
@@ -48,10 +48,14 @@ pdflatex XSS-notes.tex
 
 ## 📚 Topics Covered
 
-* **Cross-Site Scripting (XSS)** — DOM, Reflected, and Stored XSS
-* **SQL Injection (SQLi)** — detection, exploitation, and mitigation
-* **CSRF** — understanding token-based protection
+* **Cross-Site Scripting (XSS)**
+* **SQL Injection (SQLi)**
+* **CSRF**
 * **General** — web fundamentals, encoding, and secure development
+
+---
+
+**Updates:** Notes are refreshed periodically — new material, corrections, and examples will be added over time.
 
 ---
 
