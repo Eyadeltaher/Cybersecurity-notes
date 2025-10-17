@@ -7,6 +7,9 @@
 \usepackage{listings}
 \usepackage{hyperref}
 \usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
 \lstset{numbers=none, basicstyle=\ttfamily}
 \renewcommand{\lstlistingname}
 
@@ -191,36 +194,388 @@ The attacker can again perform a CSRF attack if the website contains any cookie 
 
 
 \section*{SameSite cookies bypass}
-SameSite is a browser security mechanism that determines when a website's cookies are included in requests originating from other websites. As requests to perform sensitive actions typically require an authenticated session cookie, the appropriate SameSite restrictions may prevent an attacker from triggering these actions cross-site. Since 2021, Chrome enforces Lax SameSite restrictions by default. As this is the proposed standard, we expect other major browsers to adopt this behavior in future. 
+ SameSite is a browser security mechanism that determines when a website's cookies are included in requests originating from other websites. SameSite cookie restrictions provide partial protection against a variety of cross-site attacks, including CSRF, cross-site leaks, and some CORS exploits.\\
 
+Since 2021, Chrome applies Lax SameSite restrictions by default if the website that issues the cookie doesn't explicitly set its own restriction level. This is a proposed standard, and we expect other major browsers to adopt this behavior in the future. As a result, it's essential to have solid grasp of how these restrictions work, as well as how they can potentially be bypassed, in order to thoroughly test for cross-site attack vectors
+
+\subsection*{What is a site in the context of SameSite cookies?}
+ In the context of SameSite cookie restrictions, a site is defined as the top-level domain (TLD), usually something like .com or .net, plus one additional level of the domain name. This is often referred to as the TLD+1.\\
+
+When determining whether a request is same-site or not, the URL scheme is also taken into consideration. This means that a link from "http://app.example.com" to "https://app.example.com" is treated as cross-site by most browsers. 
+
+
+\begin{lstlisting}[frame=single]
+			https://app.example.com
+			  |            |     |
+    			  |            |     |
+			  |            |     |
+		        scheme         +1   TLD
+			  |            |     |
+			  |            |     |
+		          --------------------
+		                   |
+		                   |
+	     	                  SITE
+\end{lstlisting}
+
+
+\textbf{NOTE:} You may come across the term "effective top-level domain" (eTLD). This is just a way of accounting for the reserved multipart suffixes that are treated as top-level domains in practice, such as .co.uk.
+
+\subsection*{What's the difference between a site and an origin?}
+ The difference between a site and an origin is their scope; a site encompasses multiple domain names, whereas an origin only includes one. Although they're closely related, it's important not to use the terms interchangeably as conflating the two can have serious security implications.\\
+
+Two URLs are considered to have the same origin if they share the exact same scheme, domain name, and port. Although note that the port is often inferred from the scheme. 
+\begin{lstlisting}[frame=single]
+			   https://app.example.com
+		 	  |                       |
+		    	  |                       |
+		  	  -------------------------
+		              	      |
+		               	      |
+	     	        	    origin  
+\end{lstlisting}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{>{\ttfamily}l>{\ttfamily}lcc}
+\toprule
+\textrm{Request from} & \textrm{Request to} & \textrm{Same-site?} & \textrm{Same-origin?} \\
+\midrule
+https://example.com & https://example.com & Yes & Yes \\
+https://app.example.com & https://intranet.example.com & Yes & No: mismatched domain name \\
+https://example.com & https://example.com:8080 & Yes & No: mismatched port \\
+https://example.com & https://example.co.uk & No: mismatched eTLD & No: mismatched domain name \\
+https://example.com & http://example.com & No: mismatched scheme & No: mismatched scheme \\
+\bottomrule
+\end{tabular}
+\label{tab:same-site-origin}
+\end{table}
+
+\subsection*{How does SameSite work?}
+SameSite works by enabling browsers and website owners to limit which cross-site requests, if any, should include specific cookies. This can help to reduce users' exposure to CSRF attacks, which induce the victim's browser to issue a request that triggers a harmful action on the vulnerable website. As these requests typically require a cookie associated with the victim's authenticated session, the attack will fail if the browser doesn't include this.\\
+
+All major browsers currently support the following SameSite restriction levels: 
+\begin{itemize}
+	\item Strict
+	\item Lax
+	\item None
+\end{itemize}
 \newpage
+Developers can manually configure a restriction level for each cookie they set, giving them more control over when these cookies are used. To do this, they just have to include the SameSite attribute in the Set-Cookie response header, along with their preferred value: 
 
-\section*{Bypassing Referer-based CSRF defenses}
-Some applications make use of the HTTP Referer header to attempt to defend against CSRF attacks, normally by verifying that the request originated from the application's own domain. This is generally less effective than CSRF token validation. 
-
-
-\subsection*{Referer header}
-The HTTP Referer header (which is inadvertently misspelled in the HTTP specification) is an optional request header that contains the URL of the web page that linked to the resource that is being requested. It is generally added automatically by browsers when a user triggers an HTTP request, including by clicking a link or submitting a form. Various methods exist that allow the linking page to withhold or modify the value of the Referer header. This is often done for privacy reasons.
+\begin{lstlisting} [frame=single]
+Set-Cookie: session=0F8tgdOhi9ynR1M9wa3ODa; SameSite=Strict
+\end{lstlisting}
+\vspace{0.25cm}
+\textbf{NOTE:} If the website issuing the cookie doesn't explicitly set a SameSite attribute, Chrome automatically applies Lax restrictions by default. This means that the cookie is only sent in cross-site requests that meet specific criteria, even though the developers never configured this behavior. As this is a proposed new standard, we expect other major browsers to adopt this behavior in future. 
 
 \begin{enumerate}
-	\item \textbf{Validation of Referer depends on header being present}\\Some applications validate the Referer header when it is present in requests but skip the validation if the header is omitted. 
-	 Some applications validate the Referer header when it is present in requests but skip the validation if the header is omitted.\\
+	\item \textbf{Strict}
+If a cookie is set with the SameSite=Strict attribute, browsers will not send it in any cross-site requests. In simple terms, this means that if the target site for the request does not match the site currently shown in the browser's address bar, it will not include the cookie. 
+	\item \textbf{Lax}
+Lax SameSite restrictions mean that browsers will send the cookie in cross-site requests, but only if both of the following conditions are met: 
+\begin{itemize}
+ \item The request uses the GET method. 
+ \item The request resulted from a top-level navigation by the user, such as clicking on a link.
+\end{itemize}
+ This means that the cookie is not included in cross-site POST requests, for example. As POST requests are generally used to perform actions that modify data or state (at least according to best practice), they are much more likely to be the target of CSRF attacks.
 
-In this situation, an attacker can craft their CSRF exploit in a way that causes the victim user's browser to drop the Referer header in the resulting request. There are various ways to achieve this, but the easiest is using a META tag within the HTML page that hosts the CSRF attack: 
-\begin{lstlisting}[frame=single]
-<meta name="referrer" content="never">
+Likewise, the cookie is not included in background requests, such as those initiated by scripts, iframes, or references to images and other resources.
+	\item \textbf{None}
+ If a cookie is set with the SameSite=None attribute, this effectively disables SameSite restrictions altogether, regardless of the browser. As a result, browsers will send this cookie in all requests to the site that issued it, even those that were triggered by completely unrelated third-party sites.\\
+
+With the exception of Chrome, this is the default behavior used by major browsers if no SameSite attribute is provided when setting the cookie. \\
+
+When setting a cookie with SameSite=None, the website must also include the Secure attribute, which ensures that the cookie is only sent in encrypted messages over HTTPS. Otherwise, browsers will reject the cookie and it won't be set. 
+\begin{lstlisting} [frame=single]
+Set-Cookie: trackingId=0F8tgdOhi9ynR1M9wa3ODa; SameSite=None; Secure
 \end{lstlisting}
-Note $\Longrightarrow$ the meta tag is in the header not the body of the HTML page so, CSRF POC look like
+\end{enumerate}
+
+\section*{General Testing Methodology for CSRF with SameSite Bypass}
+
+\subsection*{1. Reconnaissance Phase}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.2\textwidth}>{\raggedright\arraybackslash}p{0.75\textwidth}}
+    \toprule
+    \textbf{Task} & \textbf{Description} \\
+    \midrule
+    Identify endpoints & Map all state-changing endpoints (email change, password reset, profile updates, etc.) \\
+    Authentication analysis & Document authentication mechanism and session management \\
+    CSRF token check & Verify if CSRF tokens are implemented and their predictability \\
+    Request flow mapping & Document the complete request flow for sensitive operations \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{2. Cookie Analysis}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.2\textwidth}>{\raggedright\arraybackslash}p{0.75\textwidth}}
+    \toprule
+    \textbf{Check} & \textbf{Analysis Points} \\
+    \midrule
+    Set-Cookie headers & Examine login responses for cookie settings \\
+    SameSite attributes & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item No SameSite specified $\rightarrow$ defaults to Lax
+        \item SameSite=Lax $\rightarrow$ GET requests with top-level navigation allowed
+        \item SameSite=Strict $\rightarrow$ more restrictive (requires same-site context)
+        \item SameSite=None $\rightarrow$ requires Secure flag
+    \end{itemize} \\
+    Cookie scope & Domain and path settings analysis \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{3. Endpoint Testing}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Test} & \textbf{Procedure} \\
+    \midrule
+    HTTP method testing & Test if endpoints accept both GET and POST methods \\
+    Method override techniques & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item \texttt{\_method} parameter (Ruby, Laravel)
+        \item \texttt{X-HTTP-Method-Override} header
+        \item Framework-specific overrides
+    \end{itemize} \\
+    Parameter testing & Verify parameter acceptance in GET query strings vs POST body \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{4. Client-Side Redirect Analysis (for SameSite=Strict Bypass)}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Step} & \textbf{Procedure} \\
+    \midrule
+    Identify redirect gadgets & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item Find client-side redirects in application flow
+        \item Look for confirmation pages with automatic redirects
+        \item Identify JavaScript that handles navigation
+        \item Search for URL parameters that influence redirect targets
+    \end{itemize} \\
+    Analyze redirect logic & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item Study JavaScript files for redirect mechanisms
+        \item Identify dynamic URL construction
+        \item Check for parameter injection points
+        \item Test path traversal in redirect parameters
+    \end{itemize} \\
+    Test redirect control & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item Modify parameters to control redirect destination
+        \item Use path traversal (../) to access other endpoints
+        \item Verify cookies are sent in redirected request
+        \item Confirm same-origin context is maintained
+    \end{itemize} \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{5. SameSite Bypass Vectors}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Vector} & \textbf{Implementation} \\
+    \midrule
+    Top-level navigation & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item \texttt{window.location}
+        \item \texttt{<meta> refresh}
+        \item \texttt{<iframe>} with top navigation
+        \item Form submission with \texttt{target="\_top"}
+    \end{itemize} \\
+    Client-side redirect chains & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item Abuse application's own redirect mechanisms
+        \item Chain multiple client-side redirects
+        \item Use parameter injection to control final destination
+        \item Maintain same-site context through redirect flow
+    \end{itemize} \\
+    Browser-specific & Test different browser versions and behaviors \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{6. Exploit Crafting for SameSite=Strict Bypass}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Step} & \textbf{Procedure} \\
+    \midrule
+    Chain vulnerabilities & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item Combine open redirect with state-changing endpoints
+        \item Use path traversal in redirect parameters
+        \item Encode parameters to avoid syntax breaks
+        \item Test parameter normalization behavior
+    \end{itemize} \\
+    Construct exploit URL & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item Start with vulnerable redirect endpoint
+        \item Inject path to target endpoint using ../ sequences
+        \item Append target parameters with proper encoding
+        \item Ensure final URL points to state-changing action
+    \end{itemize} \\
+    Delivery mechanism & 
+    \begin{itemize}
+        \setlength\itemsep{0em}
+        \item Use \texttt{<script>} tag with \texttt{document.location}
+        \item Implement via \texttt{<iframe>} with navigation
+        \item Chain through multiple redirect layers
+        \item Test in different browser contexts
+    \end{itemize} \\
+    \bottomrule
+\end{tabular}
+
+\section*{Key Testing Checklist}
+
+\subsection*{Cookie Configuration Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.8\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    No explicit SameSite attribute set  \\
+    SameSite=Lax with top-level navigation  \\
+    SameSite=Strict requiring same-site context  \\
+    Cookie without Secure flag on HTTPS sites  \\
+    Cross-domain cookie scope issues \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Endpoint Vulnerability Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.8\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    GET requests accepted for state-changing operations \\
+    Method overriding supported (\texttt{\_method}, \texttt{X-HTTP-Method-Override})  \\
+    No CSRF tokens or predictable tokens  \\
+    Parameters accepted via query string \\
+    No Referer header validation  \\
+    Client-side redirects with user-controllable parameters  \\
+    Path traversal possible in redirect parameters \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Redirect Gadget Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.8\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    Identify confirmation pages with automatic redirects &  \\
+    Locate JavaScript files handling client-side navigation  \\
+    Test parameter control over redirect destinations & \\
+    Verify path traversal works in redirect parameters & \\
+    Confirm cookies are sent during client-side redirects  \\
+    Test URL normalization behavior\\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Exploit Validation Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.8\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    Proof-of-concept changes target user state \\
+    Works with logged-in user session \\
+    Bypasses SameSite=Strict restrictions  \\
+    Consistent across different browsers  \\
+    Maintains session through redirect chain  \\
+    Properly encodes special characters \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Common Redirect Gadget Locations}
+\begin{itemize}
+    \item Comment confirmation pages with automatic redirects
+    \item Search result pages with "redirecting..." functionality
+    \item Login/logout confirmation pages
+    \item Form submission success pages
+    \item Payment processing confirmation pages
+    \item Any page with meta refresh or JavaScript timeout redirects
+\end{itemize}
+
+
+\subsection*{Some examples}
+\begin{lstlisting}[frame=single]
+<script>
+    document.location = 'https://vulnerable-website.com/account/pay
+    ment?recipient=hacker&amount=1000000';
+</script>
+\end{lstlisting}
 
 \begin{lstlisting}[frame=single]
+ <html>
+<body>
+  <form action="https://vulnerable-website.com/post/comment/confirmation">
+<input type="hidden" name="postId" value="&#47;my&#45;account&#47;change&#45
+;email&#63;email&#61;efdfr&#64;normal&#45;user&#46;net&amp;submit&#61;1" />
+<input type="submit" value="Submit request" />
+  </form>
+  <script>
+document.location = "https://vulnerable-website.com/post/comment/confirmatio
+n?postId=../my-account/change-email?email=afr%40normal-user.net%26submit=1";
+  </script>
+</body>
+ </html>
+\end{lstlisting}
+
+\begin{lstlisting}[frame=single]
+<form action="https://vulnerable-website.com/account/payment" method="POST">
+    <input type="hidden" name="_method" value="GET">
+    <input type="hidden" name="recipient" value="hacker">
+    <input type="hidden" name="amount" value="1000000">
+</form>
+\end{lstlisting}
+
+
+
+
+
+
+
+\section*{Bypassing Referer-based CSRF Defenses}
+
+Some applications use the HTTP Referer header to defend against CSRF attacks, typically by verifying that requests originate from the application's own domain. This approach is generally less effective than proper CSRF token validation and can be bypassed using various techniques.
+
+\subsection*{Understanding the Referer Header}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Concept} & \textbf{Description} \\
+    \midrule
+    Purpose & Contains URL of webpage that linked to the requested resource \\
+    Browser behavior & Added automatically when users click links or submit forms \\
+    Privacy concerns & Often modified or withheld for privacy reasons \\
+    Common misspelling & Incorrectly spelled as "Referer" in HTTP specification \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Referer Validation Bypass Techniques}
+
+\subsubsection*{1. Exploiting Absent Referer Header}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Vulnerability} & \textbf{Exploitation Method} \\
+    \midrule
+    Weak validation & Applications validate Referer when present but skip validation when header is absent \\
+    Bypass method & Cause browser to omit Referer header in CSRF request \\
+    Implementation & Use \texttt{<meta name="referrer" content="never">} in HTML header \\
+    \bottomrule
+\end{tabular}
+
+\textbf{Example CSRF PoC with Referer Suppression:}
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
 <html>
   <head>
-     <meta name="referrer" content="never">
-  <head>
+    <meta name="referrer" content="never">
+  </head>
   <body>
-    <form action="website.net/my-account/change-email" method="POST">
-      <input type="hidden" name="email" value="er&#64;mal&#45;user&#46"/>
-      <input type="submit" value="Submit request" />
+    <form action="https://target.com/my-account/change-email" method="POST">
+      <input type="hidden" name="email" value="attacker@evil.com">
+      <input type="submit" value="Submit">
     </form>
     <script>
       history.pushState('', '', '/');
@@ -228,37 +583,67 @@ Note $\Longrightarrow$ the meta tag is in the header not the body of the HTML pa
     </script>
   </body>
 </html>
-
 \end{lstlisting}
 
-\item \textbf{Validation of Referer can be circumvented}\\
-Some applications validate the Referer header in a naive way that can be bypassed. For example, if the application validates that the domain in the Referer starts with the expected value, then the attacker can place this as a subdomain of their own domain: 
+\subsubsection*{2. Circumventing Domain Validation Logic}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Validation Flaw} & \textbf{Bypass Technique} \\
+    \midrule
+    Starts-with validation & Place target domain as subdomain of attacker domain \\
+    Contains validation & Include target domain in query string or path \\
+    Regex weaknesses & Exploit poor regular expression patterns \\
+    \bottomrule
+\end{tabular}
 
-\begin{lstlisting}[frame=single]
-http://vulnerable-website.com.attacker-website.com/csrf-attack
+\newpage
+
+\textbf{Subdomain Bypass Example:}
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
+http://target-domain.com.attacker-evil.com/csrf-poc
 \end{lstlisting}
-Likewise, if the application simply validates that the Referer contains its own domain name, then the attacker can place the required value elsewhere in the URL: 
-\begin{lstlisting}[frame=single]
-http://attacker-website.com/csrf-attack?vulnerable-website.com
+
+\textbf{Query String Bypass Example:}
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
+http://attacker-evil.com/csrf-poc?target-domain.com
 \end{lstlisting}
 
-Note $\Longrightarrow$  Although you may be able to identify this behavior using Burp, you will often find that this approach no longer works when you go to test your proof-of-concept in a browser. In an attempt to reduce the risk of sensitive data being leaked in this way, many browsers now strip the query string from the Referer header by default.\\
+\subsection*{Browser Referrer Policy Challenges}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Challenge} & \textbf{Solution} \\
+    \midrule
+    Query string stripping & Modern browsers often strip query strings from Referer by default \\
+    Override method & Set \texttt{Referrer-Policy: unsafe-url} header in exploit response \\
+    Header spelling & Note: "Referrer-Policy" uses correct spelling (double 'r') \\
+    \bottomrule
+\end{tabular}
 
-You can override this behavior by making sure that the response containing your exploit has the "Referrer-Policy: unsafe-url" header set (note that Referrer is spelled correctly in this case, just to make sure you're paying attention!). This ensures that the full URL will be sent, including the query string. 
-
-\subsection*{How to Add "Referrer-Policy: unsafe-url" Correctly}
-\begin{itemize}
-\item Go to Proxy → Settings in Burp
-\item Find the Match and Replace section
-\item Click Add
-\item Configure the rule:
-	\begin{itemize}
-		\item    Type: Replace response header
-		\item   Match: Referrer-Policy
-		\item   Replace: Referrer-Policy: unsafe-url
-	\end{itemize}
-\item Click OK
-\end{itemize}
+\subsection*{Burp Suite Configuration for Referrer Policy}
+\begin{enumerate}
+    \item \textbf{Access Proxy Settings}
+    \begin{itemize}
+        \item Go to \texttt{Proxy → Options} in Burp Suite
+        \item Scroll to \texttt{Match and Replace} section
+    \end{itemize}
+    
+    \item \textbf{Create Replacement Rule}
+    \begin{itemize}
+        \item Click \texttt{Add} to create new rule
+        \item Configure with these settings:
+        \begin{itemize}
+            \item Type: \texttt{Response header}
+            \item Match: \texttt{Referrer-Policy}
+            \item Replace: \texttt{Referrer-Policy: unsafe-url}
+        \end{itemize}
+    \end{itemize}
+    
+    \item \textbf{Activate Rule}
+    \begin{itemize}
+        \item Ensure rule is checked/enabled
+        \item Click \texttt{OK} to save configuration
+    \end{itemize}
+\end{enumerate}
 Now when your browser requests the PoC HTML, Burp will automatically add the correct header to the server's response.
 
 Note $\Longrightarrow$ If you found the CSRF and you will make the POC make first the Referer using realserver then like burpsuite (the vuln web still just a query parameter)
@@ -289,6 +674,86 @@ And the POC look like
 
 Note $\Longrightarrow$ the last parameter in method "history.pushState" is the query parameter which is the vuln website as you see
 
-\end{enumerate}
 
+\subsection*{General Testing Methodology}
+
+\subsubsection*{1. Referer Header Analysis}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Test} & \textbf{Procedure} \\
+    \midrule
+    Header presence check & Verify if application checks for Referer header existence \\
+    Validation logic & Determine how Referer domain is validated \\
+    Absent header handling & Test requests with Referer header completely removed \\
+    \bottomrule
+\end{tabular}
+
+\subsubsection*{2. Validation Logic Testing}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Test Case} & \textbf{Expected Result} \\
+    \midrule
+    Subdomain bypass & Application accepts \texttt{target.com.attacker.com} as valid \\
+    Query string inclusion & Application accepts Referer with target in query parameters \\
+    Path manipulation & Application accepts Referer with target in path \\
+    Protocol variations & Test HTTP vs HTTPS Referer handling \\
+    \bottomrule
+\end{tabular}
+
+\subsubsection*{3. Exploit Development}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
+    \toprule
+    \textbf{Component} & \textbf{Implementation} \\
+    \midrule
+    Referer suppression & Use \texttt{<meta name="referrer" content="never">} \\
+    Domain spoofing & Craft URLs that appear to originate from target domain \\
+    Policy enforcement & Configure \texttt{Referrer-Policy: unsafe-url} \\
+    Delivery method & Choose appropriate delivery (iframe, form, script) \\
+    \bottomrule
+\end{tabular}
+
+\section*{Testing Checklist for Referer-based CSRF Protection}
+
+\subsection*{Header Presence Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.8\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    Application rejects requests with no Referer header  \\
+    Application accepts requests with missing Referer header  \\
+    Validation only occurs when Referer is present \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Validation Logic Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.8\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    Subdomain bypass works (target.attacker.com)  \\
+    Query string bypass works (attacker.com?target.com)  \\
+    Path-based bypass works (attacker.com/target.com/)  \\
+    Protocol validation is properly implemented \\
+    Exact domain matching required \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Browser Compatibility Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.8\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    Referrer-Policy: unsafe-url forces full URL inclusion  \\
+    Meta tag referrer suppression works across browsers \\
+    Query strings are preserved in Referer header \\
+    Works in latest browser versions \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Defense Recommendations}
+\begin{itemize}
+    \item \textbf{Avoid Referer-based validation} - Use multiple layers of CSRF protection
+    \item \textbf{If using Referer} - Implement strict exact-domain matching
+    \item \textbf{Fail securely} - Reject requests with invalid/missing Referer when expected
+\end{itemize}
 \end{document}
