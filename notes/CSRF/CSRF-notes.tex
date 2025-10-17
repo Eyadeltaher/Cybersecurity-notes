@@ -292,6 +292,56 @@ Set-Cookie: trackingId=0F8tgdOhi9ynR1M9wa3ODa; SameSite=None; Secure
 \end{lstlisting}
 \end{enumerate}
 
+\subsection*{Bypassing SameSite Lax restrictions with newly issued cookies}
+Browsers try to stop cookies from being sent when a site is visited from another site. This helps stop CSRF attacks. But Chrome has a small exception: if a cookie was just created or refreshed and the site receives a top-level POST request in the first 120 seconds (2 minutes) after that, Chrome may send the cookie even if it came from another site. That makes a small 2-minute window where an attacker might be able to act.
+
+\textbf{NOTE:} This special 2-minute window does not apply if the cookie was explicitly set with SameSite=Lax. Only cookies with no SameSite attribute get this temporary exception.
+
+\subsection*{Why this exception exists}
+Some login systems (like SSO — signing in with Google, etc.) need the browser to send the cookie right after a login or redirect. Chrome allows this short grace period so those SSO flows don’t break.
+
+\subsection*{How an attacker could try to use it}
+If an attacker can make the user get a new session cookie (for example by making the user go through the site’s login flow), then during the next 2 minutes a cross-site request might include that new cookie. That could let the attacker trigger a sensitive action using the victim’s session — but in practice this is hard:
+
+\begin{itemize}
+\item The attacker needs to cause a top-level navigation so the cookie gets refreshed.
+\item Opening a new tab or popup is often blocked unless the user clicks something.
+\item The attacker then must make the victim send a POST while still in that 2-minute window.
+\end{itemize}
+
+\subsection*{Cookie Refresh Strategy}
+\begin{itemize}
+\item \textbf{Problem:} 2-minute window is too short for reliable timing attacks
+\item \textbf{Solution:} Force cookie refresh using OAuth/social login flows
+\item \textbf{Key Insight:} OAuth endpoints often issue new session cookies even for logged-in users
+\item \textbf{Endpoint Pattern:} Look for /social-login, /oauth-callback, SSO endpoints
+\end{itemize}
+
+\subsection*{Popup Blocker Challenges}
+\begin{itemize}
+\item \textbf{Blocking Behavior:} window.open() is blocked without user interaction
+\item \textbf{Bypass Method:} Wrap in click event handlers (window.onclick)
+\item \textbf{User Interaction Required:} Must induce victim to click anywhere on page
+\end{itemize}
+
+\subsection*{Key Code Patterns that must be in the POC}
+\begin{lstlisting} [frame=single]
+<p>Click anywhere on the page</p>
+    <script>
+// Popup blocker bypass
+window.onclick = () => {
+    window.open('https://target.com/social-login');
+    setTimeout(executeCSRF, 5000);
+}
+
+// Timing coordination
+function executeCSRF() {
+    document.forms[0].submit(); // Fresh cookie used here
+}
+    </script>
+\end{lstlisting}
+
+
 \section*{General Testing Methodology for CSRF with SameSite Bypass}
 
 \subsection*{1. Reconnaissance Phase}
@@ -566,6 +616,8 @@ Some applications use the HTTP Referer header to defend against CSRF attacks, ty
     \bottomrule
 \end{tabular}
 
+\vspace{.25cm}
+
 \textbf{Example CSRF PoC with Referer Suppression:}
 \begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
 <html>
@@ -596,7 +648,7 @@ Some applications use the HTTP Referer header to defend against CSRF attacks, ty
     \bottomrule
 \end{tabular}
 
-\newpage
+\vspace{.25cm}
 
 \textbf{Subdomain Bypass Example:}
 \begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
@@ -675,7 +727,7 @@ And the POC look like
 Note $\Longrightarrow$ the last parameter in method "history.pushState" is the query parameter which is the vuln website as you see
 
 
-\subsection*{General Testing Methodology}
+\subsection*{Testing Methodology for Referer Validation Bypass}
 
 \subsubsection*{1. Referer Header Analysis}
 \begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.7\textwidth}}
@@ -756,4 +808,239 @@ Note $\Longrightarrow$ the last parameter in method "history.pushState" is the q
     \item \textbf{If using Referer} - Implement strict exact-domain matching
     \item \textbf{Fail securely} - Reject requests with invalid/missing Referer when expected
 \end{itemize}
+
+\newpage
+
+
+\section*{CSRF Vulnerability Discovery Checklist}
+
+\subsection*{Phase 1: Reconnaissance \& Endpoint Discovery}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.85\textwidth}c}
+    \toprule
+    \textbf{Task} & \textbf{Check} \\
+    \midrule
+    Map all state-changing endpoints  \\
+    \quad - User account operations (email, password, profile changes)  \\
+    \quad - E-commerce functions (purchases, cart modifications)  \\
+    \quad - Financial transactions  \\
+    \quad - Social media actions (posts, messages, likes) \\
+    \quad - Administrative functions   \\
+    Identify authentication mechanisms \\
+    \quad - Session cookie analysis  \\
+    \quad - Token-based authentication  \\
+    \quad - OAuth/SSO flows  \\
+    Document request flows for sensitive operations \\
+    \quad - Parameter structures  \\
+    \quad - HTTP methods used  \\
+    \quad - Required headers  \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Phase 2: CSRF Protection Analysis}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.85\textwidth}c}
+    \toprule
+    \textbf{Task} & \textbf{Check} \\
+    \midrule
+    Check for CSRF tokens  \\
+    \quad - Presence in forms/requests  \\
+    \quad - Token predictability/entropy  \\
+    \quad - Token validation mechanisms  \\
+    Analyze SameSite cookie settings  \\
+    \quad - Check Set-Cookie headers  \\
+    \quad - Identify cookies without explicit SameSite attributes  \\
+    \quad - Note SameSite=Strict/Lax/None configurations  \\
+    Test Referer header validation  \\
+    \quad - Header presence requirements  \\
+    \quad - Domain validation logic  \\
+    \quad - Missing header handling  \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Phase 3: Vulnerability Testing}
+
+\subsubsection*{CSRF Token Bypass Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.85\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    Method dependency: Change POST → GET while keeping parameters  \\
+    Token omission: Remove CSRF token entirely from requests & \\
+    Session independence: Test if tokens are tied to user sessions  \\
+    Cookie-bound tokens: Check if CSRF tokens are tied to non-session cookies  \\
+    Double-submit bypass: Test cookie setting functionality  \\
+    \bottomrule
+\end{tabular}
+
+\subsubsection*{SameSite Bypass Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.85\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    2-minute window: Test cross-site POST requests with fresh cookies  \\
+    Cookie refresh mechanisms: Identify OAuth/SSO endpoints that issue new sessions  \\
+    Top-level navigation: Test GET requests with Lax restrictions  \\
+    Client-side redirects: Find and exploit redirect gadgets  \\
+    \bottomrule
+\end{tabular}
+
+\subsubsection*{Referer Bypass Tests}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.85\textwidth}c}
+    \toprule
+    \textbf{Test Case} & \textbf{Check} \\
+    \midrule
+    Header suppression: Use \texttt{<meta name="referrer" content="never">}  \\
+    Domain validation flaws: Test subdomain and query string bypasses \\
+    Browser policy override: Configure Referrer-Policy: unsafe-url  \\
+    \bottomrule
+\end{tabular}
+
+\subsection*{Phase 4: Exploit Development \& Validation}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.85\textwidth}c}
+    \toprule
+    \textbf{Task} & \textbf{Check} \\
+    \midrule
+    Create PoC using Burp Suite generator \\
+    Test delivery mechanisms (direct links, embedded forms, scripts)  \\
+    Verify exploit works cross-origin \\
+    Confirm no user interaction required (or minimal interaction)  \\
+    Test across different browsers \\
+    \bottomrule
+\end{tabular}
+
+\section*{Methodology to Find CSRF Vulnerabilities}
+
+\subsection*{1. Automated Discovery}
+\begin{itemize}
+    \item Use Burp Suite's CSRF PoC generator for quick testing
+    \item Employ automated scanners with CSRF detection capabilities
+    \item Crawl application to identify all forms and state-changing endpoints
+\end{itemize}
+
+\subsection*{2. Manual Testing Approach}
+
+\subsubsection*{Step 1: Endpoint Identification}
+\begin{itemize}
+    \item Browse application as authenticated user
+    \item Use proxy to capture all requests
+    \item Filter for POST/PUT/DELETE requests
+    \item Focus on actions that change application state
+\end{itemize}
+
+\subsubsection*{Step 2: Protection Mechanism Analysis}
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
+For each sensitive endpoint:
+   Check for CSRF tokens in requests
+   Analyze cookie SameSite attributes
+   Test Referer header requirements
+   Document all protection layers
+\end{lstlisting}
+
+\subsubsection*{Step 3: Bypass Attempts}
+
+\textbf{CSRF Token Bypasses:}
+\begin{itemize}
+    \item Remove token parameter
+    \item Use token from different session
+    \item Change request method (POST → GET)
+    \item Test token predictability
+\end{itemize}
+
+\textbf{SameSite Bypasses:}
+\begin{itemize}
+    \item Test within 2-minute window of login
+    \item Force cookie refresh via OAuth flows
+    \item Use top-level navigation for GET requests
+    \item Exploit client-side redirect chains
+\end{itemize}
+
+\textbf{Referer Bypasses:}
+\begin{itemize}
+    \item Suppress Referer header entirely
+    \item Spoof domain in Referer
+    \item Bypass validation logic
+\end{itemize}
+
+\subsubsection*{Step 4: Exploit Crafting}
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
+- Use Burp's CSRF PoC generator as base
+- Modify for specific bypass techniques
+- Test exploit in controlled environment
+- Verify action executes successfully
+\end{lstlisting}
+
+\subsection*{3. Advanced Techniques}
+
+\subsubsection*{Cookie Refresh Attacks}
+\begin{itemize}
+    \item Identify endpoints that issue new sessions
+    \item Chain OAuth flows with CSRF exploits
+    \item Bypass popup blockers with user interaction
+    \item Coordinate timing for 2-minute window
+\end{itemize}
+
+\subsubsection*{Client-Side Redirect Abuse}
+\begin{itemize}
+    \item Find confirmation pages with automatic redirects
+    \item Inject path traversal in redirect parameters
+    \item Chain redirects to target sensitive endpoints
+    \item Maintain session through redirect flow
+\end{itemize}
+
+\subsection*{4. Defense Evasion Patterns}
+
+\subsubsection*{For SameSite=Lax:}
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
+- Use top-level navigation for GET requests
+- Exploit 2-minute window with fresh cookies
+- Chain with cookie refresh mechanisms
+\end{lstlisting}
+
+\subsubsection*{For SameSite=Strict:}
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
+- Find and abuse client-side redirects
+- Use application's own navigation mechanisms
+- Maintain same-site context through redirect chains
+\end{lstlisting}
+
+\subsubsection*{For Referer Validation:}
+\begin{lstlisting}[frame=single, basicstyle=\footnotesize\ttfamily]
+- Suppress header entirely
+- Bypass domain validation logic
+- Override browser Referrer-Policy
+\end{lstlisting}
+
+\subsection*{5. Validation \& Reporting}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.85\textwidth}c}
+    \toprule
+    \textbf{Task} & \textbf{Check} \\
+    \midrule
+    Confirm vulnerability impact & \\
+    Document bypass techniques used  \\
+    Provide reproducible PoC  \\
+    Suggest remediation measures \\
+    \bottomrule
+\end{tabular}
+
+\section*{Important Notes}
+
+\begin{itemize}
+    \item \textbf{Document everything} - Keep detailed notes of all tests performed and results
+    \item \textbf{Consider browser differences} - Test across multiple browsers as behavior may vary
+    \item \textbf{Chain vulnerabilities} - Look for opportunities to chain CSRF with other vulnerabilities
+    \item \textbf{Test both authenticated and unauthenticated states} - Some endpoints may behave differently
+\end{itemize}
+
+\section*{Remediation Recommendations}
+
+\begin{itemize}
+    \item \textbf{Implement CSRF tokens} - Use unique, unpredictable tokens tied to user sessions
+    \item \textbf{Set explicit SameSite attributes} - Always set SameSite=Strict for sensitive cookies
+    \item \textbf{Avoid Referer-based validation} - Use proper CSRF tokens instead
+    \item \textbf{Require re-authentication} - For highly sensitive actions, require password confirmation
+    \item \textbf{Use custom headers} - For AJAX requests, use custom headers that can't be sent cross-origin
+    \item \textbf{Implement double-submit patterns} - Use both cookie and request parameter for CSRF tokens
+\end{itemize}
+
+
+
 \end{document}
