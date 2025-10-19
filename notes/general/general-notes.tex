@@ -18,8 +18,42 @@
 \begin{document}
 \maketitle
 
-\section*{Introduction}
+\section*{Subdomain Enumeration}
+
+\begin{itemize}
+
+\item \textbf{\underline{Knock Subdomain Scan}}
+\begin{lstlisting}[frame=single]
+knockpy -d "domain.com" --recon --bruteforce
+\end{lstlisting}
+
+\item \textbf{\underline{subfinder Scan}}
+\begin{lstlisting}[frame=single]
+subfinder -d someweb.com -o subf.txt -v
+\end{lstlisting}
+
+\item \textbf{\underline{assetfinder Scan}}
+\begin{lstlisting}[frame=single]
+assetfinder -subs-only someweb.com > asset.txt
+\end{lstlisting}
+
+\item \textbf{\underline{Subdomain Finder}}
+\begin{lstlisting}[frame=single]
+https://subdomainfinder.c99.nl/
+Save output to a file "subfinder.txt"
+\end{lstlisting}
+
+\item \textbf{Add all Enumerated/Collected subdomains from different tools in different files into one file with unique subdomains}
+\begin{lstlisting}[frame=single]
+ cat subf.txt subfinder.txt asset.txt | sort -u > subdomains.txt
+\end{lstlisting}
+
+\item \textbf{\underline{To check the live subdomains and checking the status code of them}}
+\begin{lstlisting}[frame=single]
+cat subdomains.txt | httpx -title -wc -sc -cl -ct -location -web-server
+-o alive-subdomains.txt
+\end{lstlisting}
 
 
-
+\end{itemize}
 \end{document}

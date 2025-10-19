@@ -1,0 +1,177 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{listings}
+\geometry{margin=1in}
+
+\title{A Practical Guide to \texttt{httpx}}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Introduction}
+\texttt{httpx} is a fast and versatile HTTP probing and reconnaissance toolkit developed in Go by the team behind ProjectDiscovery.  
+It enables users (particularly in web-security, bug-bounty and infrastructure analysis contexts) to efficiently scan, probe and gather information about web services (hosts, ports, paths, responses) via HTTP(S).  
+
+
+\section*{Installation}
+According to the detailed guide:  
+\begin{itemize}
+  \item Ensure Go (golang) version 1.20 (or compatible) is installed.
+  \item Then install via:  
+\begin{lstlisting}[language=bash]
+go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+\end{lstlisting}
+  \item After installation go to your Golang Path, /go/bin/ (in my case)
+  \item copy httpx to directory /usr/bin/ $\Rightarrow$ sudo cp httpx /usr/bin/
+  \item Confirm installation by running:  
+\begin{lstlisting}[language=bash]
+httpx --help
+\end{lstlisting}
+\end{itemize}
+
+\section*{Core Features and Use-Cases}
+\subsection*{Scanning / Probing Hosts}
+\texttt{httpx} can probe individual hosts or many hosts via file/input. Example:  
+\begin{lstlisting}[language=bash]
+httpx -u example.com -probe
+\end{lstlisting}
+This checks the availability of the host via HTTP.
+You can also supply a file of hosts:  
+\begin{lstlisting}[language=bash]
+httpx -l hosts.txt
+\end{lstlisting}
+Which reads hosts from \texttt{hosts.txt} each on its own line.
+And you can pipe input from other tools (for example from a sub-domain enumeration tool) into httpx:  
+\begin{lstlisting}[language=bash]
+cat hosts.txt | grep example.com | httpx
+\end{lstlisting}
+
+For multiple ports:  
+\begin{lstlisting}[language=bash]
+httpx -u example.com -ports 80,443,8009,8080,8081,8090,8180,9443
+\end{lstlisting}
+This is useful because web services may run on non-standard HTTP ports. 
+
+\subsection*{Probes – Gathering Response Details}
+You can ask httpx to collect various attributes about each HTTP response: status code, content type/length, title, server software, technology detection, hash of response body, response time, etc.  
+Example:  
+\begin{lstlisting}[language=bash]
+httpx -status-code -content-type -content-length -location \
+       -title -web-server -tech-detect -ip -cname -word-count \
+       -line-count -response-time -cdn -hash sha256 \
+       -include-response -silent -stats \
+       -follow-host-redirects -max-redirects 2
+\end{lstlisting}
+
+Such detailed probing is useful for infrastructure mapping, fingerprinting, and reconnaissance.
+
+\subsection*{Filtering, Matching, Extraction}
+\texttt{httpx} supports matchers (to include based on criteria) and filters (to exclude undesired results). Examples:  
+\begin{itemize}
+  \item Match specific HTTP codes:  
+\begin{lstlisting}[language=bash]
+cat hosts.txt | httpx -mc 200,302
+\end{lstlisting}
+
+  \item Match responses containing a specific string:  
+\begin{lstlisting}[language=bash]
+cat hosts.txt | httpx -ms admin
+\end{lstlisting}
+
+  \item Filter out unwanted status codes:  
+\begin{lstlisting}[language=bash]
+httpx -l urls.txt -fc 404,403,401,400,500
+\end{lstlisting}
+
+  \item Extract parts of a response via regex:  
+\begin{lstlisting}[language=bash]
+echo "http://example.com" | httpx -er 'admin*'
+\end{lstlisting}
+ 
+\end{itemize}
+
+\subsection*{Performance / Rate-Limiting / Threading}
+When scanning many targets, you’ll want to tune performance: number of threads, rate limits, timeouts, retries. Example:  
+\begin{lstlisting}[language=bash]
+httpx -u example.com -t 10 -rate-limit 50
+\end{lstlisting}
+This sets 10 threads and limits to 50 requests per second.
+Other options: \texttt{-rl} (requests per second), \texttt{-rlm} (per minute), \texttt{-timeout}, \texttt{-retries}, etc.
+
+\subsection*{Output Options}
+You can save results in different formats for later processing:  
+\begin{itemize}
+  \item Save to a plain file:  
+\begin{lstlisting}[language=bash]
+httpx -l urls.txt -o httpx.log
+\end{lstlisting}
+  \item Output as JSON Lines:  
+\begin{lstlisting}[language=bash]
+httpx -l urls.txt -j
+\end{lstlisting}
+
+  \item Store full HTTP responses in a directory:  
+\begin{lstlisting}[language=bash]
+httpx -l urls.txt -sr http-responses/
+\end{lstlisting}
+  
+\end{itemize}
+
+\subsection*{Advanced / Additional Features}
+Other notable capabilities:  
+\begin{itemize}
+  \item Screenshots: headless browser captures of the target web pages. Example:  
+\begin{lstlisting}[language=bash]
+echo https://example.com | httpx -ss -st
+\end{lstlisting}
+
+  \item Configuration via YAML file: Instead of specifying many flags, you can maintain a config file, e.g., \texttt{httpx-config.yaml}.
+  \item HTTP methods probe (which methods are allowed):  
+\begin{lstlisting}[language=bash]
+echo "http://example.com" | httpx -x all -probe
+\end{lstlisting}
+
+  \item Proxy support (HTTP, SOCKS):  
+\begin{lstlisting}[language=bash]
+echo "http://example.com" | httpx -http-proxy http://127.0.0.1:8080
+\end{lstlisting}
+
+\end{itemize}
+
+\section*{Usage Examples}
+\begin{itemize}
+  \item Simple host probe:  
+\begin{lstlisting}[language=bash]
+httpx -u example.com -probe
+\end{lstlisting}
+  \item Batch scan with title and status code:  
+\begin{lstlisting}[language=bash]
+httpx -l subdomains.txt -title -status-code -tech-detect
+\end{lstlisting}
+  \item Scan for a specific path (e.g., robots.txt) across many hosts:  
+\begin{lstlisting}[language=bash]
+httpx -l hosts.txt -path "/robots.txt" -sc
+\end{lstlisting}
+  \item Match only HTTP 200/301/302 responses:  
+\begin{lstlisting}[language=bash]
+cat subdomains.txt | httpx -mc 200,301,302 -sc
+\end{lstlisting}
+  \item Save output to JSON and process with jq:  
+\begin{lstlisting}[language=bash]
+httpx -l urls.txt -j -o httpx.json
+cat httpx.json | jq 'select(.status_code == 200)'
+\end{lstlisting}
+
+\end{itemize}
+
+
+
+
+
+
+\end{document}
