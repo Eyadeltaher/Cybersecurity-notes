@@ -53,7 +53,299 @@ Save output to a file "subfinder.txt"
 cat subdomains.txt | httpx -title -wc -sc -cl -ct -location -web-server
 -o alive-subdomains.txt
 \end{lstlisting}
+\end{itemize}
 
+
+\section*{Directory Enumeration}
+
+\begin{itemize}
+
+\item \textbf{\underline{Gobuster}}
+\begin{lstlisting}[frame=single]
+Basic scan with common options
+gobuster dir -u http://target.com/ -w wordlist.txt -o output.txt
+
+With extensions
+gobuster dir -u http://target.com/ -w wordlist.txt -x php,txt,html
+
+Specific status codes
+gobuster dir -u http://target.com/ -w wordlist.txt -s 200,301,302,403
+
+status-codes-blacklist
+gobuster dir -u http://target.com/ -w wordlist.txt -b 404,403
+
+
+Set threads (faster but more noisy)
+gobuster dir -u http://target.com/ -w wordlist.txt -t 50
+\end{lstlisting}
+
+\item \textbf{\underline{Advanced Example - Comprehensive Scan}}
+\begin{lstlisting}[frame=single]
+gobuster dir -u http://target.com/
+-w /seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+-x php,html,txt,js,bak,old,json
+-s 200,204,301,302,307,403,500
+-b 400,404,403
+-t 40
+-r
+-o gobuster-comprehensive.txt
+--timeout 10s
+--user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+\end{lstlisting}
+
+\section*{FFUF Directory Enumeration}
+\begin{itemize}
+\item \textbf{Simple Directory Discovery:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt
+\end{lstlisting}
+
+\item \textbf{With Extensions:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt -e .php,.html,.txt
+\end{lstlisting}
+
+\item \textbf{With Status Code Filtering:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt -mc 200,301,302,403
+\end{lstlisting}
+
+\item \textbf{\underline{Critical Filtering Options}}
+
+\item \textbf{Filter by Response Size (Most Important):}
+\begin{lstlisting}[frame=single]
+Filter out common wildcard response sizes
+ffuf -u http://target.com/FUZZ -w wordlist.txt -fs 1042,1245,184
+
+Filter size ranges
+ffuf -u http://target.com/FUZZ -w wordlist.txt -fs 0-100,1000-2000
+
+Filter code
+ffuf -u http://target.com/FUZZ -w wordlist.txt -fc 401,403
+\end{lstlisting}
+
+\item \textbf{\underline{Performance \& Stealth}}
+
+\item \textbf{Thread Control:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt -t 50 # Faster
+ffuf -u http://target.com/FUZZ -w wordlist.txt -t 10 # Stealthier
+\end{lstlisting}
+
+\item \textbf{Request Delay:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt -p 0.1 # Fixed delay
+ffuf -u http://target.com/FUZZ -w wordlist.txt -p 0.1-0.5 # Random
+\end{lstlisting}
+
+\item \textbf{Rate Limiting:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt -rate 10
+\end{lstlisting}
+
+\item \textbf{\underline{Headers \& Authentication}}
+
+\item \textbf{Custom Headers:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt
+-H "User-Agent: Mozilla/5.0"
+-H "Authorization: Bearer token123"
+-H "X-API-Key: value"
+\end{lstlisting}
+
+\item \textbf{Host Header Fuzzing:}
+\begin{lstlisting}[frame=single]
+ffuf -w subdomains.txt -u https://target.com/ -H "Host: FUZZ" -mc 200
+\end{lstlisting}
+
+\newpage
+\item \textbf{\underline{Advanced Scanning Techniques}}
+
+\item \textbf{Recursive Scanning:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt -recursion 
+-recursion-depth 2
+\end{lstlisting}
+
+\item \textbf{POST Request Fuzzing:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/login -w passwords.txt -X POST
+-d "username=admin&password=FUZZ" 
+-H "Content-Type: application/x-www-form-urlencoded" -mc 200 -fs 0
+\end{lstlisting}
+
+\item \textbf{Parameter Fuzzing:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/page?param=FUZZ -w parameters.txt -mc 200
+\end{lstlisting}
+
+\item \textbf{Multi-wordlist Fuzzing (Clusterbomb):}
+\begin{lstlisting}[frame=single]
+ffuf -w usernames.txt:USER -w passwords.txt:PASS
+-u http://target.com/login?user=USER&pass=PASS
+-mode clusterbomb -mc 200
+\end{lstlisting}
+
+\item \textbf{\underline{Output Options}}
+
+\item \textbf{Save to File:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w list.txt -o result.json -of json
+ffuf -u http://target.com/FUZZ -w list.txt -o result.txt -of csv
+\end{lstlisting}
+
+\item \textbf{Silent Mode:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ -w wordlist.txt -s
+\end{lstlisting}
+\end{itemize}
+
+\subsection*{Practical Complete Examples}
+
+\item \textbf{Comprehensive Directory Scan:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/FUZZ
+-w /seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+-e .php,.html,.txt,.js,.bak,.old
+-mc 200,301,302,403,500
+-fs 0,1042,1245
+-t 40
+-p 0.1
+-c
+-o ffuf-complete.json
+-of json
+\end{lstlisting}
+
+\item \textbf{API Endpoint Discovery:}
+\begin{lstlisting}[frame=single]
+ffuf -u http://target.com/api/FUZZ
+-w /seclists/Discovery/Web-Content/api/common-api-endpoints.txt
+-mc 200,201,204
+-H "Content-Type: application/json"
+-H "Authorization: Bearer token"
+-fs 0
+-o api-endpoints.json
+\end{lstlisting}
+
+\item \textbf{Virtual Host Discovery:}
+\begin{lstlisting}[frame=single]
+ffuf -w subdomains.txt
+-u http://target.com
+-H "Host: FUZZ.target.com"
+-mc 200,301,302
+-fs 0
+-o vhosts.txt
+\end{lstlisting}
+
+\subsection*{Best Practices}
+\begin{itemize}
+\item \textbf{Always use filters}: Start with \texttt{-fs} to filter out wildcard responses
+\item \textbf{Use auto-calibration}: \texttt{-ac} helps with automatic filtering
+\item \textbf{Respect rate limits}: Use \texttt{-p} or \texttt{-rate} for production systems
+\item \textbf{Save your results}: Always use \texttt{-o} with appropriate format
+\item \textbf{Start small}: Test with small wordlists before comprehensive scans
+\item \textbf{Use recursion wisely}: \texttt{-recursion-depth} prevents infinite loops
+\end{itemize}
+
+\subsection*{Common Response Size Filters}
+\begin{itemize}
+\item \textbf{ASP.NET}: Often \texttt{-fs 184} for wildcard redirects
+\item \textbf{WordPress}: Common sizes \texttt{-fs 1042,1245}
+\item \textbf{Custom apps}: Use \texttt{-ac} to auto-detect sizes to filter
+\end{itemize}
+
+
+
+\item \textbf{\underline{Dirsearch Comprehensive Scan}}
+\begin{lstlisting}[frame=single]
+dirsearch -u https://target.com/ -e php,html,js,txt,json,asp,aspx 
+-w /usr/share/wordlists/dirb/common.txt -t 50 --recursive-depth 2 
+-o dirsearch-results.txt
+\end{lstlisting}
+
+
+
+\item \textbf{\underline{Combine and Sort Results from Multiple Tools}}
+\begin{lstlisting}[frame=single]
+cat gobuster-.txt ffuf-.txt dirb-*.txt dirsearch-results.txt | grep 
+-Eo '(http|https)://[^/"]+' | sort -u > all-directories.txt
+\end{lstlisting}
+
+\item \textbf{\underline{Validate Live Directories with Httpx}}
+\begin{lstlisting}[frame=single]
+cat all-directories.txt | httpx -title -status-code -content-length 
+-web-server -location -follow-redirects -o live-directories.txt
+\end{lstlisting}
+
+\item \textbf{\underline{Filter Interesting Findings}}
+\begin{lstlisting}[frame=single]
+cat live-directories.txt | grep 
+-E "(admin|login|dashboard|config|backup|api)" > interesting-paths.txt
+\end{lstlisting}
 
 \end{itemize}
+
+\subsection*{Important Notes}
+\begin{itemize}
+\item Always check robots.txt for hidden directories: \texttt{https://target.com/robots.txt}
+\item Look for common backup files: .bak, .old, .txt, \_backup, \_old
+\item Test for directory traversal vulnerabilities during enumeration
+\item Use rate limiting (\texttt{-delay} in gobuster, \texttt{-p} in ffuf) to avoid overwhelming the target
+\item Always respect the target's robots.txt and terms of service
+\end{itemize}
+
+
+\section*{Directory Enumeration Wordlists}
+
+\begin{itemize}
+
+\item \textbf{\underline{Top Recommended Wordlists}}
+
+\item \textbf{General Purpose - Most Popular}
+\begin{lstlisting}[frame=single]
+/usr/share/seclists/Discovery/Web-Content/common.txt
+/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt
+/usr/share/wordlists/dirb/common.txt
+\end{lstlisting}
+
+\item \textbf{Comprehensive Scanning}
+\begin{lstlisting}[frame=single]
+/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-big.txt
+/usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt
+\end{lstlisting}
+
+\item \textbf{Quick \& Fast Scans}
+\begin{lstlisting}[frame=single]
+/usr/share/seclists/Discovery/Web-Content/quickhits.txt
+/usr/share/seclists/Discovery/Web-Content/top-1000.txt
+\end{lstlisting}
+
+\item \textbf{API \& Modern Web Apps}
+\begin{lstlisting}[frame=single]
+/usr/share/seclists/Discovery/Web-Content/api/
+/usr/share/seclists/Discovery/Web-Content/raft-small-words.txt
+/usr/share/seclists/Discovery/Web-Content/common-api-endpoints-mazen160.txt
+\end{lstlisting}
+
+\item \textbf{\underline{Technology Specific Wordlists}}
+\begin{lstlisting}[frame=single]
+WordPress
+/usr/share/seclists/Discovery/Web-Content/CMS/wp-plugins.fuzz.txt
+
+Apache
+/usr/share/seclists/Discovery/Web-Content/apache.txt
+
+IIS
+/usr/share/seclists/Discovery/Web-Content/iis.txt
+\end{lstlisting}
+\end{itemize}
+
+\subsection*{Best Practice Recommendations}
+\begin{itemize}
+\item \textbf{Start Small}: Use \texttt{quickhits.txt} or \texttt{common.txt} first
+\item \textbf{Escalate}: Move to medium/big lists if initial scans find little
+\item \textbf{Be Specific}: Use technology-specific wordlists when you know the stack
+\item \textbf{Avoid Overkill}: Don't start with huge wordlists - they're slow and noisy
+\end{itemize}
+
 \end{document}
