@@ -1,0 +1,228 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{Access control Notes}
+\author{Eyad Islam El-Taher}
+
+\begin{document}
+\maketitle
+
+\section*{Introduction}
+\textbf {Access control} $\Longrightarrow$ the application of constraints on who or what is authorized to perform actions or access resources. In the context of web applications, access control is dependent on authentication and session management: 
+\begin{itemize}
+	\item \textbf{Authentication:} Who are you? (Logging in)      
+	\item \textbf{Session management:} identifies which subsequent HTTP requests are being made by that same user $\Longrightarrow$ Keeping you logged in. 
+	\item \textbf{Access control:} What are you allowed to do? (Permissions)
+\end{itemize}
+
+\section*{Access control vulnerabilities happen when}
+an application fails to properly enforce restrictions on what a user is authorized to do, allowing a user to act outside of their intended permissions. \\
+
+\vspace{5px}
+\textbf{\underline{Common Access Control Flaws:}}
+\begin{itemize}
+	\item \textbf{Missing Server Checks:} Relying on hiding buttons in the browser. Attackers can just call the function directly if the server doesn't verify permissions.
+	
+	\item \textbf{Insecure Object References (IDOR):} The app uses user-provided input (like a filename or user ID in the URL) to access data directly, without checking if the user is allowed to see it.
+
+	\item \textbf{Excessive Permissions:} Users are given more power than they need. If an attacker hijacks such an account, they can do more damage.
+
+	\item \textbf{System Misconfigurations:} Mistakes in the server or framework settings can accidentally create holes that bypass security.
+
+	\item \textbf{Predictable Identifiers:} Using easy-to-guess IDs (like 1, 2, 3...) or storing privileges in insecure locations (like browser cookies) that an attacker can easily forge.
+\end{itemize}
+
+\section*{Access control vulnerabilities happen where}
+
+\begin{itemize}
+    \item \textbf{Authentication and Authorization Mechanisms}  The core flaws often stem from incorrectly configured authentication and authorization systems, such as failing to verify the user's identity or role for every request.
+    
+    \item \textbf{Server-Side Code} When developers rely solely on client-side (e.g., UI elements like hiding links/buttons) rather than robust, server-side checks, attackers can easily bypass controls by sending direct requests to restricted URLs or API endpoints.
+    
+    \item \textbf{URL and API Endpoints} Vulnerabilities are frequently found in the parameters of URLs or API calls, where an attacker can manipulate values (like a user ID or invoice ID) to access another user's account or data (Insecure Direct Object References or IDOR).
+    
+    \item \textbf{Session Management systems} Weak session management can lead to access control issues, for instance, if session identifiers don't expire properly after logout or are exposed in the URL, allowing an attacker to hijack a session.
+    
+    \item \textbf{Platform configurations} Platform Misconfigurations: Incorrectly set up server or platform rules (e.g., a "debug" mode left enabled, or discrepancies in how different web server components interpret URLs) can create bypass opportunities.
+    
+    \item \textbf{Multi-Step Processes} In multi-stage processes (like an e-commerce checkout or an admin function with multiple confirmation steps), developers sometimes enforce access control on initial steps but neglect later ones, assuming a user would only reach the end with proper authorization.
+\end{itemize}
+
+\section*{Impact of Access Control Vulnerabilities}
+
+Access control vulnerabilities can have significant negative effects on both users and applications, primarily through unauthorized access to sensitive data and system functionality.
+
+\subsection*{\underline{Effects on the User}}
+
+\begin{itemize}
+    \item \textbf{Exposure of Sensitive Data:} Attackers can access users' private information (PII, financial records, health data), leading to identity theft or fraud.
+    
+    \item \textbf{Unauthorized Actions:} Attackers may perform actions as the user (changing passwords, making purchases, deleting data).
+    
+    \item \textbf{Privacy Violations:} User's online activities and personal data can be exposed, causing privacy breaches and reputational damage.
+    
+    \item \textbf{Loss of Trust and Security:} Users lose faith in the application's ability to protect their information.
+\end{itemize}
+
+\subsection*{\underline{Effects on the Application}}
+
+\begin{itemize}
+    \item \textbf{Data Breaches:} Exposure of large data amounts leading to legal and regulatory consequences.
+    
+    \item \textbf{System Integrity Compromise:} Attackers can modify or delete data, causing incorrect information and service disruption.
+    
+    \item \textbf{Reputational Damage:} Security breaches damage the organization's reputation, leading to customer loss.
+    
+    \item \textbf{Financial Loss:} Costs from breach investigation, user notifications, fines, legal fees, and remediation.
+    
+    \item \textbf{Service Disruption:} Attackers may disrupt normal operations, causing downtime and availability issues.
+\end{itemize}
+
+\section*{Types of Access Control}
+
+\subsection*{\underline{Vertical Access Controls}}
+\begin{itemize}
+    \item \textbf{Simple Idea:} Restricts access based on \textbf{user roles} or privilege levels.
+    \item \textbf{Analogy:} The hierarchy in a company.
+    \item \textbf{Example:} An \textbf{Administrator} can delete any user's account, but a \textbf{regular User} cannot. It's about what you are \textit{allowed to do}.
+\end{itemize}
+
+\subsection*{\underline{Horizontal Access Controls}}
+\begin{itemize}
+    \item \textbf{Simple Idea:} Restricts access to a \textbf{subset of data} within the same user level.
+    \item \textbf{Analogy:} Personal lockers in a school; everyone has one, but you can only open your own.
+    \item \textbf{Example:} In a bank app, you can only view your own accounts, not those of other customers. It's about \textit{which data} you can see.
+\end{itemize}
+
+\subsection*{\underline{Context-Dependent Access Controls}}
+\begin{itemize}
+    \item \textbf{Simple Idea:} Restricts actions based on the \textbf{current situation} or application state.
+    \item \textbf{Analogy:} Not being allowed to change your order after the chef has started cooking it.
+    \item \textbf{Example:} A website prevents you from modifying your shopping cart \textbf{after} you've clicked the "Pay" button.
+\end{itemize}
+
+
+\section*{Examples of Broken Access Control}
+
+\subsection*{1- \underline{Unprotected Functionality}}
+\begin{itemize}
+    \item \textbf{What it is:} The application has sensitive functions but does not lock the "door" to them.
+    \item \textbf{How it happens:}
+    \begin{itemize}
+        \item An admin page exists at a predictable URL (e.g., \texttt{/admin}).
+        \item The link is hidden from regular users on the webpage, but the page itself has no password or check.
+        \item Anyone who knows or guesses the URL can access it.
+    \end{itemize}
+    \item \textbf{Discovery:} Attackers can find these hidden URLs in files like \texttt{robots.txt} or by guessing common names.
+\end{itemize}
+
+robots.txt $\Longrightarrow$ a text file that website owners create to give instructions to web crawlers (like search engine bots) about which pages or directories they should not crawl.\\
+
+Security researchers frequently discover hidden administrative panels and 
+debug URLs through \texttt{robots.txt} analysis.\\
+
+Read this Writeup plz $\Longrightarrow$
+\href{https://infosecwriteups.com/secret-sauce-in-robots-txt-how-i-found-hidden-admin-panels-and-debug-urls-b7e8a11ea36f}{• \underline{Infosec Writeup Article}}
+
+
+
+\subsection*{2- \underline{The Flaw of "Security by Obscurity"}}
+
+\textbf{The Concept}
+\begin{itemize}
+    \item Sensitive functionality (e.g., an admin panel) is hidden at a \textbf{less predictable URL}.
+    \item This is known as "\textbf{security by obscurity}"—relying on secrecy rather than proper authentication.
+    \item This is \textbf{not effective access control} because the hidden URL can be discovered in multiple ways.
+\end{itemize}
+
+\textbf{\underline{Example Scenario}}
+\begin{itemize}
+    \item An application hosts its admin panel at a non-obvious URL:
+    \begin{center}
+        \texttt{https://insecure-website.com/administrator-panel-yb556}
+    \end{center}
+    \item While not easily guessable, this URL can be \textbf{leaked} to users through various channels.
+\end{itemize}
+
+\textbf{\underline{Common Leakage Vectors}} The hidden URL might be disclosed in:
+
+\begin{itemize}
+    \item \textbf{JavaScript Files:} Client-side code that dynamically builds the UI based on user roles may contain the URLs, even if they are not displayed.
+    \item \textbf{HTML Comments:} Developers might leave commented-out code or notes in the page source.
+    \item \textbf{API Responses:} Backend endpoints might return the privileged URLs in their responses.
+    \item \textbf{Sitemap.xml / Robots.txt:} As previously discussed, these files can accidentally expose paths.
+\end{itemize}
+
+
+\subsection*{3- \underline{Insecure Parameter-Based Access Control}}
+
+\textbf{The Flawed Method}
+\begin{itemize}
+    \item The application decides what a user is allowed to do during login.
+    \item It then stores this permission level in a location that the \textbf{hacker can see and control like URL}.
+    \item The application trusts this user-controlled value for all future access checks.
+\end{itemize}
+
+\textbf{\underline{Where is this Data Stored?}}
+\begin{itemize}
+    \item A \textbf{hidden field} in an HTML form
+    \item A \textbf{cookie} in the browser
+    \item A \textbf{request body} in Burp Suite
+    \item A \textbf{query parameter} in the URL
+\end{itemize}
+
+\textbf{Insecure Examples}
+\begin{lstlisting}[frame=single]
+ https://insecure-website.com/home?admin=true
+ https://insecure-website.com/home?role=1
+\end{lstlisting}
+
+\subsection*{4- \underline{Horizontal Privilege Escalation}}
+A user can access \textbf{another user's data} of the same type, instead of being restricted to their own.
+
+\begin{itemize}
+    \item A user views their profile page at:
+    \begin{center}
+        \texttt{https://insecure-website.com/myaccount?id=123}
+    \end{center}
+    \item If they change the URL to \texttt{id=124}, they can access another user's account page, data, and functions.
+    \item This is a classic \textbf{Insecure Direct Object Reference (IDOR)} vulnerability.
+\end{itemize}
+
+
+\section*{\underline{Insecure Direct Object References (IDOR)}}
+
+\subsection*{Simple Definition}
+\begin{itemize}
+    \item A subcategory of \textbf{access control vulnerabilities}.
+    \item Occurs when an application uses \textbf{user-supplied input} (like an ID in a URL) to access objects (like files or database records) \textbf{directly}.
+    \item An attacker can simply \textbf{modify this input} to gain unauthorized access to other users' data.
+\end{itemize}
+
+\subsection*{The Core Problem}
+The application trusts user-provided identifiers without verifying if the user has permission to access the specific object they are requesting.
+
+\subsection*{Simple Example}
+\begin{verbatim}
+# A user accesses their own file:
+https://example.com/view_document?doc_id=1001
+
+# An attacker changes the ID to access another file:
+https://example.com/view_document?doc_id=1002
+\end{verbatim}
+
+
+\end{document}
