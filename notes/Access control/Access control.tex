@@ -225,4 +225,45 @@ https://example.com/view_document?doc_id=1002
 \end{verbatim}
 
 
+\section*{Advanced IDOR Scenarios}
+
+\subsection*{1- \underline{Non-Predictable Identifiers (GUIDs)}}
+\begin{itemize}
+    \item Applications may use \textbf{Globally Unique Identifiers (GUIDs)} instead of simple numbers.
+    \item Example: \texttt{/view\_profile?user\_id=9b67d2d4-5a7a-4c8b-ba3c-1f5e8d9c0a2b}
+    \item This prevents \textbf{guessing or predicting} other users' identifiers through sequence.
+\end{itemize}
+
+\textbf{Where GUIDs Can Be Leaked}\\ However, these GUIDs might be disclosed elsewhere in the application:
+\begin{itemize}
+    \item User messages or chat logs
+    \item Product reviews or comments
+    \item Shared documents or file metadata
+    \item Anywhere users are referenced in the application
+\end{itemize}
+
+\subsection*{2- \underline{The Redirect Vulnerability}}
+\begin{itemize}
+    \item Some applications \textbf{do detect} unauthorized access attempts.
+    \item They respond with a \textbf{redirect to the login page}.
+    \item \textbf{However:} The initial response containing the redirect might still \textbf{include sensitive data} from the targeted user's account in the response body.
+    \item \textbf{Result:} The attack is still successful even with the redirect.
+\end{itemize}
+
+
+\subsection*{3- \underline{Horizontal to Vertical Privilege Escalation}}
+
+\subsection*{The Attack Chain}
+\begin{itemize}
+    \item A \textbf{horizontal} privilege escalation attack is used to compromise a \textbf{higher-privileged user's account}.
+    \item Attacker specifically targets an \textbf{administrative user's account}.
+    \item This effectively turns the horizontal attack into a \textbf{vertical} privilege escalation.
+\end{itemize}
+
+\subsection*{Impact}
+\begin{itemize}
+    \item \textbf{Doubles the damage:} Combines data theft (horizontal) with system compromise (vertical).
+    \item \textbf{Critical severity:} A simple IDOR can lead to complete system takeover if admin accounts are accessible.
+\end{itemize}
+
 \end{document}
