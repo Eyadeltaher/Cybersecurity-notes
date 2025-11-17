@@ -1,0 +1,454 @@
+\documentclass[12pt]{article}
+\usepackage[table]{xcolor}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{booktabs}
+
+\geometry{a4paper, margin=1in}
+\definecolor{lightblue}{RGB}{240,248,255}
+\definecolor{lightgreen}{RGB}{240,255,240}
+\definecolor{lightred}{RGB}{255,240,240}
+
+\title{\textbf{Access Control Vulnerability Assessment Methodology \& Checklist}}
+\author{Eyad Islam El-Taher}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Executive Summary}
+This document provides a comprehensive methodology for identifying and exploiting Access Control vulnerabilities based on extensive research and practical experience.
+
+\section{Phase 1: Reconnaissance \& Application Mapping}
+
+\begin{tcolorbox}[title={\textbf{1.1 Application Enumeration}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Identify all endpoints:}
+    \begin{itemize}
+        \item Administrative interfaces (\texttt{/admin}, \texttt{/dashboard})
+        \item User management endpoints (\texttt{/users}, \texttt{/profile})
+        \item API endpoints with role-based access
+        \item File upload/download functionality
+    \end{itemize}
+    
+    \item \textbf{Discover hidden functionality:}
+    \begin{itemize}
+        \item Analyze \texttt{robots.txt} for disallowed paths
+        \item Check \texttt{sitemap.xml} for application structure
+        \item Review JavaScript files for hidden endpoints
+        \item Examine HTML comments for development notes
+    \end{itemize}
+    
+    \item \textbf{User role identification:}
+    \begin{itemize}
+        \item Map available user roles (admin, user, moderator, etc.)
+        \item Identify privilege differences between roles
+        \item Document role-specific functionality
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 2: Authentication \& Session Analysis}
+
+\begin{tcolorbox}[title={\textbf{2.1 Session Management Testing}}, colback=lightgreen]
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Session token analysis:}
+    \begin{itemize}
+        \item Check for session tokens in URLs
+        \item Analyze cookie structure and security flags
+        \item Test session fixation vulnerabilities
+        \item Verify session expiration mechanisms
+    \end{itemize}
+    
+    \item \textbf{Authentication bypass testing:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    # Parameter manipulation
+    ?admin=true
+    ?is_admin=1
+    ?role=admin
+    
+    # Cookie manipulation
+    Cookie: user_role=admin; is_authenticated=true
+    \end{lstlisting}
+    
+    \item \textbf{Privilege parameter testing:}
+    \begin{itemize}
+        \item URL parameters
+        \item POST data parameters
+        \item HTTP headers
+        \item JSON/XML request bodies
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\section{Phase 3: Vertical Privilege Escalation Testing}
+
+\begin{tcolorbox}[title={\textbf{3.1 Administrative Function Access}}, colback=lightred]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Direct URL access:}
+    \begin{itemize}
+        \item Access admin panels as regular user
+        \item Bypass role-based restrictions
+        \item Test forced browsing techniques
+    \end{itemize}
+    
+    \item \textbf{Parameter-based escalation:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    # Basic privilege parameters
+    https://site.com/user/profile?user_id=123&admin=true
+    
+    # Role manipulation
+    POST /update_profile
+    user_role=administrator&user_id=123
+    
+    # Cookie privilege escalation
+    Cookie: role=admin; permissions=all
+    \end{lstlisting}
+    
+    \item \textbf{HTTP method manipulation:}
+    \begin{itemize}
+        \item Change POST to GET/PUT/DELETE
+        \item Test method override headers
+        \item Verify consistent access controls
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{3.2 Advanced Vertical Escalation Vectors}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{IDOR to vertical escalation:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    # Access admin user through IDOR
+    /users/profile?id=1 (regular user)
+    /users/profile?id=0 (admin user)
+    
+    # Modify admin user data
+    POST /users/update?id=0
+    email=attacker@evil.com&password=newpass
+    \end{lstlisting}
+    
+    \item \textbf{API endpoint testing:}
+    \begin{itemize}
+        \item Test API version differences
+        \item Check mobile vs web API privileges
+        \item Verify GraphQL query access controls
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 4: Horizontal Privilege Escalation \& IDOR}
+
+\begin{tcolorbox}[title={\textbf{4.1 IDOR Testing Methodology}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Object reference testing:}
+    \begin{itemize}
+        \item Sequential IDs (1, 2, 3...)
+        \item UUIDs/GUIDs from other sources
+        \item Username/email enumeration
+        \item Predictable hash values
+    \end{itemize}
+    
+    \item \textbf{Common IDOR endpoints:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    /users/[ID]/profile
+    /orders/[ID]/details
+    /files/[ID]/download
+    /api/v1/users/[ID]
+    /admin/users/[ID]/edit
+    \end{lstlisting}
+    
+    \item \textbf{Testing techniques:}
+    \begin{itemize}
+        \item Increment/decrement numeric IDs
+        \item Change GUIDs to other users'
+        \item Test different object types
+        \item Verify response differences
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{4.2 Advanced IDOR Scenarios}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Mass IDOR exploitation:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    # Batch user data extraction
+    for i in {1..100}; do
+        curl "https://site.com/users/$i/profile"
+    done
+    
+    # API mass enumeration
+    GET /api/users/1
+    GET /api/users/2
+    GET /api/users/3
+    \end{lstlisting}
+    
+    \item \textbf{IDOR in different HTTP methods:}
+    \begin{itemize}
+        \item GET for information disclosure
+        \item POST/PUT for data modification
+        \item DELETE for object removal
+        \item PATCH for partial updates
+    \end{itemize}
+    
+    \item \textbf{Blind IDOR detection:}
+    \begin{itemize}
+        \item Timing differences in responses
+        \item Error message variations
+        \item Response length analysis
+        \item Behavioral changes detection
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 5: Platform \& Configuration Bypasses}
+
+\begin{tcolorbox}[title={\textbf{5.1 HTTP Header Manipulation}}, colback=lightred]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{URL override headers:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    # Bypass front-end controls
+    GET / HTTP/1.1
+    X-Original-URL: /admin
+    X-Rewrite-URL: /admin
+    
+    # Method override headers
+    X-HTTP-Method-Override: DELETE
+    _method: PUT
+    \end{lstlisting}
+    
+    \item \textbf{Referer-based bypass:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    GET /admin/deleteUser HTTP/1.1
+    Referer: https://site.com/admin
+    
+    # Forged Referer for access
+    Referer: https://site.com/approved-page
+    \end{lstlisting}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{5.2 Web Server Misconfigurations}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Directory traversal testing:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    /admin/../admin
+    /admin/./admin
+    /admin//admin
+    /admin/%2e%2e/admin
+    \end{lstlisting}
+    
+    \item \textbf{HTTP verb tampering:}
+    \begin{itemize}
+        \item Test all HTTP methods on endpoints
+        \item Check for HEAD/OPTIONS information leaks
+        \item Verify TRACE/CONNECT accessibility
+    \end{itemize}
+    
+    \item \textbf{Case sensitivity bypass:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    /Admin
+    /ADMIN
+    /aDmIn
+    /admin/
+    /admin/.
+    \end{lstlisting}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 6: Multi-Step Process Testing}
+
+\begin{tcolorbox}[title={\textbf{6.1 Workflow Bypass Assessment}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Step skipping detection:}
+    \begin{itemize}
+        \item Access final steps directly
+        \item Modify step sequence parameters
+        \item Bypass validation steps
+    \end{itemize}
+    
+    \item \textbf{State parameter manipulation:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    # Payment process bypass
+    Step 1: /checkout/cart (controlled)
+    Step 2: /checkout/shipping (controlled)
+    Step 3: /checkout/payment (controlled)
+    Step 4: /checkout/confirm (UNPROTECTED!)
+    
+    # Direct access to final step
+    POST /checkout/confirm
+    order_id=123&payment_confirmed=true
+    \end{lstlisting}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{6.2 Session State Testing}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Session variable manipulation:}
+    \begin{itemize}
+        \item Modify session storage values
+        \item Tamper with session cookies
+        \item Manipulate local storage data
+    \end{itemize}
+    
+    \item \textbf{CSRF token bypass:}
+    \begin{itemize}
+        \item Remove CSRF tokens from requests
+        \item Use valid tokens from other sessions
+        \item Predict CSRF token generation
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 7: Business Logic \& Context Testing}
+
+\begin{tcolorbox}[title={\textbf{7.1 Business Logic Flaws}}, colback=lightred]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Price manipulation:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    # Hidden price parameters
+    POST /checkout
+    product_id=123&quantity=1&price=0.01
+    
+    # Discount abuse
+    coupon_code=100PERCENTOFF
+    discount_amount=9999
+    \end{lstlisting}
+    
+    \item \textbf{Quantity manipulation:}
+    \begin{itemize}
+        \item Negative quantities
+        \item Extremely large quantities
+        \item Decimal quantity values
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{7.2 Context-Based Access Testing}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Time-based restrictions:}
+    \begin{itemize}
+        \item Access expired content
+        \item Modify time-limited offers
+        \item Bypass maintenance mode
+    \end{itemize}
+    
+    \item \textbf{Geographic restrictions:}
+ \begin{itemize}
+        \item IP spoofing headers (X-Forwarded-For, CF-Connecting-IP)
+        \item VPN/proxy testing
+        \item Language/country parameter manipulation
+ \end{itemize}
+    
+    \item \textbf{User state testing:}
+    \begin{itemize}
+        \item Access features for unverified users
+        \item Bypass email verification
+        \item Access premium features as free user
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 8: Automated Testing \& Tooling}
+
+\begin{tcolorbox}[title={\textbf{8.1 Automated Scanning}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Burp Suite extensions:}
+    \begin{itemize}
+        \item Autorize - automatic privilege escalation
+        \item Authz - authorization testing
+        \item Access Control Tester
+    \end{itemize}
+    
+    \item \textbf{Custom testing scripts:}
+    \begin{lstlisting}[basicstyle=\ttfamily\small]
+    # IDOR testing with Python
+    import requests
+    for user_id in range(1, 100):
+        r = requests.get(f'https://site.com/users/{user_id}')
+        if r.status_code == 200:
+            print(f"Found accessible user: {user_id}")
+    \end{lstlisting}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{8.2 Manual Testing Checklist}}, colback=lightgreen]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Privilege matrix testing:}
+    \begin{itemize}
+        \item Test all user roles against all endpoints
+        \item Verify consistent access controls
+        \item Check for privilege creep
+    \end{itemize}
+    
+    \item \textbf{Parameter fuzzing:}
+    \begin{itemize}
+        \item Role/privilege parameters
+        \item User ID/Object ID parameters
+        \item Status/state parameters
+    \end{itemize}
+    
+    \item \textbf{Response analysis:}
+    \begin{itemize}
+        \item Compare responses between roles
+        \item Check for information leakage
+        \item Analyze error messages
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section{Phase 9: Impact Assessment \& Exploitation}
+
+\begin{tcolorbox}[title={\textbf{9.1 Risk Classification}}, colback=lightred]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Critical impact:}
+    \begin{itemize}
+        \item Full administrative access
+        \item Database compromise
+        \item Financial fraud capability
+        \item User data mass extraction
+    \end{itemize}
+    
+    \item \textbf{High impact:}
+    \begin{itemize}
+        \item Other user account takeover
+        \item Sensitive data access
+        \item Privilege escalation to mid-level roles
+    \end{itemize}
+    
+    \item \textbf{Medium impact:}
+    \begin{itemize}
+        \item Limited information disclosure
+        \item Partial privilege escalation
+        \item Business logic bypass
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title={\textbf{9.2 Proof of Concept Development}}, colback=lightblue]
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Reproducible test cases:}
+    \begin{itemize}
+        \item Step-by-step exploitation guide
+        \item Required user roles and permissions
+        \item Expected vs actual results
+    \end{itemize}
+    
+    \item \textbf{Evidence collection:}
+    \begin{itemize}
+        \item Screenshots of unauthorized access
+        \item HTTP request/response logs
+        \item Database extracts (if authorized)
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\section*{Conclusion}
+This methodology provides a systematic approach to access control vulnerability assessment, covering from basic reconnaissance to advanced exploitation techniques. The structured approach ensures comprehensive testing while helping identify complex vulnerability chains and privilege escalation paths.
+
+\end{document}

