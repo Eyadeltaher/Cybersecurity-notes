@@ -1,0 +1,101 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\geometry{a4paper, left=15mm, right=15mm, top=20mm, bottom=20mm}
+
+\title{Automated Enumeration \& Information Disclosure Notes}
+\author{Extracted from Write-up}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+Read the write-up here:
+\href{https://infosecwriteups.com/the-lazy-hackers-guide-to-500-information-disclosure-bugs-b45f9472725e}{The Lazy Hacker's Guide to \$500 Information Disclosure Bugs}.
+
+\section*{Important Explanations}
+
+\subsection*{Enumeration Strategy}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Multi-stage approach}: Start broad with ffuf, then target specific technologies
+    \item \textbf{403 responses are valuable}: Indicate existing but blocked resources (bypass potential)
+    \item \textbf{Custom wordlists}: Essential for different targets (PHP, APIs, Cloud)
+    \item \textbf{Git reconstruction}: Even with 403 on /.git/, tools can fetch key files to rebuild repository
+    \item \textbf{Header analysis reveals}: Vulnerable versions, debug modes, technology stack
+    \item \textbf{Context determines severity}: Same finding has different impact based on environment
+\end{itemize}
+
+\subsection*{Targeted Assault with Custom Wordlists}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{PHP Applications}:
+    \begin{itemize}
+        \item Backup extensions: .php.bak, .php.old, .php~
+        \item Common backup patterns for PHP apps
+    \end{itemize}
+    
+    \item \textbf{API Endpoints}:
+    \begin{itemize}
+        \item Paths: /v1/config, /internal/, /swagger.json
+        \item API-specific configuration and documentation files
+    \end{itemize}
+    
+    \item \textbf{Cloud Targets}:
+    \begin{itemize}
+        \item S3 buckets: prod-target-assets, target-backup-2023
+        \item Azure containers: Target name-based wordlists
+        \item Cloud storage brute-forcing techniques
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Key Findings}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Backup file patterns}: .php.bak, .php.old, .php~ for PHP apps
+    \item \textbf{Cloud enumeration}: S3 buckets (assets-target.s3.amazonaws.com)
+    \item \textbf{Header indicators}:
+    \begin{itemize}
+        \item Apache/2.4.49 → Path traversal (CVE-2021-41773)
+        \item PHP/5.6.40 → Outdated, unsupported version
+        \item X-Debug-Token → Symfony debug toolbar active
+        \item X-AspNetMvc-Version: 4.0 → Older ASP.NET apps
+    \end{itemize}
+    \item \textbf{Critical paths}: /trace.axd, /\_profiler/, common config files
+\end{itemize}
+\section*{Commands}
+
+\subsection*{Wordlist Preparation}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+# Merge directory and file wordlists
+cat ~/SecLists/Discovery/Web-Content/raft-medium-directories.txt
+ ~/SecLists/Discovery/Web-Content/raft-medium-files.txt > combined_raft.txt
+\end{lstlisting}
+
+\subsection*{Web Fuzzing}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+# Fast web fuzzing with auto-calibration
+ffuf -w combined_raft.txt -u https://target.com/FUZZ 
+-t 100 -mc 200,301,302,403 -ac -c -o ffuf_initial.json
+\end{lstlisting}
+
+\subsection*{Git Reconstruction}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+# Reconstructs git repository from exposed .git
+git-dumper https://target.com/.git/ /path/to/output/dir
+\end{lstlisting}
+
+\subsection*{Reconnaissance}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+# Fetch only HTTP headers for quick reconnaissance
+curl -I https://target.com
+\end{lstlisting}
+
+
+
+
+\end{document}

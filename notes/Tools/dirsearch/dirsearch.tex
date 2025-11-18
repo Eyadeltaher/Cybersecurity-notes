@@ -1,0 +1,132 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\geometry{a4paper, left=15mm, right=15mm, top=20mm, bottom=20mm}
+
+\title{Dirsearch Tool Notes}
+\author{Web Path Brute-Forcer}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Important Explanations}
+
+\subsection*{Tool Overview}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Dirsearch}: Web path brute-forcer to discover directories and files on web servers
+    \item \textbf{Default Settings}: 25 threads, HTTP GET method, no recursion, no random user-agents
+    \item \textbf{Configuration}: Default config loaded from \texttt{config.ini}, override with \texttt{--config} or \texttt{DIRSEARCH\_CONFIG} environment variable
+\end{itemize}
+
+\subsection*{Wordlist Handling}
+\begin{itemize}[leftmargin=*]
+    \item \texttt{\%EXT\%} keyword in wordlist entries is replaced with extensions passed via \texttt{-e} flag
+    \item \texttt{-f / --force-extensions}: Append extensions (and "/") to every entry if wordlist lacks \texttt{\%EXT\%}
+    \item \texttt{-O / --overwrite-extensions}: Force replacement of existing extensions in wordlist entries
+    \item \texttt{-X / --exclude-extensions}: Exclude certain extensions from wordlist
+    \item \textbf{Wordlist case support}: lowercase, uppercase, capitalization
+\end{itemize}
+
+\subsection*{Recursion Features}
+\begin{itemize}[leftmargin=*]
+    \item \texttt{-r / --recursive}: Continue brute-forcing inside discovered directories
+    \item \texttt{--max-recursion-depth}: Limit recursion depth
+    \item \texttt{--recursion-status}: Specify status codes for recursion
+    \item \textbf{Special recursion modes}:
+    \begin{itemize}
+        \item \textbf{Force-recursive}: Brute-force recursively all found paths
+        \item \textbf{Deep-recursive}: Brute-force all sub-depths (e.g., for \texttt{a/b/c}, also scan \texttt{a/}, \texttt{a/b/})
+    \end{itemize}
+    \item \texttt{--exclude-subdirs}: Exclude subdirectories from recursion
+    \item \texttt{--subdirs}: Scan specific subdirectories
+\end{itemize}
+
+\subsection*{Fuzzing Techniques}
+\begin{itemize}[leftmargin=*]
+    \item \texttt{--prefixes}: Add prefixes to each wordlist entry (useful for \texttt{.backup}, etc.)
+    \item \texttt{--suffixes}: Add suffixes to each wordlist entry (useful for \texttt{\~}, etc.)
+\end{itemize}
+
+\subsection*{Filtering \& Blacklisting}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Blacklist files}: Located in \texttt{db/} for status codes; matching paths are filtered out
+    \item \textbf{Filter options}:
+    \begin{itemize}
+        \item \texttt{--include-status}, \texttt{--exclude-status}: Status code filters
+        \item \texttt{--exclude-sizes}: Response size filters
+        \item \texttt{--exclude-texts}: Response text filters
+        \item \texttt{--exclude-regexps}: Regex filters
+        \item \texttt{--exclude-redirects}: Redirect pattern filters
+        \item \texttt{--exclude-response}: Specific response filters
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Advanced Features}
+\begin{itemize}[leftmargin=*]
+    \item \texttt{--raw}: Import raw HTTP request from file
+    \item \texttt{--scheme}: Set scheme if dirsearch cannot guess correct one
+    \item \texttt{--proxy / --proxy-list}: HTTP \& SOCKS proxy support
+    \item \texttt{--format}: Multiple report formats (simple, plain, json, xml, md, csv, html, sqlite)
+    \item \texttt{-o}: Save output to file
+    \item \textbf{Pause/Resume}: Stop scans via \texttt{Ctrl+C} and resume or skip targets/subdirectories
+\end{itemize}
+
+\section*{Commands}
+
+\subsection*{Basic Scanning}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+# Basic scan with default extensions
+dirsearch -u https://target
+
+# Scan with specific extensions
+dirsearch -e php,html,js -u https://target
+
+# Scan with custom wordlist
+dirsearch -e php,html,js -u https://target -w /path/to/wordlist
+\end{lstlisting}
+
+\subsection*{Recursive Scanning}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+# Basic recursive brute-force
+dirsearch -e php,html,js -u https://target -r
+
+# Limited recursive scan (depth 3, status 200-399)
+dirsearch -e php,html,js -u https://target -r --max-recursion-depth 3 --recursion-status 200-399
+\end{lstlisting}
+
+\subsection*{Advanced Fuzzing}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+# Add prefixes to wordlist entries
+dirsearch -e php -u https://target --prefixes .,admin,_
+
+# Add suffixes for backup files
+dirsearch -e php -u https://target --suffixes ~
+\end{lstlisting}
+
+\section*{Important Notes}
+
+\subsection*{Performance \& Optimization}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Thread warning}: Too many threads risk DoS; default is 25 but adjustable
+    \item \textbf{Slow servers}: Use HEAD method instead of GET to reduce time
+    \item \texttt{--skip-on-status 429}: Skip when server responds with "Too Many Requests"
+    \item \textbf{Bypass techniques}: Randomize user-agent or use proxy list to bypass request limits or detection
+\end{itemize}
+
+\subsection*{Best Practices}
+\begin{itemize}[leftmargin=*]
+    \item Use \texttt{--force-extensions} when wordlist doesn't include \texttt{\%EXT\%}
+    \item Use \texttt{--overwrite-extensions} carefully - some extensions may not get overwritten
+    \item Combine include/exclude filters for noisy or irrelevant results
+    \item For hidden config files or backups: use \texttt{--prefixes .} and \texttt{--suffixes \~}
+\end{itemize}
+
+\end{document}
