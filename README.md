@@ -1,73 +1,124 @@
-# 🧠 Cybersecurity Notes
+# 🛡️ Cybersecurity Notes
 
-A personal collection of detailed notes, examples, and experiments on common web security vulnerabilities — written and organized by **Eyad Eltaher**.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/Eyadeltaher/Cybersecurity-notes)](https://github.com/Eyadeltaher/Cybersecurity-notes/commits/main)
+[![Topics](https://img.shields.io/github/topics/Eyadeltaher/Cybersecurity-notes?style=flat)](https://github.com/Eyadeltaher/Cybersecurity-notes)
 
-Each folder contains:
-- 📘 LaTeX source (`.tex`) and exported PDF notes  
-- 🧪 Example files (payloads, vulnerable snippets, etc.)  
-- 🧾 Readme file for demonstration
-
-> ⚠️ **Disclaimer:** These materials are for **educational and ethical learning** only.  
-> Do **not** use any of this knowledge for unauthorized testing or exploitation.
+A **comprehensive and structured collection** of web security notes, practical examples, payloads, scripts, and curated wordlists.  
+Designed for **learning, reference, and practical penetration testing**.
 
 ---
 
-## 📂 Repository Structure
+## 📂 Repository Overview
 
-```
+The repository is organized by vulnerability category, tool, and resource type:
 
-Cybersecurity-notes/
-│
-├── notes/
-│   ├── CSRF/           → Cross-Site Request Forgery notes & examples
-│   ├── SQLi/           → SQL Injection concepts, payloads, and defenses
-│   ├── XSS/            → Cross-Site Scripting study materials
-│   └── general/        → General web security concepts and references
-│
-├── LICENSE
-└── README.md
-
-````
+- [**Access Control**](notes/Access%20control) 🔐 – Notes, methodology, privilege bypass  
+- [**CSRF**](notes/CSRF) 🎯 – Cross-Site Request Forgery notes & methodology  
+- [**General**](notes/general) 📘 – Web security fundamentals & Google Dorks  
+- [**Information Disclosure**](notes/Information%20Disclosure) 💡 – Notes & write-ups  
+- [**Recon**](notes/Recon) 🕵️‍♂️ – Web reconnaissance methodology & workflow  
+- [**SQLi**](notes/SQLi) 💉 – SQL Injection: methodology, examples, scripts  
+- [**Tools**](notes/Tools) 🧰 – Dirsearch & httpx usage guides  
+- [**WordLists**](notes/WordLists) 📝 – Curated wordlists for fuzzing and enumeration  
+- [**XSS**](notes/XSS) ✨ – Cross-Site Scripting methodology, checklist, and payloads  
 
 ---
 
-## 🛠 How to Use
+## 📚 Sections Breakdown
 
-1. Open any `notes/<topic>/` directory.
-2. Read the corresponding `README.md` to understand the content.
-3. View `.pdf` file to get the formatted PDF notes.
-4. edit the the `.tex` file if you want to add notes
+### 🔐 Access Control
+- Privilege escalation & bypass techniques  
+- IDOR testing  
+- Horizontal & vertical access bypass  
+- PDFs: `Access control.pdf`, `Access Control Methodology.pdf`
 
-Example:
+### 🎯 CSRF
+- CSRF attack scenarios & anti-CSRF tokens  
+- Testing methodology & examples  
+- PDF: `CSRF-notes.pdf`
+
+### 📘 General
+- Web security fundamentals  
+- Best practices & secure development tips  
+- Google Dorks references: `google Dorks.pdf`, `googleHacking.pdf`
+
+### 💡 Information Disclosure
+- Sources & methods of information leaks  
+- Real-world inspired write-ups  
+- PDFs: `information disclosure.pdf`, `information disclosure write-ups notes.pdf`
+
+### 🕵️‍♂️ Recon
+- Web application reconnaissance methodology  
+- Asset discovery, service fingerprinting, tools workflow  
+- PDF: `Web Application Reconnaissance.pdf`
+
+### 💉 SQLi (SQL Injection)
+- Error-based, blind, time-based SQLi  
+- Auth bypass techniques & payloads  
+- Example Python scripts:  
+  - `sqli_blind_error-based-example.py`  
+  - `sqli_timebased-example.py`  
+- PDF: `SQLi-notes.pdf`
+
+### 🧰 Tools
+**Dirsearch** – Directory & file fuzzing, options, methodology  
+**httpx** – Host probing, asset discovery, example flags  
+PDFs included for both
+
+### 📝 WordLists
+Organized collections for fuzzing, enumeration, and pentesting:  
+- API endpoints, objects, actions  
+- Context-specific lists (admin, debug, logs, setup)  
+- Programming-language-specific lists (PHP, JSP, ASP.NET, Go, Rails, etc.)  
+- Raft & DirBuster lists  
+- Fuzzing lists: `Logins.fuzz.txt`, `Passwords.fuzz.txt`  
+
+### ✨ XSS (Cross-Site Scripting)
+- Notes & methodology  
+- Checklist for testing  
+- Payload examples & SVG test file  
+- PDFs: `XSS-notes.pdf`, `XSS Methodology and Checklist.pdf`
+
+---
+
+## 🚀 How to Use
+
+### Viewing Notes
+- Open PDFs in `notes/<topic>/` for reading.
+
+### Editing / Compiling LaTeX Notes
 ```bash
-cd notes/XSS
-pdflatex XSS-notes.tex
+cd notes/<topic>
+pdflatex filename.tex
 ````
 
----
+### Practical Testing
 
-## 📚 Topics Covered
-
-* **Cross-Site Scripting (XSS)**
-* **SQL Injection (SQLi)**
-* **CSRF**
-* **General** — web fundamentals, encoding, and secure development
+* Use included scripts and wordlists with tools like `ffuf`, `gobuster`, `dirsearch`, or Burp Suite.
 
 ---
 
-## Updates
-Notes are refreshed periodically — new material, corrections, and examples will be added over time.
+## 📌 Purpose
+
+This repository is designed to:
+✔ Serve as a personal knowledge base
+✔ Provide structured penetration testing methodology
+✔ Include high-quality wordlists & payloads
+✔ Offer ready-to-use scripts for practical learning
 
 ---
 
-## 🧩 Future Plans
+## ⚠️ Disclaimer
 
-* Add more vulnerabilities
-* Add visualization or interactive HTML demos
+For **educational purposes only**.
+Do **not** use any scripts, payloads, or methodologies for unauthorized testing.
 
 ---
 
-### 🧑‍💻 Author
+## 👤 Author
 
-**Eyad Eltaher**
+**Eyad Eltaher** – Web Security | Penetration Testing | Bug Bounty Enthusiast
+
+---
 
