@@ -1,0 +1,218 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{titlesec}
+
+\geometry{a4paper, margin=1in}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1em}
+
+% Colors
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Listing style
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+
+
+% Title formatting
+\titleformat{\section}
+{\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+{\large\bfseries}{\thesubsection}{1em}{}
+
+\begin{document}
+\title{A Practical Guide to \texttt{Subdominator}}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+
+\maketitle
+
+
+
+
+
+
+
+
+\section{Introduction}
+
+Subdominator is a powerful tool for passive subdomain enumeration during bug hunting and reconnaissance processes. It is designed to help researchers and cybersecurity professionals discover potential security vulnerabilities by efficiently enumerating subdomains using various free passive resources.
+
+\section{Features}
+
+\begin{itemize}
+    \item \textbf{Fast and Powerful:} Efficiently enumerates subdomains with optimized performance
+    \item \textbf{Extensive Coverage:} 50+ passive resources for comprehensive subdomain discovery
+    \item \textbf{Configurable API Keys:} Flexible setup for various data sources
+    \item \textbf{Integrated Notification System:} Alerts via Slack, Pushbullet, etc.
+    \item \textbf{Local Database Support:} Store and manage enumeration data locally
+    \item \textbf{Multiple Output Formats:} Support for TXT, HTML, PDF, and JSON formats
+    \item \textbf{Interactive Shell Mode:} Work with subdominator database and generate reports
+\end{itemize}
+
+\section{Installation}
+
+\subsection{Prerequisites}
+Ensure you have Python 3.12 or later installed:
+
+\begin{lstlisting}[language=bash]
+python3 --version
+\end{lstlisting}
+
+\subsection{Installation Methods}
+
+\subsubsection{Install from PyPI (Recommended)}
+\begin{lstlisting}[language=bash]
+pip install --upgrade subdominator
+\end{lstlisting}
+
+\subsubsection{Install from GitHub}
+\begin{lstlisting}[language=bash]
+pip install --upgrade git+https://github.com/RevoltSecurities/Subdominator
+\end{lstlisting}
+
+\subsubsection{Install using PIPX}
+\begin{lstlisting}[language=bash]
+pipx install subdominator
+\end{lstlisting}
+
+\subsubsection{Install from Source}
+\begin{lstlisting}[language=bash]
+git clone https://github.com/RevoltSecurities/Subdominator.git
+cd Subdominator
+pip install --upgrade pip
+pip install -r requirements.txt
+\end{lstlisting}
+
+\subsection{Verification}
+Verify installation by running:
+\begin{lstlisting}[language=bash]
+subdominator --help
+\end{lstlisting}
+
+\section{Configuration}
+
+\subsection{YAML Configuration Updates}
+
+Existing users need to update their config YAML file with new resources. Open the config file at:
+
+\begin{lstlisting}
+$HOME/.config/Subdominator/provider-config.yaml
+\end{lstlisting}
+\newpage
+Add the following resources:
+
+\begin{lstlisting}
+builwith:
+  - your-api-key1
+  - your-api-key2
+
+passivetotal:
+  - user-mail1:api-key1
+  - user-mail2:api-key2
+
+trickest:
+  - your-api-key1
+  - your-api-key2
+\end{lstlisting}
+
+New users will be required to update in the next version if any new resources are added.
+
+\section{Examples}
+
+\subsection{Basic Domain Enumeration}
+\begin{lstlisting}[language=bash]
+subdominator -d example.com
+\end{lstlisting}
+
+\subsection{Bulk Enumeration with Output Directory}
+\begin{lstlisting}[language=bash]
+subdominator -dL domains.txt -oD ./results/
+\end{lstlisting}
+
+\subsection{JSON Output with All Sources}
+\begin{lstlisting}[language=bash]
+subdominator -d example.com -all -json -o results.json
+\end{lstlisting}
+
+\subsection{Custom Google Dork}
+\begin{lstlisting}[language=bash]
+subdominator -d target.com -ir google --dork 'site:target.com -www -dev intext:secrets'
+\end{lstlisting}
+
+\subsubsection{Advanced Enumeration with Filtering}
+\begin{lstlisting}[language=bash]
+subdominator -d target.com -all -fw -t 60 -o results.txt -V
+\end{lstlisting}
+\textbf{Description:} Comprehensive scan using all sources, filtering wildcards, with 60-second timeout, verbose output, and saving to file.
+
+\subsubsection{With Proxy for Debugging}
+\begin{lstlisting}[language=bash]
+subdominator -d target.com -px http://127.0.0.1:8080 -s -nc
+\end{lstlisting}
+\textbf{Description:} Route traffic through proxy for debugging, silent mode with no colors.
+
+\subsubsection{Silent Mode for Automation}
+\begin{lstlisting}[language=bash]
+subdominator -d target.com -s -o subdomains.txt
+\end{lstlisting}
+\textbf{Description:} Clean output with only subdomains, perfect for scripting and automation.
+
+\subsubsection{Check API Key Status}
+\begin{lstlisting}[language=bash]
+subdominator -d test.com -ir shodan -ski -ls
+\end{lstlisting}
+\textbf{Description:} Test Shodan API key functionality and list available sources.
+
+\subsection{Most Important One-Line Example}
+
+\subsubsection{Comprehensive Enumeration Command}
+\begin{lstlisting}[language=bash]
+subdominator -d target.com -all -fw -o subdomains.txt -json
+\end{lstlisting}
+
+\textbf{Why this is the most important command:}
+\begin{itemize}
+    \item \texttt{-d target.com} - Specifies the target domain for enumeration
+    \item \texttt{-all} - Uses all available sources for maximum coverage
+    \item \texttt{-fw} - Filters out wildcard subdomains to clean results
+    \item \texttt{-o subdomains.txt} - Saves results to a file for persistence
+    \item \texttt{-json} - Provides structured data format for further processing
+\end{itemize}
+
+This single command provides the most comprehensive subdomain enumeration with clean, usable output that can be easily integrated into other tools or workflows. It represents the optimal balance between coverage, output quality, and practical utility for bug bounty hunters and security researchers.
+
+\vspace{2cm}
+
+\textbf{\Large NOTE $\Rightarrow$ Subdominator consistently discovers more subdomains than Subfinder}
+
+\end{document}

