@@ -1,0 +1,808 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{Clickjacking (UI redressing) Vulnerability Notes}
+\author{Eyad Islam El-Taher}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+Clickjacking, also known as a "UI Redress Attack," is an interface-based malicious attack. The core principle is deceptively simple: an attacker tricks a user into clicking on a hidden or disguised element on a webpage. The user believes they are interacting with a visible, harmless page (e.g., playing a game or watching a video), but their click is secretly hijacked to perform an unintended action on a different, hidden website or application.\\
+
+It is essentially a violation of the user's intent, exploiting their trust and logged-in sessions to execute unauthorized commands.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{clickjacking-diagram.png}
+    \label{fig:clickjacking}
+\end{figure}
+
+\section*{Clickjacking Vulnerability Happen When}
+\begin{enumerate}
+    \item \textbf{The target website lacks framing protections}:
+    \begin{itemize}
+        \item Missing \texttt{X-Frame-Options} header
+        \item No \texttt{Content-Security-Policy} with \texttt{frame-ancestors} directive
+        \item Weak or bypassable frame-busting scripts
+    \end{itemize}
+    
+    \item \textbf{The application has click-triggered sensitive actions}
+    
+    \item \textbf{The user has an active authenticated session}
+    
+    \item \textbf{Social engineering convinces the user to click}
+\end{enumerate}
+
+\section*{Clickjacking Vulnerability Happen Where}
+\begin{itemize}
+    \item \textbf{Social Media Platforms}: Unauthorized liking/sharing/following
+    \item \textbf{Webmail Clients}: Forced email deletion/composition
+    \item \textbf{Online Banking}: Unauthorized fund transfers
+    \item \textbf{Administrative Panels}: Configuration changes
+    \item \textbf{E-commerce Sites}: Unwanted purchases/cart modifications
+    \item \textbf{Account Management Pages}: Password/email changes
+    \item \textbf{Browser Permission Dialogs}: Camera/microphone access
+\end{itemize}
+
+\section*{Impact of Clickjacking Vulnerability}
+\begin{itemize}
+    \item \textbf{Financial Loss}: Unauthorized bank transfers and transactions
+    \item \textbf{Account Takeover}: Password and email changes
+    \item \textbf{Data Breach}: Unauthorized data access and sharing
+    \item \textbf{Reputation Damage}: Social media actions performed without consent
+    \item \textbf{Privacy Violation}: Unauthorized access to webcam/microphone
+    \item \textbf{Business Disruption}: Administrative settings changes
+\end{itemize}
+
+
+
+\hrule
+
+\section*{X-Frame \& Content-Security-Policy and Their Roles}
+
+\subsection*{X-Frame-Options Header}
+The \texttt{X-Frame-Options} HTTP header is a legacy but widely supported defense mechanism that instructs the browser whether a page can be embedded in a frame, iframe, embed, or object.
+
+\begin{tcolorbox}[title=X-Frame-Options Directives]
+\begin{itemize}
+    \item \textbf{DENY} - Prevents any framing whatsoever
+    \item \textbf{SAMEORIGIN} - Allows framing only by pages from the same origin
+    \item \textbf{ALLOW-FROM https://example.com} - Allows framing only by specified domain (poor browser support)
+\end{itemize}
+\end{tcolorbox}
+
+
+\subsection*{Content-Security-Policy (CSP) Header}
+The \texttt{Content-Security-Policy} header is the modern replacement for \texttt{X-Frame-Options}, offering more granular control through the \texttt{frame-ancestors} directive.
+
+\begin{tcolorbox}[title=CSP frame-ancestors Directives]
+\begin{itemize}
+    \item \textbf{frame-ancestors 'none';} - Equivalent to \texttt{DENY}
+    \item \textbf{frame-ancestors 'self';} - Equivalent to \texttt{SAMEORIGIN}
+    \item \textbf{frame-ancestors https://trusted.com;} - Allows specific domains
+    \item \textbf{frame-ancestors 'self' https://*.example.com;} - Complex domain patterns
+\end{itemize}
+\end{tcolorbox}
+
+
+\section*{X-Frame \& Content-Security-Policy Misconfigurations}
+
+\subsection*{Common X-Frame-Options Misconfigurations}
+
+\begin{tcolorbox}[title=Critical Misconfigurations]
+\begin{enumerate}
+    \item \textbf{Header Not Set} - Complete absence of X-Frame-Options header
+    \item \textbf{Inconsistent Application} - Header set on some pages but not others
+    \item \textbf{Using ALLOW-FROM} - Poor browser support makes this ineffective
+    \item \textbf{Case Sensitivity} - Incorrect casing (e.g., \texttt{sameorigin} vs \texttt{SAMEORIGIN})
+    \item \textbf{Multiple Headers} - Conflicting X-Frame-Options directives
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Common CSP frame-ancestors Misconfigurations}
+
+\begin{tcolorbox}[title=Dangerous CSP Patterns]
+\begin{enumerate}
+    \item \textbf{Wildcard Usage} - \texttt{frame-ancestors *;} (Allows all domains)
+    \item \textbf{Overly Permissive} - \texttt{frame-ancestors 'self' https://*;} 
+    \item \textbf{Missing Directive} - CSP present but without \texttt{frame-ancestors}
+    \item \textbf{Report-Only Mode} - Using \texttt{Content-Security-Policy-Report-Only} without enforcement
+    \item \textbf{Inheritance Issues} - Child frames without proper CSP inheritance
+\end{enumerate}
+\end{tcolorbox}
+
+\textbf{Vulnerable Examples:}
+\begin{lstlisting}[language=bash]
+# VULNERABLE: Allows framing from any HTTPS domain
+Content-Security-Policy: frame-ancestors https:;
+
+# VULNERABLE: Wildcard allows all domains
+Content-Security-Policy: frame-ancestors *;
+
+# VULNERABLE: Missing frame-ancestors directive
+Content-Security-Policy: default-src 'self';
+\end{lstlisting}
+
+\hrule
+
+\section*{How to Identify Clickjacking Vulnerabilities}
+
+\subsection*{1- Manual Testing Methods}
+
+\begin{tcolorbox}[title=Basic Manual Test Template]
+I created an HTML file with the following code to test if a target page can be framed. The file name is \texttt{clickjacking-test.html}  just open it in a browser.
+\end{tcolorbox}
+
+\subsection*{Usage Instructions:}
+
+\begin{enumerate}
+    \item Save the code above as \texttt{clickjacking-test.html}
+    \item Edit the \texttt{src} attribute in the iframe to point to your target URL
+    \item Adjust the CSS positions to align the overlay with sensitive buttons
+    \item Open the file in a web browser while logged into the target application
+    \item Click the red overlay button to test if actions are triggered in the background frame
+\end{enumerate}
+
+\subsection*{2- Automated Tools \& Browser Extensions}
+
+\begin{tcolorbox}[title=Firefox Addon: Click-jacking by Daoud Youssef]
+This extension provides immediate visual feedback about clickjacking vulnerabilities:
+\begin{itemize}
+    \item \textbf{Functionality}: Adds a red border to webpages vulnerable to clickjacking
+    \item \textbf{Detection Method}: Identifies missing \texttt{X-Frame-Options} header
+    \item \textbf{Usage}: Simply browse to any webpage - visual indicators show vulnerability status
+    \item \textbf{Benefit}: Quick, real-time assessment during penetration testing
+\end{itemize}
+\end{tcolorbox}
+
+\textbf{How the Extension Works:}
+\begin{enumerate}
+    \item Install the extension from Firefox Add-ons store
+    \item Browse to target website
+    \item If page loads with \textbf{red border} = Vulnerable (missing X-Frame-Options)
+    \item If no red border = Protected (X-Frame-Options header present)
+\end{enumerate}
+
+\subsection*{3- Command-Line Identification Methods}
+
+\begin{lstlisting}[language=bash]
+# Basic header check
+curl -I https://example.com/sensitive-page
+
+# Check specifically for security headers
+curl -I https://example.com | grep -i "x-frame-options\|content-security-policy"
+
+# Comprehensive security header check
+curl -s -I https://example.com | grep -E "(X-Frame-Options|Content-Security-Policy|X-Content-Type-Options)"
+\end{lstlisting}
+
+\section*{False Positive Checks}
+
+\subsection*{Common False Positive Scenarios}
+
+\begin{tcolorbox}[title=False Positive Scenarios to Consider]
+\begin{enumerate}
+    \item \textbf{JavaScript Frame Busting}: Page lacks headers but has client-side frame protection
+    \item \textbf{Dynamic Content}: Pages that shouldn't be framed (error pages, static content)
+    \item \textbf{Intentional Framing}: Public pages designed to be embedded (widgets, help pages)
+    \item \textbf{Report-Only Mode}: CSP in report-only without enforcement
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Comprehensive Assessment Checklist}
+
+\begin{tcolorbox}[title=Clickjacking Assessment Checklist]
+\begin{itemize}
+    \item  Check for \texttt{X-Frame-Options} header presence and value
+    \item  Check for \texttt{Content-Security-Policy} with \texttt{frame-ancestors}
+    \item  Verify header consistency across all sensitive pages
+    \item  Test actual framing capability with proof-of-concept
+    \item  Verify if framing is intentional for public content
+    \item  Test across different user roles (public, authenticated, admin)
+    \item  Check for inheritance in subdomains and child frames
+\end{itemize}
+\end{tcolorbox}
+
+\subsection*{Burp Suite Integration}
+
+\begin{lstlisting}
+ Using Burp Scanner checks for clickjacking:
+ 1. Enable "Check for missing X-Frame-Options header" in scan configuration
+ 2. Use "Embedded content" checks in engagement tools
+
+\end{lstlisting}
+
+\section*{Burp Suite Clickbandit}
+
+\subsection*{What is Burp Clickbandit?}
+
+\begin{tcolorbox}[title=Burp Clickbandit Overview]
+Burp Clickbandit is a tool that helps test for clickjacking vulnerabilities by creating exploit proof-of-concepts directly from your browser.
+\end{tcolorbox}
+
+\textbf{Key Features:}
+\begin{itemize}
+    \item Creates clickjacking attack HTML files automatically
+    \item Works directly in your browser using JavaScript
+    \item Records user actions to build realistic exploits
+    \item Bypasses frame busters with sandboxing
+    \item Generates ready-to-use attack pages
+\end{itemize}
+
+\subsection*{Setup Steps}
+
+\begin{enumerate}
+    \item \textbf{Open Clickbandit} in Burp Suite:
+    \begin{itemize}
+        \item Go to \texttt{Burp Menu → Burp Clickbandit}
+    \end{itemize}
+    
+    \item \textbf{Copy the script}:
+    \begin{itemize}
+        \item Click \texttt{Copy Clickbandit to clipboard}
+    \end{itemize}
+    
+    \item \textbf{Visit target website} in your browser
+    
+    \item \textbf{Open Developer Console}:
+    \begin{itemize}
+        \item Press \texttt{F12} or right-click → \texttt{Inspect Element}
+        \item Go to \texttt{Console} tab
+    \end{itemize}
+    
+    \item \textbf{Paste and run} the Clickbandit script
+\end{enumerate}
+
+\subsection*{Running an Attack}
+
+\begin{tcolorbox}[title=Attack Workflow]
+Once Clickbandit banner appears at the top of your browser:
+\end{tcolorbox}
+
+\begin{enumerate}
+    \item Click \texttt{Start} to begin recording
+    
+    \item \textbf{Perform actions} on the website:
+    \begin{itemize}
+        \item Click buttons, links, forms
+        \item Mimic what a victim would do
+        \item All actions are recorded
+    \end{itemize}
+    
+    \item Click \texttt{Finish} when done
+    
+    \item \textbf{Optional settings}:
+    \begin{itemize}
+        \item \texttt{Disable click actions} - Prevents real clicks on target site
+        \item \texttt{Sandbox iframe} - Bypasses frame busters
+    \end{itemize}
+\end{enumerate}
+
+\subsection*{Reviewing and Saving}
+
+\begin{tcolorbox}[title=Review Tools]
+After completing the attack, use these features to test and save:
+\end{tcolorbox}
+
+\textbf{Review Commands:}
+\begin{itemize}
+    \item \texttt{Toggle transparency} - Show/hide original page
+    \item \texttt{Reset} - Restore attack to initial state
+    \item \texttt{+/- buttons} - Zoom in/out
+    \item \texttt{Arrow keys} - Reposition attack UI
+\end{itemize}
+
+\textbf{Save the exploit:}
+\begin{itemize}
+    \item Click \texttt{Save} to download HTML file
+    \item This file is your clickjacking proof-of-concept
+    \item Use it to demonstrate the vulnerability
+\end{itemize}
+
+\subsection*{Clickbandit Workflow Summary}
+
+\begin{lstlisting}
+1. Burp Menu -> Burp Clickbandit
+2. Copy script to clipboard
+3. Browse to target site
+4. Open Developer Console (F12)
+5. Paste script and press Enter
+6. Click "Start" in Clickbandit banner
+7. Perform actions on target site
+8. Click "Finish"
+9. Review and test the attack
+10. Click "Save" to download HTML PoC
+\end{lstlisting}
+
+
+
+\hrule
+
+\section*{Exploitation Techniques \& Notes}
+
+\subsection*{1- \underline{Basic Clickjacking Exploit}}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+<head>
+	<style>
+		#target_website {
+			position:relative;
+			width:128px;
+			height:128px;
+			opacity:0.00001;
+			z-index:2;
+			}
+		#decoy_website {
+			position:absolute;
+			width:300px;
+			height:400px;
+			z-index:1;
+			}
+	</style>
+</head>
+...
+<body>
+	<div id="decoy_website">
+	...decoy web content here...
+	</div>
+	<iframe id="target_website" src="https://vulnerable-website.com">
+	</iframe>
+</body>
+\end{lstlisting}
+
+\subsection*{2- \underline{Clickjacking with Prefilled Form Input}}
+
+\subsection*{The Vulnerability}
+
+\begin{tcolorbox}[title=Prefilled Form Clickjacking]
+Websites that allow form prepopulation via GET parameters are vulnerable to advanced clickjacking attacks where form values are preset before the user clicks.
+\end{tcolorbox}
+
+\textbf{How it works:}
+\begin{itemize}
+    \item Target website accepts form prepopulation via URL parameters
+    \item Example: \texttt{https://site.com/form?email=attacker@evil.com}
+    \item Attacker creates clickjacking page with prefilled target URL
+    \item Victim only needs to click "Submit" - all form data is already set
+\end{itemize}
+
+\subsection*{Attack Scenario}
+
+\begin{lstlisting}
+https://vulnerable-bank.com/transfer?to_account=ATTACKER_123&amount=1000
+\end{lstlisting}
+Victim only needs to click "Confirm Transfer"
+
+\subsection*{3- \underline{Exploitation: Frame Busting Scripts}}
+
+\subsection*{What are Frame Busting Scripts?}
+
+\begin{tcolorbox}[title=Frame Busting Definition]
+Client-side protection scripts that prevent a website from being loaded inside frames or iframes, typically implemented through browser extensions or JavaScript.
+\end{tcolorbox}
+
+\textbf{Common Frame Busting Behaviors:}
+\begin{itemize}
+    \item Check if current window is the main/top window
+    \item Make all frames visible to the user
+    \item Prevent clicking on invisible frames
+    \item Intercept and alert users about potential clickjacking attacks
+\end{itemize}
+
+\subsection*{Bypassing Frame Busting Scripts}
+
+\begin{tcolorbox}[title=Attackers' Workarounds]
+Frame busting scripts have limitations that attackers can exploit.
+\end{tcolorbox}
+
+\textbf{Vulnerabilities in Frame Busting:}
+\begin{itemize}
+    \item \textbf{Browser-specific}: Techniques vary across browsers
+    \item \textbf{JavaScript dependency}: Requires JavaScript enabled
+    \item \textbf{HTML flexibility}: Multiple ways to circumvent protection
+    \item \textbf{Security settings}: Browser settings may block the scripts
+\end{itemize}
+
+\subsection*{HTML5 Sandbox Bypass}
+
+\begin{tcolorbox}[title=Effective Bypass Technique]
+Using HTML5 iframe \texttt{sandbox} attribute to neutralize frame busters.
+\end{tcolorbox}
+
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+<iframe id="victim_website" 
+        src="https://victim-website.com" 
+        sandbox="allow-forms allow-scripts">
+</iframe>
+\end{lstlisting}
+
+\textbf{How this bypass works:}
+\begin{itemize}
+    \item \texttt{allow-forms}: Enables form submission within iframe
+    \item \texttt{allow-scripts}: Allows JavaScript execution
+    \item \textbf{Missing \texttt{allow-top-navigation}}: Prevents top-level navigation
+    \item Frame buster scripts run but cannot navigate the top window
+    \item Website remains trapped in the iframe
+\end{itemize}
+
+\textbf{\underline{Other Bypass Techniques:}}
+\begin{itemize}
+    \item \textbf{Double framing}: Nested iframes confuse reference checks
+    \item \textbf{onBeforeUnload event}: Intercept navigation attempts
+    \item \textbf{XSS filters}: Abuse browser XSS protection
+    \item \textbf{Referrer checks}: Spoof or manipulate referrer headers
+\end{itemize}
+
+\subsection*{4- \underline{Combining Clickjacking with Other Attacks}}
+
+\subsection*{Attack Overview}
+
+\begin{tcolorbox}[title=Clickjacking + DOM XSS = Critical Impact]
+While clickjacking alone can cause harm, its true danger emerges when combined with other vulnerabilities like Stored XSS to execute arbitrary JavaScript.
+\end{tcolorbox}
+
+\textbf{Attack Flow:}
+\begin{itemize}
+    \item Identify a DOM XSS vulnerability in the target website
+    \item Craft a malicious URL that triggers the XSS payload
+    \item Embed the URL in a transparent iframe
+    \item Overlay deceptive UI elements
+    \item Victim clicks, triggering both the action AND XSS execution
+\end{itemize}
+
+\subsection*{Attack Example}
+\begin{lstlisting}[basicstyle=\ttfamily\small, frame=single]
+<iframe src="https://vulnerable-website.com/feedback?
+name=<img src=1 onerror=alert(document.cookie)>&email=attacker@evil.com
+&subject=test&message=test#feedbackResult">
+</iframe>
+\end{lstlisting}
+
+\subsection*{How This Works}
+
+\begin{tcolorbox}[title=Attack Mechanics]
+\begin{itemize}
+    \item Victim visits attacker's malicious page
+    \item Transparent iframe loads the vulnerable feedback form
+    \item DOM XSS payload is automatically injected via URL parameters
+    \item Victim clicks deceptive button overlaid on the iframe
+    \item Click submits the form AND triggers the XSS payload
+    \item Attacker's JavaScript executes in the context of the target site
+\end{itemize}
+\end{tcolorbox}
+
+\vspace{0.5cm}
+
+\subsection*{5- \underline{Multistep Clickjacking}}
+
+\subsection*{What is Multistep Clickjacking?}
+
+\begin{tcolorbox}[title=Multiple Actions Required]
+When an attack requires several clicks to complete, like adding items to a cart and then checking out.
+\end{tcolorbox}
+
+\subsection*{Real-World Example: Online Shopping}
+
+\textbf{Attack Scenario:}
+\begin{itemize}
+    \item Victim visits malicious page
+    \item Transparent iframe loads shopping website
+    \item Attacker overlays multiple deceptive buttons
+    \item Victim clicks thinking they're playing a game
+    \item Actually adds items to cart and completes purchase
+\end{itemize}
+
+\subsection*{How It Works}
+
+\begin{enumerate}
+    \item \textbf{Step 1}: Add item to shopping cart
+    \item \textbf{Step 2}: Proceed to checkout
+    \item \textbf{Step 3}: Confirm payment
+    \item \textbf{Step 4}: Place order
+\end{enumerate}
+
+\subsection*{Technical Implementation}
+
+\begin{itemize}
+    \item Uses \textbf{multiple iframes} or page divisions
+    \item Each iframe handles one step of the process
+    \item Requires \textbf{precise positioning} of overlay elements
+    \item Must maintain user session across all steps
+\end{itemize}
+
+\newpage
+
+\section*{Clickjacking Testing Methodology}
+
+\subsection*{Phase 1: Reconnaissance \& Scope Definition}
+
+\begin{tcolorbox}[title=Step 1: Target Identification]
+\begin{enumerate}
+    \item Identify all sensitive functionalities:
+    \begin{itemize}
+        \item Login/authentication pages
+        \item Administrative interfaces
+        \item Financial transactions
+        \item Account management pages
+        \item Form submissions with sensitive actions
+    \end{itemize}
+    \item Map application structure and user roles
+    \item Note all endpoints that perform state-changing operations
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=Step 2: Header Analysis]
+\begin{enumerate}
+    \item Use automated scanning:
+    \begin{lstlisting}[language=bash]
+    # Bulk header checking
+    curl -I https://target.com/endpoint | 
+    grep -i "x-frame-options\|content-security-policy"
+    
+    \end{lstlisting}
+    \item Check for inconsistencies across pages
+    \item Verify both \texttt{X-Frame-Options} and \texttt{CSP frame-ancestors}
+    \item Note pages missing protection headers
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 2: Vulnerability Confirmation}
+
+\begin{tcolorbox}[title=Step 3: Basic Framing Test]
+\begin{enumerate}
+    \item Create basic clickjacking test file:
+    \begin{lstlisting}[language=HTML]
+    <iframe src="https://target.com/sensitive-page" 
+            style="opacity:0.5; width:500px; height:500px;">
+    </iframe>
+    \end{lstlisting}
+    \item Test if page loads in iframe
+    \item Check for visual indicators of frame busting
+    \item Verify if page functionality remains accessible
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=Step 4: Advanced Testing Methods]
+\begin{enumerate}
+    \item \textbf{Firefox Extension Check}:
+    \begin{itemize}
+        \item Install "Click-jacking by Daoud Youssef"
+        \item Browse to target pages
+        \item Note red borders indicating vulnerabilities
+    \end{itemize}
+    \item \textbf{Burp Clickbandit Assessment}:
+    \begin{itemize}
+        \item Follow Clickbandit workflow
+        \item Test multi-step actions
+        \item Generate PoC for complex scenarios
+    \end{itemize}
+    \item \textbf{Manual PoC Creation}:
+    \begin{itemize}
+        \item Create custom HTML files for specific functionalities
+        \item Test overlay positioning and user interaction
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 3: Exploitation Techniques}
+
+\begin{tcolorbox}[title=Step 5: Frame Buster Bypass Testing]
+\begin{enumerate}
+    \item Test HTML5 sandbox bypass:
+    \begin{lstlisting}[language=HTML]
+    <iframe src="https://target.com" 
+            sandbox="allow-forms allow-scripts">
+    </iframe>
+    \end{lstlisting}
+    \item Attempt double framing techniques
+    \item Check for JavaScript dependency in frame busting
+    \item Test with different browser security settings
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=Step 6: Advanced Attack Vectors]
+\begin{enumerate}
+    \item \textbf{Prefilled Form Testing}:
+    \begin{itemize}
+        \item Identify forms with GET parameter prepopulation
+        \item Craft URLs with malicious preset values
+        \item Test if forms submit with attacker-controlled data
+    \end{itemize}
+    \item \textbf{Multi-step Action Testing}:
+    \begin{itemize}
+        \item Map complex workflows (e.g., shopping cart → checkout)
+        \item Create multi-iframe attacks
+        \item Test session persistence across steps
+    \end{itemize}
+    \item \textbf{Combined Vulnerability Testing}:
+    \begin{itemize}
+        \item Identify DOM XSS vulnerabilities
+        \item Combine with clickjacking vectors
+        \item Test for privilege escalation scenarios
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+
+\subsection*{Testing Checklist Summary}
+
+\begin{tcolorbox}[title=Clickjacking Assessment Checklist]
+\begin{itemize}
+    \item \textbf{Reconnaissance}
+    \begin{itemize}
+        \item Map sensitive functionalities and endpoints
+    \end{itemize}
+    \item \textbf{Header Analysis}
+    \begin{itemize}
+        \item Check for \texttt{X-Frame-Options} header
+        \item Check for \texttt{CSP frame-ancestors} directive
+        \item Verify header consistency across pages
+    \end{itemize}
+    \item \textbf{Vulnerability Confirmation}
+    \begin{itemize}
+        \item Basic iframe loading test
+        \item Browser extension verification
+        \item Burp Clickbandit assessment
+    \end{itemize}
+    \item \textbf{Exploitation Testing}
+    \begin{itemize}
+        \item Frame buster bypass attempts
+        \item Prefilled form testing
+        \item Multi-step action testing
+        \item Combined vulnerability testing
+    \end{itemize}
+\end{itemize}
+\end{tcolorbox}
+
+\subsection*{Tools \& Commands Quick Reference}
+
+\begin{tcolorbox}[title=Essential Testing Tools]
+\begin{itemize}
+    \item \textbf{Header Analysis}: curl, browser dev tools
+    \item \textbf{Visual Indicators}: Firefox "Click-jacking" extension
+    \item \textbf{PoC Generation}: Burp Clickbandit
+    \item \textbf{Manual Testing}: Custom HTML files
+\end{itemize}
+\end{tcolorbox}
+
+\begin{lstlisting}[title=Key Commands, basicstyle=\ttfamily\small]
+# Header checking
+curl -I https://target.com | grep -i frame
+
+# Bulk testing multiple endpoints
+cat urls.txt | while read url; do
+    echo "Testing: $url"
+    curl -I "$url" | grep -i "x-frame-options\|content-security-policy"
+done
+
+# Quick manual test
+echo '<iframe src="URL" style="opacity:0.5;"></iframe>' > test.html
+\end{lstlisting}
+
+\newpage
+
+\section*{Remediation and Prevention Measures}
+
+\subsection*{Quick Fix: Add Security Headers}
+
+Add these headers to your web server configuration:
+
+\begin{tcolorbox}[title=For Apache (.htaccess)]
+\begin{lstlisting}
+# Block ALL framing (most secure)
+Header always set X-Frame-Options "DENY"
+Header always set Content-Security-Policy "frame-ancestors 'none'"
+
+# OR allow same-site only
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set Content-Security-Policy "frame-ancestors 'self'"
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=For Nginx (server config)]
+\begin{lstlisting}
+# Block ALL framing
+add_header X-Frame-Options "DENY" always;
+add_header Content-Security-Policy "frame-ancestors 'none'" always;
+
+# OR allow same-site only  
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Content-Security-Policy "frame-ancestors 'self'" always;
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection*{For Developers: Code Solutions}
+
+\begin{tcolorbox}[title=PHP]
+\begin{lstlisting}[language=PHP]
+<?php
+// Add to top of sensitive pages
+header('X-Frame-Options: DENY');
+header("Content-Security-Policy: frame-ancestors 'none'");
+?>
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=Node.js/Express]
+\begin{lstlisting}
+// For all routes
+app.use((req, res, next) => {
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
+    next();
+});
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[title=ASP.NET]
+\begin{lstlisting}
+// In Web.config
+<system.webServer>
+  <httpProtocol>
+    <customHeaders>
+      <add name="X-Frame-Options" value="DENY" />
+      <add name="Content-Security-Policy" value="frame-ancestors 'none'" />
+    </customHeaders>
+  </httpProtocol>
+</system.webServer>
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection*{Simple Testing}
+
+Check if your fix works:
+
+\begin{tcolorbox}[title=Quick Test Command]
+\begin{lstlisting}[language=bash]
+curl -I https://yoursite.com | grep -i "frame"
+\end{lstlisting}
+\end{tcolorbox}
+
+You should see:
+\begin{verbatim}
+X-Frame-Options: DENY
+Content-Security-Policy: frame-ancestors 'none'
+\end{verbatim}
+
+\subsection*{What to Protect}
+
+Add headers to these pages:
+\begin{itemize}
+    \item Login pages
+    \item Admin panels  
+    \item Payment pages
+    \item Account settings
+    \item Any page with sensitive actions
+\end{itemize}
+
+\subsection*{Remember}
+
+\begin{tcolorbox}[title=Key Points]
+\begin{itemize}
+    \item Use \texttt{DENY} or \texttt{SAMEORIGIN} for X-Frame-Options
+    \item Use \texttt{'none'} or \texttt{'self'} for CSP frame-ancestors
+    \item Test with browser tools or curl command
+    \item Apply to ALL sensitive pages
+    \item Both headers provide extra protection
+\end{itemize}
+\end{tcolorbox}
+
+
+
+\end{document}
