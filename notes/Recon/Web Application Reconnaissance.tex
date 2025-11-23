@@ -4,6 +4,7 @@
 \usepackage{booktabs}
 \usepackage{colortbl}
 \usepackage{geometry}
+\usepackage{listings}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows,positioning}
 
@@ -29,6 +30,15 @@
 \rowcolor{headerbg}
 \color{white}\textbf{Command} & \color{white}\textbf{Description} \\
 \midrule
+\rowcolor{row2}
+\textcolor{commandbg}{knockpy -d "zu.edu.eg" --recon --bruteforce --json} & 
+Discovers subdomains, ip and certs and saves to json file \\
+\rowcolor{row1}
+\lstinline|cat file.json || \lstinline|grep -oP '"domain":\s*"\K[^"]+'|
+ > subk.txt & Create a txt file with discovered subdomains\\
+\rowcolor{row2}
+\textcolor{commandbg}{subdominator -d target.com -o subd.txt} & 
+Discovers subdomains using passive sources and saves to file \\
 \rowcolor{row1}
 \textcolor{commandbg}{subfinder -d target.com > subf.txt} & 
 Discovers subdomains using passive sources and saves to file \\
@@ -36,7 +46,7 @@ Discovers subdomains using passive sources and saves to file \\
 \textcolor{commandbg}{assetfinder -subs-only target.com > ast.txt} & 
 Finds domains and subdomains related to target and saves to file \\
 \rowcolor{row1}
-\textcolor{commandbg}{cat subf.txt ast.txt | sort -u | tee subdomains.txt} & 
+\textcolor{commandbg}{cat subf.txt ast.txt subk.txt subd.txt | sort -u | tee subdomains.txt} & 
 Combines and deduplicates subdomain lists \\
 \rowcolor{row2}
 \textcolor{commandbg}{cat subdomains.txt | httpx | tee liveSubdomains.txt} & 

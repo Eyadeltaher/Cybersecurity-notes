@@ -11,7 +11,7 @@
 \renewcommand{\lstlistingname}
 
 \geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
-\title{general notes}
+\title{Directory Enumeration notes}
 \date{Friday, October 3, 2025}
 \author{Eyad Islam El-Taher}
 
@@ -56,26 +56,33 @@ cat subdomains.txt | httpx -title -wc -sc -cl -ct -location -web-server
 \end{itemize}
 
 
-\section*{Directory Enumeration}
+\section*{Gobuster Directory Enumeration}
 
 \begin{itemize}
 
-\item \textbf{\underline{Gobuster}}
-\begin{lstlisting}[frame=single]
 Basic scan with common options
-gobuster dir -u http://target.com/ -w wordlist.txt -o output.txt
+\begin{lstlisting}[frame=single]
+gobuster dir -u http://target.com/ -w common.txt -o output.txt
+\end{lstlisting}
 
 With extensions
+\begin{lstlisting}[frame=single]
 gobuster dir -u http://target.com/ -w wordlist.txt -x php,txt,html
+\end{lstlisting}
 
 Specific status codes
+\begin{lstlisting}[frame=single]
 gobuster dir -u http://target.com/ -w wordlist.txt -s 200,301,302,403
+\end{lstlisting}
 
 status-codes-blacklist
+\begin{lstlisting}[frame=single]
 gobuster dir -u http://target.com/ -w wordlist.txt -b 404,403
+\end{lstlisting}
 
 
 Set threads (faster but more noisy)
+\begin{lstlisting}[frame=single]
 gobuster dir -u http://target.com/ -w wordlist.txt -t 50
 \end{lstlisting}
 
@@ -92,6 +99,35 @@ gobuster dir -u http://target.com/
 --timeout 10s
 --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 \end{lstlisting}
+
+\item \textbf{\underline{Gobuster DNS command}}
+\begin{lstlisting}[frame=single]
+gobuster dns -q -r 8.8.8.8 -d example.com -w /Discovery/DNS/
+subdomains-top1million-5000.txt -t 4 --delay 1s -o results.txt
+\end{lstlisting}
+NOTE --> -r  : Use custom DNS server (format server.com or server.com:port)
+
+\item \textbf{\underline{Virtual Host Discovery:}}
+\begin{lstlisting}[frame=single]
+gobuster vhost -u https://example.com -t 50 
+-w /wordlists/Discovery/DNS/subdomains-top1million-5000.txt
+\end{lstlisting}
+The vhost command discovers Virtual host names on target web servers. Virtual hosting is a technique for hosting multiple domain names on a single server.\\
+
+Exposing hostnames on a server may reveal supplementary web content belonging to the target. Vhost checks if the subdomains exist by visiting the formed URL and cross-checking the IP address.\\
+
+To brute-force virtual hosts, use the same wordlists as for DNS brute-forcing subdomains.\\
+
+Similar to brute forcing subdomains eg. url = example.com, vhost looks for dev.example.com or beta.example.com etc. 
+
+\subsection*{Tips \& Best Practices}
+\begin{enumerate}
+	\item Start small, then scale up to larger wordlists
+	\item http:// and https:// versions of a URL
+	\item Scan both http:// and https:// versions of a URL
+	\item Use the -e flag to follow redirects if needed.
+	\item Continue to enumerate results to find as much information as possible. Run gobuster again with the results found and see what else appears. Keep digging to locate those hidden directories. 
+\end{enumerate}
 
 \section*{FFUF Directory Enumeration}
 \begin{itemize}
@@ -158,7 +194,6 @@ ffuf -u http://target.com/FUZZ -w wordlist.txt
 ffuf -w subdomains.txt -u https://target.com/ -H "Host: FUZZ" -mc 200
 \end{lstlisting}
 
-\newpage
 \item \textbf{\underline{Advanced Scanning Techniques}}
 
 \item \textbf{Recursive Scanning:}
