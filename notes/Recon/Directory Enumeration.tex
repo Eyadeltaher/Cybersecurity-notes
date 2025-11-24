@@ -421,4 +421,41 @@ cat output.txt | unfurl --unique keys
 cat output.txt | grep auto= | head -n 1
 \end{lstlisting}
 
+
+\section{Favicon Hashing for OSINT and Reconnaissance}
+
+\subsection{Overview}
+A favicon (favorite icon) is a small graphic displayed in browser tabs and bookmarks. This technique leverages the fact that organizations often reuse the same favicon across multiple assets including subdomains, internal applications, staging servers, phishing kits, and command-and-control (C2) panels. By generating MurmurHash3 fingerprints of favicons, security professionals can passively discover related infrastructure across various search engines.
+
+\subsection{Technical Implementation}
+The favicon hash can be generated using my script with the following command:
+\begin{verbatim}
+./icoHash.sh https://website/favicon.ico
+\end{verbatim}
+
+Or as a one-liner:
+\begin{verbatim}
+python3 -c "import mmh3,requests,codecs,sys; 
+print(mmh3.hash(codecs.encode(requests.get(sys.argv[1]).content,'base64')))" 
+"https://example.com/favicon.ico"
+\end{verbatim}
+
+\subsection{Search Engine Queries}
+The generated hash can be used across multiple OSINT platforms:
+
+\begin{itemize}
+    \item \textbf{Shodan:} \texttt{http.favicon.hash:1848946384}
+    \item \textbf{FOFA:} \texttt{icon\_hash="1848946384"}
+    \item \textbf{Censys:} Similar hash-based filtering
+    \item \textbf{ZoomEye:} Favicon hash search capabilities
+\end{itemize}
+
+\subsection{Key Use Cases}
+\begin{itemize}
+    \item \textbf{CDN Bypass:} Discover origin IPs behind content delivery networks
+    \item \textbf{Asset Discovery:} Identify forgotten subdomains and internal portals
+    \item \textbf{Threat Hunting:} Track phishing campaigns and attacker infrastructure
+    \item \textbf{Attack Surface Mapping:} Locate exposed admin panels and development environments
+\end{itemize}
+
 \end{document}
