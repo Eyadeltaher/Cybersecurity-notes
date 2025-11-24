@@ -1,0 +1,88 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\lstset{numbers=none, basicstyle=\ttfamily}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{pifont}
+\usepackage{amssymb}
+\usepackage{titlesec}
+
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{Reconnaissance Methodology Checklist}
+\author{Eyad Islam El-Taher}
+
+% =============== Styles =====================
+\definecolor{primary}{RGB}{36,37,64}
+\definecolor{accent}{RGB}{0,140,255}
+
+\titleformat{\section}{\Large\bfseries\color{primary}}{}{0em}{}
+\titleformat{\subsection}{\bfseries\color{accent}}{}{0em}{}
+
+\newcommand{\ccheckbox}{$\square$ \;}
+\newcommand{\cdone}{$\blacksquare$ \;}
+
+% =============== Document ====================
+\begin{document}
+\maketitle
+% ============ Phase 1: Scope Understanding ============
+\section{Scope Clarification}
+\begin{itemize}[leftmargin=1.2cm]
+    \item \ccheckbox Identify target domain(s)
+    \item \ccheckbox Check allowed TLD and subdomains
+    \item \ccheckbox Determine in-scope IP ranges
+    \item \ccheckbox Read program rules and restrictions
+    \item \ccheckbox Note rate limiting and automation policies
+\end{itemize}
+
+% ============ Phase 2: Passive Recon ============
+\section{Passive Reconnaissance}
+\subsection{Subdomain Enumeration}
+\begin{itemize}[leftmargin=1.2cm]
+	\item \ccheckbox Subdomains Enum $\Rightarrow$ DNS \& VHOST
+    \item \ccheckbox Certificate Transparency (crt.sh)
+    \item \ccheckbox DNS archives (SecurityTrails, DNSDumpster)
+    \item \ccheckbox favicon.ico hash search (Shodan)
+    \item \ccheckbox Search engine dorks (Google dorks)
+    \item \ccheckbox GitHub/Leaks search (GitHub dorks)
+    \item \ccheckbox Wayback \& web Archive
+    
+\end{itemize}
+\textbf{Note:} Best OSINT + dorks reference: \url{https://www.lopseg.com.br/}
+
+
+\subsection{Public Footprinting}
+\begin{itemize}[leftmargin=1.2cm]
+    \item \ccheckbox WHOIS info review
+    \item \ccheckbox ASN mapping
+    \item \ccheckbox Technology fingerprinting \& Identify outdated technologies
+	\item \ccheckbox Telegram data bots  
+    \item \ccheckbox Linked systems discovery
+\end{itemize}
+
+% ============ Phase 3: Active Recon ============
+\section{Active Reconnaissance}
+\subsection{Service Discovery}
+\begin{itemize}[leftmargin=1.2cm]
+    \item \ccheckbox Port scanning
+    \item \ccheckbox Banner grabbing
+    \item \ccheckbox WAF detection
+    \item \ccheckbox Bbot Tool
+\end{itemize}
+
+\subsection{Web Asset Mapping}
+\begin{itemize}[leftmargin=1.2cm]
+	\item \ccheckbox sitemap.xml \& robots.txt
+    \item \ccheckbox Crawl site structure
+    \item \ccheckbox Hidden directories
+    \item \ccheckbox Parameter discovery
+    \item \ccheckbox Identify exposed development endpoints
+\end{itemize}
+
+
+\end{document}

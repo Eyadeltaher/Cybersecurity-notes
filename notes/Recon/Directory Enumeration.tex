@@ -383,4 +383,42 @@ IIS
 \item \textbf{Avoid Overkill}: Don't start with huge wordlists - they're slow and noisy
 \end{itemize}
 
+\section*{Reconnaissance on archive URLs}
+
+\subsection*{What is Wayback Machine?}
+Wayback machine is a digital archive of world wide web that allows users to access and view historical snapshots of web pages, enabling them to see how a website looked and functioned at various points in time. This is achieved by periodically crawling and storing copies of web pages.
+
+
+\subsection*{Tools used}
+\begin{itemize}
+\item \textbf{waybackurls}: A golang based tool that can be used for crawling domains archived by wayback machine.
+\item \textbf{unfurl}: used to perform filtration on endpoints extracted from wayback archieve using waybackurls tool
+\end{itemize}
+
+\textbf{\underline{Using waybackurls to fetch URLs from Wayback Machine:}}
+\begin{lstlisting}[frame=single]
+waybackurls example.com > output.txt
+\end{lstlisting}
+
+\vspace{0.5cm}
+\textbf{\underline{Filtering and extracting information from URLs using unfurl:}}\\
+
+\textbf{Enumerating subdomains}
+\begin{lstlisting}[frame=single]
+cat output.txt | unfurl --unique domains
+\end{lstlisting}
+
+
+\textbf{Searching for tokens}
+\begin{lstlisting}[frame=single]
+cat output.txt | unfurl --unique values | grep -E '^ey.*\..*\..*'
+\end{lstlisting}
+
+
+\textbf{Finding parameters}
+\begin{lstlisting}[frame=single]
+cat output.txt | unfurl --unique keys
+cat output.txt | grep auto= | head -n 1
+\end{lstlisting}
+
 \end{document}
