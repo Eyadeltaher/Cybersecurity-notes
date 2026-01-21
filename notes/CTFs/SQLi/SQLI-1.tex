@@ -1,0 +1,201 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    {\Huge\bfseries SQLi-1 \par}
+    \vspace{1cm}
+    {\large \textbf{Author:} Eyad Islam El-Taher \par}
+    \vspace{1cm}
+    {\large \textbf{Date:} \today \par}
+    \vspace{2cm}
+    \vfill
+\end{titlepage}
+
+
+
+\section*{How the Researcher Exploited the Vulnerability}
+
+This section explains step by step how the researcher exploited the SQL injection vulnerability in the Formidable Pro WordPress plugin.
+
+\subsection*{1. Unauthenticated AJAX Endpoint}
+
+The website exposed the following WordPress AJAX endpoint:
+
+\begin{verbatim}
+/wp-admin/admin-ajax.php
+\end{verbatim}
+
+Normally, sensitive AJAX actions require authentication. However, the vulnerable action did not:
+
+\begin{verbatim}
+action=frm_forms_preview
+\end{verbatim}
+
+This endpoint could be accessed by anyone, even without logging in.
+
+\subsection*{2. User-Controlled HTML and Shortcodes}
+
+The endpoint accepted parameters such as:
+
+\begin{itemize}
+  \item \texttt{after\_html}
+  \item \texttt{before\_html}
+\end{itemize}
+
+These parameters were rendered directly into the page output and allowed the use of WordPress shortcodes.  
+Example:
+
+\begin{verbatim}
+after_html=Hello World
+\end{verbatim}
+
+Critically, the endpoint also allowed plugin-defined shortcodes.
+
+\subsection*{3. Vulnerable Shortcode: \texttt{[display-frm-data]}}
+
+The Formidable Pro plugin provides the shortcode:
+
+\begin{verbatim}
+[display-frm-data]
+\end{verbatim}
+
+This shortcode is used to display form submission data and accepts parameters such as:
+
+\begin{itemize}
+  \item \texttt{id} – Form ID
+  \item \texttt{order\_by} – SQL column(s)
+  \item \texttt{order} – Sorting direction (\texttt{ASC} or \texttt{DESC})
+\end{itemize}
+
+\textbf{Vulnerability:}  
+These parameters were inserted directly into an SQL query without sufficient sanitization.
+
+\subsection*{4. SQL Injection via the \texttt{order} Parameter}
+
+The researcher injected arbitrary SQL through the \texttt{order} parameter.
+
+Example request:
+
+\begin{verbatim}
+action=frm_forms_preview&
+after_html=XXX[display-frm-data id=835 order_by=id limit=1 order=zzz]YYY
+\end{verbatim}
+
+This caused SQL errors on the backend, confirming the presence of an SQL injection vulnerability.
+
+\subsection*{5. Blind SQL Injection Using ORDER BY}
+
+The injection was a \textbf{blind SQL injection}:
+
+\begin{itemize}
+  \item Query results were not directly visible
+  \item The attacker could control row ordering
+  \item This allowed extraction of data one bit at a time
+\end{itemize}
+
+The injection occurred inside the \texttt{ORDER BY} clause of the SQL query.
+
+\subsection*{6. Bypassing Query Manipulation}
+
+Formidable Pro internally modified SQL queries, especially handling commas (\texttt{,}), which normally breaks injected queries.
+
+To bypass this, the researcher:
+
+\begin{itemize}
+  \item Used \texttt{sqlmap}
+  \item Applied a custom \texttt{--eval} expression
+  \item Used the \texttt{commalesslimit} tamper script
+\end{itemize}
+
+This neutralized the plugin’s query rewriting logic and allowed valid injected SQL queries to execute.
+
+\subsection*{7. Database Extraction}
+
+Using the refined \texttt{sqlmap} configuration, the researcher successfully:
+
+\begin{itemize}
+  \item Identified the DBMS (MySQL)
+  \item Enumerated database tables
+  \item Extracted sensitive information, including:
+    \begin{itemize}
+      \item Administrator usernames
+      \item Password hashes
+      \item Personal data from form submissions
+      \item Webroot path
+    \end{itemize}
+\end{itemize}
+
+All data was retrieved via blind SQL injection.
+
+\subsection*{8. Privilege Escalation via iThemes Sync (Optional)}
+
+The researcher observed that another plugin, \texttt{iThemes Sync}, stored:
+
+\begin{itemize}
+  \item User ID
+  \item Authentication key
+\end{itemize}
+
+These values were stored in plaintext in the WordPress database.
+
+\subsubsection*{Why This Matters}
+
+The iThemes Sync plugin authenticates requests using the following logic:
+
+\[
+\text{hash} = \text{SHA256}(\text{user\_id} \, || \, \text{action} \, || \, \text{args} \, || \, \text{key} \, || \, \text{salt})
+\]
+
+If an attacker obtains the \texttt{user\_id} and \texttt{key}, they can:
+
+\begin{itemize}
+  \item Generate valid authentication hashes
+  \item Send authenticated administrative requests
+  \item Perform actions such as:
+    \begin{itemize}
+      \item Adding new administrator users
+      \item Installing or activating plugins
+      \item Achieving remote code execution
+    \end{itemize}
+\end{itemize}
+
+\subsection*{9. Attack Chain Summary}
+
+\begin{verbatim}
+Unauthenticated AJAX endpoint
+        ↓
+Shortcode injection
+        ↓
+SQL Injection (ORDER BY)
+        ↓
+Blind SQL data exfiltration
+        ↓
+Read WordPress database
+        ↓
+(Optional) Admin access via iThemes Sync
+        ↓
+Potential Remote Code Execution
+\end{verbatim}
+
+
+
+\end{document}
