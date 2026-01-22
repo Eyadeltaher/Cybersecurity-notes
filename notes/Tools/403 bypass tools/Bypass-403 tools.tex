@@ -1,0 +1,87 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    keywordstyle=\color{blue}
+}
+
+\title{Analysis of HTTP 403 Bypass Tools}
+\author{Eyad El-Taher}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Tool 1: Bypass-403}
+\textbf{GitHub:} \url{https://github.com/iamj0ker/bypass-403}
+
+\subsection{Description}
+A lightweight shell script designed for security researchers to bypass 403 Forbidden restrictions. It allows users to compare server responses under various conditions to identify misconfigurations.
+
+\subsection{Installation}
+To set up the environment and dependencies:
+\begin{lstlisting}[language=bash]
+git clone https://github.com/iamj0ker/bypass-403
+cd bypass-403
+chmod +x bypass-403.sh
+sudo apt install figlet jq
+\end{lstlisting}
+
+\subsection{Usage}
+\begin{lstlisting}[language=bash]
+./bypass-403.sh https://example.com admin
+./bypass-403.sh [website] [path]
+\end{lstlisting}
+
+\subsection{Features}
+\begin{itemize}
+    \item Utilizes 24 known bypass techniques.
+    \item Leverages \texttt{curl} for request automation.
+    \item \textbf{Contributors:} remonsec, manpreetMayankPandey01, saadibabar.
+\end{itemize}
+
+\newpage
+
+\section{Tool 2: 4-ZERO-3}
+\textbf{GitHub:} \url{https://github.com/Dheerajmadhukar/4-ZERO-3}
+
+\subsection{Introduction}
+4-ZERO-3 is a comprehensive script designed to bypass 403/401 unauthorized errors. It incorporates a wide array of techniques and provides the exact \texttt{cURL} payload when a successful bypass is detected.
+
+\begin{quote}
+    \textbf{Note on False Positives:} If multiple [200 OK] responses are received, verify the \texttt{Content-Length}. Identical lengths often indicate a false positive caused by redirects (301/302).
+\end{quote}
+
+\subsection{Operational Modes}
+The tool supports specific flags for targeted testing:
+
+\begin{itemize}
+    \item \textbf{Protocol:} \texttt{--protocol} (Protocol-based payloads)
+    \item \textbf{Port:} \texttt{--port} (Port-based payloads)
+    \item \textbf{HTTP Methods:} \texttt{--HTTPmethod} (Verb tampering)
+    \item \textbf{Encoding:} \texttt{--encode} (URL encoded bypasses)
+    \item \textbf{SQLi:} \texttt{--SQLi} (Mod\_Security \& libinjection bypasses)
+    \item \textbf{Headers:} \texttt{--header} (Header-based manipulation)
+    \item \textbf{Complete scan:} \texttt{--exploit}
+\end{itemize}
+
+\subsection{Usage Examples}
+Execute a complete scan against an endpoint:
+\begin{lstlisting}[language=bash]
+bash 403-bypass.sh -u https://target.com/secret --exploit
+\end{lstlisting}
+
+\subsection{Prerequisites}
+\begin{itemize}
+    \item \texttt{apt install curl} (Debian-based systems)
+\end{itemize}
+
+\end{document}

@@ -8,7 +8,13 @@
 \addtolength{\topmargin}{-.5in}
 \addtolength{\textheight}{1in}
 
+\title{HTTP 403, 401 Bypass Techniques}
+\author{Eyad El-Taher}
+\date{\today}
+
 \begin{document}
+
+\maketitle
 
 \section*{How I Bypassed 403 Forbidden \& Accessed Restricted Pages}
 
@@ -85,6 +91,8 @@ Adding special characters to the URL path can trick the server into interpreting
 \begin{itemize}
     \item \textbf{Dot Segments:} Use \texttt{/admin/./} or \texttt{/admin\%2e/} to represent the current directory.
     \item \textbf{Trailing Slashes:} Appending a slash (e.g., \texttt{/admin/}) can bypass rules that look for an exact string match without the slash.
+    
+   \item \textbf{String terminators} use (\%00, 0x00, //, ;, \%, !, ?, [] etc.) — adding those to the end of the path and inside the path
     \item \textbf{Encoding:} Use encoded representations like \texttt{\%20} (space) to alter the signature of the path.
 \end{itemize}
 \textit{Note: Always test payloads on isolated systems to avoid unintended consequences.}
@@ -250,19 +258,114 @@ GET /reach%2fsip.svc HTTP/1.0
 \end{quote}
 
 
-\subsection*{Real-World Success Story -1}
-By employing URL fuzzing techniques on a restricted target, I successfully discovered a hidden \textbf{Swagger documentation} endpoint. This discovery allowed for further investigation, eventually leading to the identification of a \textbf{critical SQL injection} vulnerability. This case highlights the power of persistence and creative path manipulation in bypassing 403 restrictions.
+\section*{Vulnerability Report: 403 Forbidden Bypass (DoD VDP)}
+
+\subsection*{Vulnerability Summary}
+\begin{itemize}
+    \item \textbf{Type:} 403 Forbidden Bypass
+    \item \textbf{Target:} \texttt{www.[redacted].mil}
+    \item \textbf{Severity:} Medium (Assessed by DoD)
+    \item \textbf{Status:} Resolved
+    \item \textbf{Reported via:} DoD Vulnerability Disclosure Program (VDP)
+\end{itemize}
+
+\subsection*{Vulnerability Description}
+A vulnerability was identified where certain restricted pages returning a \texttt{403 Forbidden} status could be accessed by manipulating the HTTP request structure. The access control mechanism failed to properly validate HTTP methods, allowing unauthorized access when the following conditions were met:
+\begin{enumerate}
+    \item Changing the HTTP method from \texttt{GET} to \texttt{POST}.
+    \item Appending the HTTP header: \texttt{Content-Length: 0}.
+\end{enumerate}
+
+
+
+\subsection*{Steps to Reproduce}
+\begin{enumerate}
+    \item Attempt to access a restricted page via a standard browser or \texttt{GET} request $\rightarrow$ \textbf{403 Forbidden}.
+    \item Intercept the request and modify the method to \texttt{POST}.
+    \item Add the header \texttt{Content-Length: 0}.
+    \item Send the request $\rightarrow$ The server responds with the protected content.
+\end{enumerate}
+
+\subsection*{Proof of Concept (PoC)}
+
+\noindent \textbf{Denied Request:}
+\begin{verbatim}
+curl -X GET https://www.[redacted].mil/[path]
+\end{verbatim}
+
+\noindent \textbf{Successful Bypass:}
+\begin{verbatim}
+curl -H "Content-Length: 0" -X POST https://www.[redacted].mil/[path]
+\end{verbatim}
+
+
 
 \begin{quote}
-    \textbf{Summary:} A 403 error is often just the beginning of a deeper investigation. By combining method switching, header manipulation, and automated fuzzing, you can often find the "hole" in the server's access control logic.
+    \textbf{Technique Insight:} This bypass exploits misconfigured security filters that only apply restrictions to \texttt{GET} requests or fail to authorize \texttt{POST} requests that do not carry a data payload (indicated by \texttt{Content-Length: 0}).
 \end{quote}
 
 
-\subsection*{Real-World Impact -2}
-Bypassing these restrictions is a high-impact finding. In one recent case, identifying a 403 bypass on an admin panel resulted in a \textbf{\$700 Bug Bounty} reward via HackerOne, demonstrating that simple configuration errors can lead to major security risks.
+\section*{Vulnerability Report: 403 Bypass via Trusted Proxy Header}
+
+\subsection*{Vulnerability Summary}
+\begin{itemize}
+    \item \textbf{Type:} Access control bypass via trusted proxy header
+    \item \textbf{Technique:} Header spoofing (\texttt{X-Forwarded-For})
+    \item \textbf{Affected Platform:} Yelp Business Owner App
+    \item \textbf{Severity:} Medium (CVSS $\sim$6.1)
+\end{itemize}
+
+\subsection*{Vulnerability Description}
+The web application incorrectly trusted the client-supplied \texttt{X-Forwarded-For} HTTP header. By supplying a loopback address (\texttt{127.0.0.1}), the backend treated the request as originating from an internal service.
+
+
+
+\noindent \textbf{Accessed Endpoints:}
+\begin{itemize}
+    \item Health and system status endpoints
+    \item Swagger API documentation
+    \item Business Owner App backend APIs
+\end{itemize}
+
+\subsection*{Root Cause}
+The backend logic relied solely on the \texttt{X-Forwarded-For} header to differentiate between internal and external traffic. Because this header was not sanitized or stripped at the load balancer layer, external attackers could spoof an internal identity.
+
+\subsection*{Proof of Concept (PoC)}
+
+\subsubsection*{PoC 1 -- Internal Status Endpoint}
+A standard request to the \texttt{/status} endpoint is denied by the server:
+\begin{verbatim}
+curl -k https://biz-app.yelp.com/status
+-- Response: {"error":{"id":"PredicateMismatch"}}
+\end{verbatim}
+
+\noindent Adding the spoofed header grants full access to system metadata:
+\begin{verbatim}
+curl -k https://biz-app.yelp.com/status -H "X-Forwarded-For: 127.0.0.1"
+\end{verbatim}
+
+\subsubsection*{PoC 2 -- Swagger API Documentation}
+The Swagger specification, normally restricted, is returned when the internal IP is spoofed:
+\begin{verbatim}
+curl -k https://biz-app.yelp.com/swagger.json -H "X-Forwarded-For: 127.0.0.1"
+\end{verbatim}
+
+
+
+\subsection*{Evidence of Internal Trust}
+The backend's response headers explicitly confirmed that the spoofed IP was accepted as internal:
+\begin{itemize}
+    \item \texttt{x-is-internal-ip-address: true}
+    \item \texttt{x-routing-service: routing-main--useast1}
+    \item \texttt{x-proxied: 10-65-64-83-useast1aprod}
+\end{itemize}
+
+\subsection*{Impact}
+This vulnerability represents a significant trust boundary violation. Attackers could enumerate internal-only APIs, view sensitive service metadata, and potentially interact with administrative backend functionality.
 
 \begin{quote}
-    \textbf{Conclusion:} 403 Forbidden is a challenge, not a wall. By systematically testing methods, headers, and path variations, you can identify the weak points in an application's access control layer.
+    \textbf{Remediation:} Edge proxies and load balancers should be configured to strip or overwrite \texttt{X-Forwarded-For} headers coming from untrusted external sources.
 \end{quote}
+
 
 \end{document}
