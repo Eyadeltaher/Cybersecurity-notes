@@ -1,0 +1,264 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}{}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{Authentication Vulnerabilities Testing Checklist \& Methodology}
+\author{Eyad Islam El-Taher}
+
+% Custom colors for checklists
+\definecolor{checkgreen}{RGB}{0, 128, 0}
+\definecolor{checkyellow}{RGB}{255, 193, 7}
+\definecolor{checkred}{RGB}{220, 53, 69}
+\definecolor{checkblue}{RGB}{0, 123, 255}
+\definecolor{checkgray}{RGB}{108, 117, 125}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document provides a comprehensive checklist and methodology for testing authentication vulnerabilities. It serves as a practical guide for security professionals, penetration testers, and developers to systematically identify and remediate authentication-related security flaws.
+\end{abstract}
+
+\section*{Testing Methodology Overview}
+\subsection*{Phase 1: Reconnaissance}
+\begin{tcolorbox}[colback=checkblue!5!white,colframe=checkblue!75!black,title=Information Gathering]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Identify authentication endpoints}
+    \begin{itemize}
+        \item Login pages (\texttt{/login}, \texttt{/signin})
+        \item Registration pages (\texttt{/register}, \texttt{/signup})
+        \item Password reset (\texttt{/forgot-password}, \texttt{/reset-password})
+        \item Password change (\texttt{/change-password})
+        \item Multi-factor authentication endpoints
+    \end{itemize}
+    
+    \item \textbf{Analyze authentication mechanisms}
+    \begin{itemize}
+        \item Form-based authentication
+        \item Basic authentication
+        \item Token-based authentication (JWT, OAuth)
+        \item Multi-factor authentication
+    \end{itemize}
+    
+    \item \textbf{Identify user input parameters}
+    \begin{itemize}
+        \item Username/email parameters
+        \item Password parameters
+        \item Session tokens
+        \item CSRF tokens
+        \item Verification codes
+    \end{itemize}
+    
+    \item \textbf{Gather user information}
+    \begin{itemize}
+        \item Public profiles for username enumeration
+        \item Error messages revealing information
+        \item Email addresses in HTTP responses
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 2: Username Enumeration Testing}
+\begin{tcolorbox}[colback=checkyellow!5!white,colframe=checkyellow!75!black,title=Username Enumeration Checklist]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Error message analysis}
+    \begin{itemize}
+        \item Submit invalid username + invalid password
+        \item Submit valid username + invalid password
+        \item Compare error messages for differences
+        \item Check HTTP status codes (should be identical)
+    \end{itemize}
+    
+    \item \textbf{Response time analysis}
+    \begin{itemize}
+        \item Test with invalid usernames (measure response time)
+        \item Test with valid usernames (measure response time)
+        \item Use long passwords to amplify timing differences
+        \item Use Burp Intruder \texttt{Response received} \& \texttt{Response completed}
+    \end{itemize}
+    
+    \item \textbf{Registration form testing}
+    \begin{itemize}
+        \item Test if "username already exists" message appears
+        \item Check email registration for enumeration
+        \item Test account recovery for user existence disclosure
+    \end{itemize}
+    
+    \item \textbf{Public information sources}
+    \begin{itemize}
+        \item Check user profiles for usernames
+        \item Search for email addresses in source code
+        \item Check API responses for user information
+        \item Review comments in HTML/JavaScript
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 3: Password Brute-Force Testing}
+\begin{tcolorbox}[colback=checkred!5!white,colframe=checkred!75!black,title=Brute-Force Testing Checklist]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Basic brute-force testing}
+    \begin{itemize}
+        \item Test with common password lists
+        \item Test default credentials (\texttt{admin:admin}, \texttt{root:root})
+        \item Test password patterns (season+year, companyname+123)
+        \item Test password variations (\texttt{Password1!}, \texttt{Password2!})
+    \end{itemize}
+    
+    \item \textbf{Protection mechanism testing}
+    \begin{itemize}
+        \item Test account lockout mechanisms
+        \begin{itemize}
+            \item Number of attempts before lockout
+            \item Lockout duration
+            \item Automatic vs manual unlock
+        \end{itemize}
+        \item Test IP-based rate limiting
+        \begin{itemize}
+            \item Attempts per time window
+            \item Block duration
+            \item CAPTCHA implementation
+        \end{itemize}
+    \end{itemize}
+    
+    \item \textbf{Protection bypass testing}
+    \begin{itemize}
+        \item Test if successful login resets counter
+        \item Test credential interspersing attack
+        \item Test X-Forwarded-For header for IP spoofing
+        \item Test array parameter attacks (\texttt{password[]=pass1\&password[]=pass2})
+        \item Test race condition attacks
+    \end{itemize}
+    
+    \item \textbf{Advanced techniques}
+    \begin{itemize}
+        \item Use Burp Intruder with macros for multi-step attacks
+        \item Use Turbo Intruder for high-speed attacks
+        \item Test with pitchfork attacks for multi-parameter brute-force
+        \item Configure resource pools for sequential execution
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 4: Multi-Factor Authentication Testing}
+\begin{tcolorbox}[colback=checkgreen!5!white,colframe=checkgreen!75!black,title=2FA/MFA Testing Checklist]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{2FA bypass testing}
+    \begin{itemize}
+        \item Test if 2FA can be skipped entirely
+        \item Access protected pages after first factor only
+        \item Check session state after first authentication
+        \item Test if 2FA verification is enforced on all endpoints
+    \end{itemize}
+    
+    \item \textbf{2FA code testing}
+    \begin{itemize}
+        \item Test default codes (\texttt{000000}, \texttt{123456})
+        \item Test null/empty codes
+        \item Test code reuse (previously used codes)
+        \item Test cross-account code reuse
+        \item Test rate limiting on 2FA attempts
+    \end{itemize}
+    
+    \item \textbf{2FA logic flaws}
+    \begin{itemize}
+        \item Test cookie manipulation between steps
+        \item Test if user can be changed between 1st and 2nd factor
+        \item Test response manipulation (\texttt{false} → \texttt{true})
+        \item Test if 2FA tokens are validated on submission
+    \end{itemize}
+    
+    \item \textbf{Integration testing}
+    \begin{itemize}
+        \item Test if password reset bypasses 2FA
+        \item Test if OAuth login bypasses 2FA
+        \item Test if 2FA enrollment requires verification
+        \item Test session persistence after 2FA enablement
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 5: Additional Authentication Functionality}
+\begin{tcolorbox}[colback=checkgray!5!white,colframe=checkgray!75!black,title=Supplementary Features Checklist]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Password reset testing}
+    \begin{itemize}
+        \item Test token predictability
+        \item Test token validation on form submission
+        \item Test token expiration
+        \item Test password reset poisoning via headers
+        \item Test if username can be changed in reset form
+        \item Test rate limiting on reset requests
+    \end{itemize}
+    
+    \item \textbf{Password change testing}
+    \begin{itemize}
+        \item Test if username in hidden field can be modified
+        \item Test error message differences for password enumeration
+        \item Test if current password is properly verified
+        \item Test if old sessions are invalidated
+    \end{itemize}
+    
+    \item \textbf{"Remember me" functionality}
+    \begin{itemize}
+        \item Analyze remember me token structure
+        \item Test token predictability
+        \item Test token brute-forceability
+        \item Test if token contains password/hash
+        \item Test cookie security flags
+    \end{itemize}
+    
+    \item \textbf{Session management}
+    \begin{itemize}
+        \item Test session fixation
+        \item Test concurrent session handling
+        \item Test session timeout
+        \item Test logout functionality
+        \item Test session invalidation on password change
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\section*{Wordlists \& Resources}
+\begin{itemize}
+    \item \textbf{Username lists:} 
+    \begin{itemize}
+        \item SecLists/Usernames
+        \item Common admin usernames
+        \item Company-specific patterns
+    \end{itemize}
+    
+    \item \textbf{Password lists:}
+    \begin{itemize}
+        \item rockyou.txt
+        \item SecLists/Passwords
+        \item CrackStation wordlist
+        \item Custom generated lists
+    \end{itemize}
+    
+    \item \textbf{Default credentials:}
+    \begin{itemize}
+        \item Default vendor credentials
+        \item Common admin:admin combinations
+        \item Default device credentials
+    \end{itemize}
+\end{itemize}
+
+\end{document}
