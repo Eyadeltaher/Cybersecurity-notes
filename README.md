@@ -12,7 +12,8 @@ Designed for **learning, reference, CTF practice, and practical penetration test
 
 The repository is organized by vulnerability category, tooling, and resource type:
 
-- [**Access Control**](notes/Access%20control)  – Authorization flaws, IDOR, privilege escalation  
+- [**Access Control**](notes/Access%20control)  – Authorization flaws, IDOR, privilege escalation
+- [**Authentication**](notes/Authentication)  – Authentication flaws, notes, methodology
 - [**Clickjacking**](notes/clickjacking)  – UI redressing attacks & testing examples  
 - [**CORS**](notes/CORS)  – CORS misconfigurations & exploitation  
 - [**CSRF**](notes/CSRF)  – Cross-Site Request Forgery notes & methodology  
