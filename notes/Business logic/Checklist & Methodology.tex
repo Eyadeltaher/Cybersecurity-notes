@@ -1,0 +1,242 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}{}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{Business Logic Vulnerabilities Testing Checklist \& Methodology}
+\author{Eyad Islam El-Taher}
+
+% Custom colors for checklists
+\definecolor{checkgreen}{RGB}{0, 128, 0}
+\definecolor{checkyellow}{RGB}{255, 193, 7}
+\definecolor{checkred}{RGB}{220, 53, 69}
+\definecolor{checkblue}{RGB}{0, 123, 255}
+\definecolor{checkgray}{RGB}{108, 117, 125}
+
+\begin{document}
+
+\maketitle
+
+
+\section*{Testing Methodology Overview}
+\subsection*{Phase 1: Application Mapping \& Business Rule Analysis}
+\begin{tcolorbox}[colback=checkblue!5!white,colframe=checkblue!75!black,title=Understanding Application Logic]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Identify Core Business Functions}
+    \begin{itemize}
+        \item User registration and authentication workflows
+        \item Payment and transaction processing
+        \item Order management and shopping carts
+        \item Administrative functions and access controls
+        \item File upload and data processing
+    \end{itemize}
+    
+    \item \textbf{Map User Workflows}
+    \begin{itemize}
+        \item Document multi-step processes
+        \item Identify state transitions
+        \item Map parameter dependencies
+        \item Note validation points
+    \end{itemize}
+    
+    \item \textbf{Analyze Business Rules}
+    \begin{itemize}
+        \item Domain restrictions and validations
+        \item Pricing and discount logic
+        \item Access control requirements
+        \item Workflow constraints
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 2: Input Validation \& Parameter Testing}
+\begin{tcolorbox}[colback=checkyellow!5!white,colframe=checkyellow!75!black,title=Parameter Manipulation Checklist]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Numeric Parameter Testing}
+    \begin{itemize}
+        \item Test negative values (e.g., -1, -1000)
+        \item Test zero values (0)
+        \item Test extremely large values (999999999)
+        \item Test decimal values (0.01, 100.99)
+        \item Test boundary conditions (min-1, max+1)
+    \end{itemize}
+    
+    \item \textbf{String Parameter Testing}
+    \begin{itemize}
+        \item Test empty strings
+        \item Test very long strings (10,000+ characters)
+        \item Test special characters (@, \#, \$, \%, etc.)
+        \item Test Unicode and encoded characters
+        \item Test control characters
+    \end{itemize}
+    
+    \item \textbf{Parameter Removal Testing}
+    \begin{itemize}
+        \item Remove required parameters one at a time
+        \item Delete parameter names (not just values)
+        \item Test both URL and POST parameters
+        \item Include cookie parameter testing
+    \end{itemize}
+    
+    \item \textbf{Type Confusion Testing}
+    \begin{itemize}
+        \item Strings where numbers expected
+        \item Arrays where strings expected
+        \item Boolean values in non-boolean fields
+        \item Null values in required fields
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 3: Workflow \& Sequence Testing}
+\begin{tcolorbox}[colback=checkred!5!white,colframe=checkred!75!black,title=Workflow Bypass Testing]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Step Skipping}
+    \begin{itemize}
+        \item Access step N+1 without completing step N
+        \item Bypass authentication steps
+        \item Skip payment steps
+        \item Circumvent verification steps
+    \end{itemize}
+    
+    \item \textbf{Step Repetition}
+    \begin{itemize}
+        \item Repeat the same step multiple times
+        \item Test for duplicate processing
+        \item Check for idempotency violations
+    \end{itemize}
+    
+    \item \textbf{Step Reversal}
+    \begin{itemize}
+        \item Return to earlier steps after completion
+        \item Test state consistency
+        \item Check parameter persistence
+    \end{itemize}
+    
+    \item \textbf{Direct Endpoint Access}
+    \begin{itemize}
+        \item Access protected endpoints directly via URL
+        \item Test authentication bypass via direct URLs
+        \item Check if workflow state is validated
+    \end{itemize}
+    
+    \item \textbf{Parallel Process Testing}
+    \begin{itemize}
+        \item Run multiple workflows simultaneously
+        \item Test race conditions
+        \item Check for concurrency issues
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 4: Business Rule Exploitation}
+\begin{tcolorbox}[colback=checkgreen!5!white,colframe=checkgreen!75!black,title=Business Logic Testing]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Pricing \& Discount Testing}
+    \begin{itemize}
+        \item Manipulate price parameters
+        \item Test discount stacking
+        \item Apply discounts after item removal
+        \item Test coupon code reuse
+    \end{itemize}
+    
+    \item \textbf{Inventory \& Quantity Testing}
+    \begin{itemize}
+        \item Test negative quantities
+        \item Test zero quantities
+        \item Test extremely large quantities
+        \item Test backorder/pre-order manipulation
+    \end{itemize}
+    
+    \item \textbf{Access Control Testing}
+    \begin{itemize}
+        \item Test role parameter manipulation
+        \item Try privilege escalation via workflow
+        \item Test admin function access from user accounts
+        \item Check email domain restrictions
+    \end{itemize}
+    
+    \item \textbf{Transaction Testing}
+    \begin{itemize}
+        \item Test transaction reversal
+        \item Check duplicate transaction processing
+        \item Test partial transaction completion
+        \item Verify transaction state consistency
+    \end{itemize}
+    
+    \item \textbf{Time-Based Testing}
+    \begin{itemize}
+        \item Test time-limited offers after expiration
+        \item Manipulate timestamps
+        \item Test session timeout handling
+        \item Check for race conditions in time-sensitive operations
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection*{Phase 5: Domain-Specific Testing}
+\begin{tcolorbox}[colback=checkgray!5!white,colframe=checkgray!75!black,title=Domain-Specific Logic Testing]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{E-commerce Specific Tests}
+    \begin{itemize}
+        \item Gift card balance manipulation
+        \item Reward point exploitation
+        \item Referral program abuse
+        \item Shipping cost manipulation
+    \end{itemize}
+    
+    \item \textbf{Banking/Financial Tests}
+    \begin{itemize}
+        \item Transfer amount manipulation
+        \item Balance check bypass
+        \item Fee calculation exploitation
+        \item Transaction limit bypass
+    \end{itemize}
+    
+    \item \textbf{Authentication/Authorization Tests}
+    \begin{itemize}
+        \item 2FA bypass via workflow manipulation
+        \item Session fixation attacks
+        \item Remember-me token exploitation
+        \item Password reset logic flaws
+    \end{itemize}
+    
+    \item \textbf{Email/Domain Validation Tests}
+    \begin{itemize}
+        \item Email encoding discrepancies (UTF-7, encoded-word)
+        \item Domain parsing inconsistencies
+        \item Unicode overflow attacks
+        \item Punycode manipulation
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+Burp Macros & Automating multi-step workflows \\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+
+\end{document}

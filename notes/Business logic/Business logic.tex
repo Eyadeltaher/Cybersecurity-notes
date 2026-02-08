@@ -1,0 +1,734 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}{}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{Business Logic Vulnerabilities Notes}
+\author{Eyad Islam El-Taher}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+Business logic vulnerabilities are flaws in the design and implementation of an application that allow attackers to elicit unintended behavior by manipulating legitimate functionality. These vulnerabilities result from failing to anticipate unusual application states and subsequently failing to handle them safely.
+
+\textbf{Note:} The term "business logic" refers to the set of rules defining how an application operates. Since these rules aren't always directly business-related, these vulnerabilities are also known as "application logic vulnerabilities" or "logic flaws."
+
+Logic flaws are often invisible during normal application use but can be exposed when attackers interact with applications in ways developers never intended. Business logic's primary purpose is to enforce rules and constraints that prevent users from performing actions with negative business impact or that don't make sense.
+
+\section*{Business Logic Vulnerabilities Happen When}
+
+\begin{enumerate}
+    \item \textbf{Flawed Assumptions:} Development teams make incorrect assumptions about how users will interact with the application
+    \begin{itemize}
+        \item Assuming users only interact via web browsers
+        \item Relying on weak client-side controls for validation
+        \item Failing to anticipate edge cases and unusual input
+    \end{itemize}
+    
+    \item \textbf{Inadequate Input Validation:} Insufficient or improper validation of user-supplied data
+    \begin{itemize}
+        \item Missing server-side validation
+        \item Over-reliance on client-side controls
+        \item Failure to validate transaction-critical values
+    \end{itemize}
+    
+    \item \textbf{Complex System Oversight:} In overly complicated systems that even developers don't fully understand
+    \begin{itemize}
+        \item Unclear interactions between different components
+        \item Undocumented assumptions about system behavior
+    \end{itemize}
+    
+    \item \textbf{Unusual Workflow Manipulation:} When users deviate from expected behavior patterns
+    \begin{itemize}
+        \item Circumventing intended workflows
+        \item Combining functions in unexpected ways
+        \item Exploiting gaps in state management
+    \end{itemize}
+\end{enumerate}
+
+\section*{Business Logic Vulnerabilities Happen Where}
+Logic vulnerabilities can manifest in various parts of an application:
+
+\begin{itemize}
+    \item \textbf{Authentication Mechanisms:}
+    \begin{itemize}
+        \item Registration processes
+        \item Login workflows
+        \item Password reset functionality
+        \item Multi-factor authentication
+    \end{itemize}
+    
+    \item \textbf{Authorization Controls:}
+    \begin{itemize}
+        \item Access control checks
+        \item Privilege escalation paths
+        \item Role-based access control (RBAC) implementations
+    \end{itemize}
+    
+    \item \textbf{Transaction Processing:}
+    \begin{itemize}
+        \item Payment workflows
+        \item Shopping cart functionality
+        \item Discount and coupon applications
+        \item Inventory management
+    \end{itemize}
+    
+    \item \textbf{User Input Processing:}
+    \begin{itemize}
+        \item Form submissions
+        \item File uploads
+        \item API parameter handling
+        \item Configuration changes
+    \end{itemize}
+    
+    \item \textbf{State Management:}
+    \begin{itemize}
+        \item Session handling
+        \item Workflow state transitions
+        \item Multi-step processes
+        \item Concurrent operation handling
+    \end{itemize}
+    
+    \item \textbf{Business Rules Enforcement:}
+    \begin{itemize}
+        \item Business policy implementations
+        \item Compliance rule enforcement
+        \item Validation rule sets
+        \item Constraint checking
+    \end{itemize}
+\end{itemize}
+
+\section*{Impact of Business Logic Vulnerabilities}
+The impact of business logic vulnerabilities varies significantly based on the affected functionality:
+
+\begin{itemize}
+    \item \textbf{Authentication Bypass:}
+    
+    \item \textbf{Financial Impact:}
+    
+    \item \textbf{Data Integrity:}
+
+    \item \textbf{Business Process Disruption:}
+
+    \item \textbf{Unauthorized Actions:}
+    
+    \item \textbf{Resource Abuse:}
+
+    \item \textbf{Information Disclosure:}
+\end{itemize}
+
+
+\subsection*{Detection Challenges}
+Business logic vulnerabilities present unique detection challenges:
+\begin{itemize}
+    \item \textbf{Human Knowledge Requirement:} Understanding of business domain and attacker motivations
+    \item \textbf{Automation Resistance:} Difficult to detect with automated vulnerability scanners
+    \item \textbf{Context Dependence:} Highly specific to application functionality and business rules
+    \item \textbf{Subtle Manifestations:} Often appear as minor behavioral anomalies rather than clear errors
+\end{itemize}
+
+These characteristics make business logic vulnerabilities prime targets for manual security testing, bug bounty programs, and thorough code reviews.
+
+\section*{Examples of Business Logic Vulnerabilities}
+\subsection*{Excessive Trust in Client-Side Controls}
+A fundamental vulnerability occurs when developers assume users only interact through web interfaces and rely on client-side validation for security.
+
+\subsubsection*{Vulnerability Pattern}
+\begin{itemize}
+    \item \textbf{Assumption:} Users only use browser interface
+    \item \textbf{Flaw:} Relying on client-side validation as security
+    \item \textbf{Reality:} Attackers can intercept/modify requests (Burp Proxy)
+    \item \textbf{Result:} Client-side controls become useless
+\end{itemize}
+
+\subsection*{Practical Example: Price Manipulation}
+\subsubsection*{Scenario}
+E-commerce site with store credit system. Client-side JavaScript prevents purchases exceeding credit balance.
+
+\subsubsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Attempt purchase → Rejected (insufficient credit)
+    \item Intercept \texttt{POST /cart} request in Burp
+    \item Modify \texttt{price} parameter to arbitrary value
+    \item Set price below available credit
+    \item Complete purchase with manipulated price
+\end{enumerate}
+
+\begin{lstlisting}
+# Original:
+POST /cart HTTP/1.1
+item_id=123&price=100&quantity=1
+
+# Modified:
+POST /cart HTTP/1.1
+item_id=123&price=1&quantity=1
+\end{lstlisting}
+
+
+
+\section*{Failing to Handle Unconventional Input}
+\subsection*{Overview}
+Applications often fail to properly handle unexpected or unconventional user input, leading to business logic vulnerabilities. Developers frequently anticipate only "normal" user behavior without considering edge cases or malicious input scenarios.
+
+\subsection*{Common Vulnerable Scenarios}
+\begin{itemize}
+    \item \textbf{Numeric Input Issues:}
+    \begin{itemize}
+        \item Negative values where only positives expected
+        \item Zero values causing division errors
+        \item Extremely large numbers causing overflow
+        \item Decimal values where integers expected
+    \end{itemize}
+    
+    \item \textbf{String Input Issues:}
+    \begin{itemize}
+        \item Exceptionally long strings
+        \item Special characters and scripts
+        \item Whitespace variations
+        \item Unicode and encoding issues
+    \end{itemize}
+    
+    \item \textbf{Type Confusion:}
+    \begin{itemize}
+        \item Strings where numbers expected
+        \item Arrays where strings expected
+        \item Boolean values misinterpreted
+        \item Null values not handled
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Practical Example: Negative Amount Transfer}
+\subsubsection*{Vulnerability Description}
+A banking application transfers funds between accounts. The logic checks if sender has sufficient funds but fails to validate that the transfer amount is positive.
+
+
+
+\subsubsection*{Attack Scenario}
+\begin{itemize}
+    \item Attacker sends \$-1000 to victim
+    \item Logic: \$-1000 <= \$balance (always true)
+    \item Result: Attacker receives \$1000 from victim
+    \item Direction: Funds transfer in "wrong" direction
+\end{itemize}
+
+\subsection*{Testing Methodology}
+\subsubsection*{Numeric Field Testing}
+\begin{itemize}
+    \item \textbf{Extreme Values:}
+    \begin{itemize}
+        \item Very large positive numbers (999999999)
+        \item Very large negative numbers (-999999999)
+        \item Zero (0)
+        \item Decimal values (0.01, 100.99)
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{String Field Testing}
+\begin{enumerate}
+    \item \textbf{Length Testing:}
+    \begin{itemize}
+        \item Empty strings
+        \item Very long strings (10,000+ characters)
+    \end{itemize}
+    
+    \item \textbf{Character Testing:}
+    \begin{itemize}
+        \item Special characters (@, \#, \$, \%, etc.)
+        \item Unicode characters
+        \item Control characters
+        \item Script tags
+    \end{itemize}
+\end{enumerate}
+
+\subsection*{Key Questions During Testing}
+\begin{itemize}
+    \item Are input limits properly enforced?
+    \item What happens when limits are reached?
+    \item Is input normalized/transformed?
+    \item Are business rules validated server-side?
+    \item How does the application handle invalid types?
+\end{itemize}
+
+\section*{Example 1: Negative Quantity Price Manipulation}
+\subsection*{Vulnerability}
+Cart system fails to validate that item quantities must be positive numbers, allowing negative quantities that create negative total prices.
+
+\subsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Add cheap item to cart normally
+    \item Intercept POST /cart request via Burp
+    \item Change quantity parameter to negative value
+    \item Negative quantity deducts from cart total
+    \item Add expensive item 
+    \item Use negative quantity of cheap item to offset total price
+    \item Purchase expensive item for reduced/negative total
+\end{enumerate}
+
+\subsection*{Key Finding}
+\begin{itemize}
+    \item Negative quantities accepted without validation
+    \item Total price can become negative
+    \item Business logic assumes quantities $\geq$ 1
+    \item No server-side validation of quantity sign
+\end{itemize}
+
+\section*{Example 2: Integer Overflow Price Bypass}
+\subsection*{Vulnerability}
+Price calculation uses 32-bit integers that overflow when total exceeds maximum value, causing price to wrap to negative values.
+
+\subsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Leather jacket price: 133700 cents
+    \item Maximum 32-bit integer: 2,147,483,647
+    \item Calculate units needed: 2,147,483,647 $\div$ 133,700 $\simeq$ 16,057 units
+    \item Use Burp Intruder to add 99 units repeatedly
+    \item Total price exceeds max → wraps to negative (Integer overflow)
+    \item Adjust quantities to settle total between \$0-\$100
+    \item Complete purchase with manipulated price
+\end{enumerate}
+
+\subsection*{Key Finding}
+\begin{itemize}
+    \item Integer overflow in price calculation
+    \item Negative totals from overflow wrap-around
+    \item No bounds checking on cumulative totals
+    \item Business logic assumes reasonable quantities
+\end{itemize}
+
+\section*{Example 3: Email Truncation Admin Bypass}
+\subsection*{Vulnerability}
+Email addresses truncated to 255 characters during storage, allowing domain spoofing via crafted long addresses.
+
+\subsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Discover /admin endpoint requires @dontwannacry.com email
+    \item Register with 255+ character email:
+    \begin{lstlisting}
+very-long-string@dontwannacry.com.mail.net
+    \end{lstlisting}
+    \item Position the "m" that is last character of "@dontwannacry.com" at character 255
+    \item Email client receives full address (no truncation)
+    \item Application stores truncated version (255 chars) --> "very-long-string@dontwannacry.com" only
+    \item Truncated address appears as @dontwannacry.com so Gain admin access
+\end{enumerate}
+
+\subsection*{Key Finding}
+\begin{itemize}
+    \item Email truncation without validation
+    \item Different truncation points in system components
+    \item Business logic relies on email domain for authorization
+    \item No verification of complete email address integrity
+\end{itemize}
+
+\section*{Making Flawed Assumptions About User Behavior}
+\subsection*{Overview}
+A common root cause of business logic vulnerabilities is developers making incorrect assumptions about how users will behave. These flawed assumptions lead to security gaps when users act in unexpected or malicious ways.
+
+\subsection*{Assumption: Trusted Users Remain Trustworthy}
+Applications may implement strict initial controls but then assume users remain trustworthy after passing them. This leads to lax enforcement later in the user journey.
+
+\subsection*{Example: Email Change Admin Bypass}
+\subsubsection*{Scenario}
+Admin panel requires @dontwannacry.com email addresses. System validates email during registration but not during subsequent changes.
+
+\subsubsection*{Vulnerability}
+\begin{itemize}
+    \item Initial registration validates email domain
+    \item Email change feature lacks same validation
+    \item Once authenticated, users are "trusted"
+    \item No re-validation of admin privileges
+\end{itemize}
+
+\subsubsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Discover /admin requires @dontwannacry.com email
+    \item Register with normal email address and complete confirmation process
+    \item Log into account and navigate to "My account" → Change email 
+    \item Change to @dontwannacry.com address
+    \item Gain admin access without validation
+\end{enumerate}
+
+\section*{Users Won't Always Supply Mandatory Input}
+\subsection*{Overview}
+Developers often assume users will always supply values for mandatory input fields. While browsers prevent normal form submission without required fields, attackers can manipulate parameters in transit, including removing them entirely.
+
+\subsection*{Vulnerability Pattern}
+When multiple functions share the same server-side script, the presence/absence of parameters determines which code path executes. Removing parameters can expose restricted functionality.
+
+\subsection*{Example: Password Change Without Verification}
+\subsubsection*{Vulnerability}
+Password change functionality requires current password, but server-side logic fails when parameter is missing.
+
+\subsubsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Intercept POST /my-account/change-password request
+    \item Remove current-password parameter entirely
+    \item Change username parameter to administrator
+    \item Submit request without current password
+    \item Password successfully changed for admin account
+    \item Log in as administrator with new password
+\end{enumerate}
+
+\section*{Users Won't Always Follow the Intended Sequence}
+\subsection*{Overview}
+Applications often assume users will follow predefined step-by-step workflows, but attackers can skip steps or access endpoints out of order, leading to security bypasses.
+
+\subsection*{Example: 2FA Step Bypass}
+\subsubsection*{Vulnerability}
+Two-factor authentication requires login → verification code entry sequence, but doesn't verify completion before granting access.
+
+\subsubsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Log into own account, note /my-account URL
+    \item Log out
+    \item Log into victim's account with credentials
+    \item When prompted for verification code, manually navigate to /my-account
+    \item Access granted without completing 2FA step
+\end{enumerate}
+
+\subsubsection*{Key Finding}
+\begin{itemize}
+    \item Application doesn't track authentication state between steps
+    \item Step completion not verified before granting access
+    \item Assumes users will complete all steps in order
+\end{itemize}
+
+\subsection*{Common Vulnerable Workflows}
+\begin{itemize}
+    \item \textbf{Multi-Step Authentication:} Login → 2FA → Access
+    \item \textbf{Purchase Flows:} Cart → Shipping → Payment → Confirmation
+    \item \textbf{Registration Processes:} Signup → Verification → Profile setup
+    \item \textbf{Administrative Actions:} Approval → Review → Execution
+    \item \textbf{File Uploads:} Selection → Review → Upload → Processing
+\end{itemize}
+
+\section*{Assumptions About Sequence of Events}
+\subsection*{Overview}
+Developers often assume users will follow applications through predictable state sequences. Attackers can use forced browsing to interact with endpoints in any order, accessing application states that were never intended.
+
+\subsection*{Tool Capabilities}
+\begin{itemize}
+    \item Burp Proxy: Intercept and analyze requests
+    \item Burp Repeater: Replay requests arbitrarily
+    \item Forced Browsing: Access endpoints in any sequence
+    \item State Manipulation: Interact with application in unexpected states
+\end{itemize}
+
+\subsection*{Example 1: Order Confirmation Bypass}
+\subsubsection*{Vulnerability}
+Purchase workflow: Add items → Checkout → Payment → Confirmation. System doesn't verify payment completion before showing confirmation.
+
+\subsubsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Buy affordable item normally
+    \item Capture order confirmation URL: GET /cart/order-confirmation?order-confirmation=true
+    \item Add expensive leather jacket to cart
+    \item Directly access order confirmation URL
+    \item Order completes without payment deduction
+\end{enumerate}
+
+\subsection*{Example 2: Role Selection Bypass}
+\subsubsection*{Vulnerability}
+Login workflow: Credentials → Role selection → Home page. System defaults to admin role if selection skipped.
+
+\subsubsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Intercept login process
+    \item Forward POST /login request
+    \item Drop GET /role-selector request
+    \item Directly browse to home page
+    \item Role defaults to administrator
+    \item Access admin panel without selection
+\end{enumerate}
+
+\section*{Domain-Specific Flaws}
+\subsection*{Overview}
+Business logic vulnerabilities often involve domain-specific rules and workflows. Understanding the business domain is crucial for identifying how attackers could manipulate intended functionality for malicious purposes.
+
+\subsection*{E-commerce Discount Abuse Example}
+\subsubsection*{Classic Vulnerability: Discount Timing}
+\begin{itemize}
+    \item Shop offers 10\% discount on orders over \$1000
+    \item Vulnerability: Discount applied before final cart validation
+    \item Attack: Add items to reach threshold → Apply discount → Remove unwanted items
+    \item Result: Discount on order no longer meeting criteria
+\end{itemize}
+
+\subsection*{Example: Gift Card Coupon Exploit}
+\subsubsection*{Scenario}
+Shop offers 30\% coupon (SIGNUP30) on \$10 gift cards. Users can purchase discounted gift cards and redeem them for store credit.
+
+\subsubsection*{Vulnerability}
+Profit generation through automated gift card purchase and redemption cycle.
+
+\subsubsection*{Exploitation Steps}
+\begin{enumerate}
+    \item Obtain 30\% discount coupon via newsletter signup
+    \item Purchase \$10 gift card → \$7 after discount
+    \item Redeem gift card → Receive \$10 store credit
+    \item Profit: \$3 per cycle
+    \item Automate process using Burp Suite macros
+\end{enumerate}
+
+\subsubsection*{Automation Setup}
+\begin{enumerate}
+
+
+	\item Click Settings in the top toolbar and click Sessions and then in the Session handling rules panel, click Add
+	\item go to the Scope tab. Under URL scope, select Include all URLs. 
+	\item Go back to the Details tab. Under Rule actions, click Add > Run a macro. Under Select macro, click Add again to open the Macro Recorder.
+    \item Record macro sequence:
+    \begin{lstlisting}
+1. POST /cart             (Add gift card)
+2. POST /cart/coupon      (Apply coupon)
+3. POST /cart/checkout    (Complete purchase)
+4. GET /order-confirmation (Get gift card code)
+5. POST /gift-card        (Redeem gift card)
+    \end{lstlisting}
+    Then, click OK. The Macro Editor opens.
+    
+    \item In the list of requests, select GET /cart/order-confirmation?order-confirmed=true. Click Configure item. In the dialog that opens, click Add to create a custom parameter. Name the parameter gift-card and highlight the gift card code at the bottom of the response. Click OK 
+    \item Select the POST /gift-card request and click Configure item again. In the Parameter handling section, use the drop-down menus to specify that the gift-card parameter should be derived from the prior response (response 4). Click OK. 
+    \item In the Macro Editor, click Test macro. Look at the response to GET /cart/order-confirmation?order-confirmation=true and note the gift card code that was generated. Look at the POST /gift-card request. Make sure that the gift-card parameter matches and confirm that it received a 302 response. Keep clicking OK until you get back to the main Burp window. 
+    \item Send the GET /my-account request to Burp Intruder. Make sure that Sniper attack is selected. 
+    \item In the Payloads side panel, under Payload configuration, select the payload type Null payloads and then click on Resource pool to open the Resource pool side panel. Add the attack to a resource pool with the Maximum concurrent requests set to 1. 
+    \item Start the attack.
+\end{enumerate}
+
+
+
+
+\subsubsection*{Domain Understanding}
+\begin{enumerate}
+    \item Study business rules and workflows
+    \item Identify financial incentives and rewards
+    \item Map transaction cycles and loops
+    \item Understand business objectives vs technical implementation
+\end{enumerate}
+
+\subsubsection*{Attack Surface Identification}
+\begin{itemize}
+    \item Discount and coupon systems
+    \item Loyalty and reward programs
+    \item Referral systems
+    \item Bulk pricing and tiered discounts
+    \item Return and refund policies
+\end{itemize}
+
+\section*{Providing an Encryption Oracle}
+\subsection*{Overview}
+An encryption oracle occurs when an application allows users to encrypt arbitrary data and obtain the ciphertext. This becomes dangerous when other parts of the application use the same encryption algorithm.
+
+\subsection*{Example: Cookie Decryption/Encryption Oracle}
+\subsubsection*{Vulnerability}
+Application provides two functions:
+\begin{itemize}
+    \item Email validation error → Encrypts input → Sets cookie
+    \item Notification cookie → Decrypts → Shows error message
+\end{itemize}
+
+\subsubsection*{Exploitation Steps}
+\begin{enumerate}
+    \item \textbf{Identify Encryption Oracle:}
+    \begin{itemize}
+        \item Invalid email → Encrypted notification cookie
+        \item Error message shows decrypted email
+        \item Two-way oracle: Encrypt via POST, decrypt via GET
+    \end{itemize}
+    
+    \item \textbf{Decrypt Stay-Logged-In Cookie:}
+    \begin{itemize}
+        \item Use decrypt endpoint with stay-logged-in cookie
+        \item Reveals format: \texttt{username:timestamp}
+        \item Copy administrator's timestamp from own cookie
+    \end{itemize}
+    
+    \item \textbf{Encrypt Administrator Cookie:}
+    \begin{itemize}
+        \item Input: \texttt{administrator:timestamp}
+        \item Encrypt via email parameter
+        \item Get ciphertext from notification cookie
+    \end{itemize}
+    
+    \item \textbf{Remove Prefix:}
+    \begin{itemize}
+        \item Ciphertext includes "Invalid email address: " prefix
+        \item Block cipher requires 16-byte multiples
+        \item Add padding, encrypt, remove prefix blocks
+        \item Result: Clean administrator cookie ciphertext
+    \end{itemize}
+    
+    \item \textbf{Authentication Bypass:}
+    \begin{itemize}
+        \item Replace stay-logged-in cookie with crafted ciphertext
+        \item Access as administrator
+    \end{itemize}
+\end{enumerate}
+
+\subsection*{Technical Analysis}
+\subsubsection*{Oracle Endpoints}
+\begin{lstlisting}
+# Encryption Oracle
+POST /post/comment
+email=arbitrary-data --> Sets encrypted notification cookie
+
+# Decryption Oracle  
+GET /post?postId=x
+notification-cookie=ciphertext --> Shows decrypted data
+\end{lstlisting}
+
+
+\subsection*{Key Findings}
+\begin{itemize}
+    \item \textbf{Two-way Oracle:} Both encrypt and decrypt available
+    \item \textbf{Algorithm Reuse:} Same encryption for cookies and notifications
+    \item \textbf{Prefix Vulnerability:} Predictable plaintext structure
+    \item \textbf{Authentication Bypass:} Forge authentication cookies
+\end{itemize}
+
+\section*{Email Address Parser Discrepancies}
+\subsection*{Overview}
+Email address parsing varies across application components, allowing attackers to bypass domain restrictions using encoding techniques.
+
+\subsection*{Vulnerability}
+Different components parse the same email address differently:
+\begin{itemize}
+    \item Registration validation: Checks domain restrictions
+    \item Email server: Parses and sends confirmation emails
+    \item Database: Stores and retrieves email addresses
+    \item Authentication: Verifies email domains for access control
+\end{itemize}
+
+\subsection*{Example: Domain Restriction Bypass via UTF-7}
+\subsubsection*{Scenario}
+Application restricts registration to \texttt{@ginandjuice.shop} domain.
+
+\subsubsection*{Testing Steps}
+\begin{enumerate}
+    \item \textbf{Identify Restriction:}
+    \begin{itemize}
+        \item Attempt registration with \texttt{foo@exploit-server.net}
+        \item Error: "email domain must be ginandjuice.shop"
+    \end{itemize}
+    
+    \item \textbf{Test Encoding Bypasses:}
+    \begin{itemize}
+        \item ISO-8859-1 encoded: \texttt{=?iso-8859-1?q?=61=62=63?=foo@ginandjuice.shop}
+        \item UTF-8 encoded: \texttt{=?utf-8?q?=61=62=63?=foo@ginandjuice.shop}
+        \item Both blocked: "Registration blocked for security reasons"
+    \end{itemize}
+    
+    \item \textbf{Find Working Encoding:}
+    \begin{itemize}
+        \item UTF-7 encoded: \texttt{=?utf-7?q?\&AGEAYgBj-?=foo@ginandjuice.shop}
+        \item Accepted - UTF-7 bypasses validation
+    \end{itemize}
+    
+    \item \textbf{Exploit:}
+    \begin{lstlisting}
+=?utf-7?q?attacker&AEA-[EXPLOIT-SERVER-ID]&ACA-?=@ginandjuice.shop
+    \end{lstlisting}
+    \begin{itemize}
+        \item Validation sees: \texttt{@ginandjuice.shop} (passes)
+        \item Mailer interprets: \texttt{attacker@[EXPLOIT-SERVER-ID]} (sends confirmation)
+        \item Registration successful with attacker's email
+    \end{itemize}
+\end{enumerate}
+
+
+```latex
+\section*{How to Prevent Business Logic Vulnerabilities}
+\subsection*{Core Prevention Principles}
+To effectively prevent business logic vulnerabilities, focus on two key areas:
+
+\begin{enumerate}
+    \item \textbf{Domain Understanding:} Ensure developers and testers fully comprehend the business domain the application serves
+    \item \textbf{Assumption Management:} Avoid making implicit assumptions about user behavior or application component interactions
+\end{enumerate}
+
+\subsection*{Critical Prevention Measures}
+\subsubsection*{Assumption Validation}
+\begin{itemize}
+    \item Identify all assumptions about server-side state
+    \item Implement explicit validation for each assumption
+    \item Verify input sensibility before processing
+    \item Continuously re-evaluate assumptions during development
+\end{itemize}
+
+\subsubsection*{Team Knowledge Management}
+\begin{itemize}
+    \item Ensure developers understand business rules thoroughly
+    \item Train testers on expected application behavior
+    \item Document edge cases and unusual scenarios
+    \item Foster communication between technical and business teams
+\end{itemize}
+
+\subsection*{Development Best Practices}
+\subsubsection*{Documentation Standards}
+\begin{enumerate}
+    \item \textbf{Design Documentation:}
+    \begin{itemize}
+        \item Maintain clear design documents for all workflows
+        \item Document data flows and state transitions
+        \item Note all assumptions made at each stage
+        \item Include business rule explanations
+    \end{itemize}
+    
+    \item \textbf{Code Clarity:}
+    \begin{itemize}
+        \item Write self-documenting, readable code
+        \item Avoid unnecessary complexity
+        \item Use descriptive variable and function names
+        \item Well-written code should be understandable without excessive documentation
+    \end{itemize}
+    
+    \item \textbf{Complexity Management:}
+    \begin{itemize}
+        \item For complex logic, produce detailed documentation
+        \item Document all assumptions and expected behaviors
+        \item Include examples of valid and invalid scenarios
+        \item Note dependencies and side-effects
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection*{Code Quality Practices}
+\begin{itemize}
+    \item \textbf{Dependency Tracking:}
+    \begin{itemize}
+        \item Document all code component dependencies
+        \item Analyze side-effects of dependency manipulation
+        \item Consider how malicious users could exploit dependencies
+    \end{itemize}
+    
+    \item \textbf{Testing Integration:}
+    \begin{itemize}
+        \item Include business logic tests in test suites
+        \item Test edge cases and unusual user behavior
+        \item Validate assumptions through automated testing
+    \end{itemize}
+    
+    \item \textbf{Code Review Focus:}
+    \begin{itemize}
+        \item Review for implicit assumptions
+        \item Check business rule implementation correctness
+        \item Validate error handling and edge cases
+    \end{itemize}
+\end{itemize}
+
+
+
+
+\end{document}
