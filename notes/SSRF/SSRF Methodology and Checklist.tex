@@ -1,0 +1,361 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}{}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{SSRF Testing Methodology \& Checklist}
+\author{Eyad Islam El-Taher}
+
+% Custom colors
+\definecolor{primaryblue}{RGB}{0, 102, 204}
+\definecolor{dangerred}{RGB}{204, 0, 0}
+\definecolor{warningyellow}{RGB}{255, 193, 7}
+\definecolor{successgreen}{RGB}{40, 167, 69}
+\definecolor{infogray}{RGB}{108, 117, 125}
+\definecolor{darkpurple}{RGB}{102, 0, 204}
+
+\begin{document}
+
+\maketitle
+
+\begin{tcolorbox}[colback=white!95!black,colframe=darkpurple,title=Document Purpose]
+This document provides a comprehensive methodology and checklist for identifying, testing, and exploiting Server-Side Request Forgery (SSRF) vulnerabilities. It serves as a practical guide for penetration testers, security professionals, and developers to systematically assess SSRF risks in web applications.
+\end{tcolorbox}
+
+\section*{Testing Methodology Overview}
+\begin{tcolorbox}[colback=primaryblue!5!white,colframe=primaryblue,title=Phase 1: Reconnaissance \& Attack Surface Identification]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Identify SSRF Entry Points}
+    \begin{itemize}
+        \item Features that fetch external resources (profile pictures, webhooks)
+        \item URL parameters (\texttt{?url=}, \texttt{?path=}, \texttt{?dest=})
+        \item HTTP headers (\texttt{Referer}, \texttt{X-Forwarded-For}, \texttt{Origin})
+        \item File uploads that process external content (PDF generators, image processors)
+        \item XML parsers (XXE to SSRF vectors)
+    \end{itemize}
+    
+    \item \textbf{Map Parameter Names}
+    \begin{tcolorbox}[colback=white,colframe=infogray,title=Common SSRF Parameters]
+    \begin{tabular}{llll}
+    \texttt{url} & \texttt{uri} & \texttt{path} & \texttt{dest} \\
+    \texttt{redirect} & \texttt{return} & \texttt{out} & \texttt{view} \\
+    \texttt{dir} & \texttt{show} & \texttt{file} & \texttt{document} \\
+    \texttt{location} & \texttt{src} & \texttt{source} & \texttt{image} \\
+    \texttt{hook} & \texttt{webhook} & \texttt{callback} & \texttt{notify}
+    \end{tabular}
+    \end{tcolorbox}
+    
+    \item \textbf{Identify Internal Resources}
+    \begin{itemize}
+        \item Cloud metadata endpoints: \texttt{169.254.169.254} (AWS, GCP, Azure)
+        \item Internal IP ranges: \texttt{10.0.0.0/8}, \texttt{172.16.0.0/12}, \texttt{192.168.0.0/16}
+        \item Localhost: \texttt{127.0.0.1}, \texttt{localhost}, \texttt{0.0.0.0}
+        \item Common services: \texttt{redis}, \texttt{memcached}, \texttt{mongodb}, \texttt{elasticsearch}
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=warningyellow!5!white,colframe=warningyellow,title=Phase 2: Basic (In-Band) SSRF Testing]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Test Basic Localhost Access}
+    \begin{itemize}
+        \item Submit \texttt{http://127.0.0.1}
+        \item Submit \texttt{http://localhost}
+        \item Submit \texttt{http://0.0.0.0}
+        \item Check for admin interfaces, internal files, or debug endpoints
+    \end{itemize}
+    
+    \item \textbf{Test Internal Network Ranges}
+    \begin{itemize}
+        \item Use Burp Intruder to fuzz internal IPs: \texttt{http://192.168.0.\$1\$:8080/admin}
+        \item Monitor response times and status codes
+        \item Look for \texttt{200 OK} responses indicating live services
+    \end{itemize}
+    
+    \item \textbf{Test Alternative IP Representations}
+    \begin{tcolorbox}[colback=white,colframe=infogray,title=IP Bypass Formats]
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Format} & \textbf{Example} \\
+    \hline
+    Decimal & \texttt{http://2130706433/} \\
+    Octal & \texttt{http://017700000001/} \\
+    Hexadecimal & \texttt{http://0x7f000001/} \\
+    Shortened & \texttt{http://127.1/} \\
+    CIDR bypass & \texttt{http://127.127.127.127/} \\
+    \hline
+    \end{tabular}
+    \end{tcolorbox}
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=dangerred!5!white,colframe=dangerred,title=Phase 3: Blind SSRF Detection]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Out-of-Band (OAST) Detection}
+    \begin{itemize}
+        \item Set up Burp Collaborator or Interactsh
+        \item Inject unique domain in suspicious parameters
+        \item Monitor for DNS and HTTP interactions
+    \end{itemize}
+    
+    \item \textbf{Collaborator Everywhere Workflow}
+    \begin{enumerate}
+        \item Install Collaborator Everywhere extension
+        \item Add target to scope
+        \item Browse application normally
+        \item Monitor Collaborator tab for callbacks
+        \item Identify which headers triggered interactions
+    \end{enumerate}
+    
+    \item \textbf{Response Time Analysis}
+    \begin{itemize}
+        \item Compare response times between valid and invalid internal IPs
+        \item Longer responses may indicate live internal services
+        \item Timeouts may indicate blocked ports or firewalls
+    \end{itemize}
+    
+    \item \textbf{Error Message Analysis}
+    \begin{itemize}
+        \item Look for differences in error messages
+        \item Connection refused vs connection timeout
+        \item DNS resolution errors
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=successgreen!5!white,colframe=successgreen,title=Phase 4: Bypass Technique Testing]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Blacklist Bypass Techniques}
+    \begin{itemize}
+        \item Alternative IP representations (decimal, octal, hex)
+        \item URL encoding and double encoding
+        \item Case variation (\texttt{/ADMIN}, \texttt{/Admin})
+        \item DNS to localhost (\texttt{localtest.me} → \texttt{127.0.0.1})
+        \item Custom domain pointing to \texttt{127.0.0.1}
+    \end{itemize}
+    
+    \item \textbf{Whitelist Bypass Techniques}
+    \begin{itemize}
+        \item Embedded credentials: \texttt{http://expected@evil-host}
+        \item Fragment tricks: \texttt{http://evil-host\#expected}
+        \item DNS hierarchy: \texttt{http://expected.evil-host}
+        \item Double encoding: \texttt{http://localhost:80\%2523@expected.com}
+        \item Open redirect chaining
+    \end{itemize}
+    
+    \item \textbf{DNS Rebinding Testing}
+    \begin{itemize}
+        \item Use rebinding services: \texttt{lock.cmpxchg8b.com}
+        \item Configure public IP + internal target IP
+        \item Submit domain to SSRF endpoint
+        \item Send multiple requests (10-20 attempts)
+        \item Monitor for successful bypass
+    \end{itemize}
+    
+    \item \textbf{Protocol Smuggling}
+    \begin{itemize}
+        \item Test \texttt{file://} for local file inclusion
+        \item Test \texttt{gopher://} for attacking internal services
+        \item Test \texttt{dict://} for service probing
+        \item Test \texttt{ftp://} for internal FTP access
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=darkpurple!5!white,colframe=darkpurple,title=Phase 5: Exploitation \& Impact Assessment]
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Cloud Metadata Exploitation}
+    \begin{tcolorbox}[colback=white,colframe=infogray,title=Cloud Metadata Endpoints]
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Cloud Provider} & \textbf{Metadata URL} \\
+    \hline
+    AWS & \texttt{http://169.254.169.254/latest/meta-data/} \\
+    GCP & \texttt{http://169.254.169.254/computeMetadata/v1/} \\
+    Azure & \texttt{http://169.254.169.254/metadata/instance?api-version=2017} \\
+    DigitalOcean & \texttt{http://169.254.169.254/metadata/v1/} \\
+    \hline
+    \end{tabular}
+    \end{tcolorbox}
+    
+    \item \textbf{Internal Service Exploitation}
+    \begin{itemize}
+        \item Redis: \texttt{gopher://localhost:6379/\_*2\$4...}
+        \item Memcached: \texttt{gopher://localhost:11211/\_stats}
+        \item Elasticsearch: \texttt{http://localhost:9200/\_cat/indices}
+        \item Internal admin panels: \texttt{http://192.168.1.1/admin}
+    \end{itemize}
+    
+    \item \textbf{Remote Code Execution Vectors}
+    \begin{itemize}
+        \item Shellshock via headers in blind SSRF
+        \item Vulnerable HTTP client libraries
+        \item Internal service vulnerabilities (Redis RCE)
+        \item PDF generator exploitation
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\section*{SSRF Testing Checklist}
+\begin{tcolorbox}[colback=white!95!black,colframe=black,title=Comprehensive SSRF Checklist]
+\begin{enumerate}[label=\textbf{[\arabic*]}]
+    \item \textbf{Entry Point Identification}
+    \begin{itemize}
+        \item [ ] URL parameters (dest, path, url, redirect)
+        \item [ ] HTTP headers (Referer, X-Forwarded-For, Origin)
+        \item [ ] File upload features (PDF, image, document processing)
+        \item [ ] XML parsers (XXE to SSRF)
+        \item [ ] API endpoints with external fetch capabilities
+        \item [ ] Webhook configuration pages
+        \item [ ] Profile picture URL import
+    \end{itemize}
+    
+    \item \textbf{Basic Localhost Testing}
+    \begin{itemize}
+        \item [ ] http://127.0.0.1
+        \item [ ] http://localhost
+        \item [ ] http://0.0.0.0
+        \item [ ] http://[::1] (IPv6)
+        \item [ ] http://127.0.0.1:8080 (different ports)
+        \item [ ] http://127.0.0.1/admin
+        \item [ ] http://127.0.0.1/secret
+        \item [ ] http://127.0.0.1/internal
+    \end{itemize}
+    
+    \item \textbf{Internal Network Probing}
+    \begin{itemize}
+        \item [ ] 192.168.0.0/16 range scanning
+        \item [ ] 10.0.0.0/8 range scanning
+        \item [ ] 172.16.0.0/12 range scanning
+        \item [ ] Common ports (22, 80, 443, 8080, 3306, 6379, 9200)
+        \item [ ] Internal service discovery
+    \end{itemize}
+    
+    \item \textbf{Cloud Metadata Testing}
+    \begin{itemize}
+        \item [ ] AWS: http://169.254.169.254/latest/meta-data/
+        \item [ ] AWS: http://169.254.169.254/latest/user-data/
+        \item [ ] GCP: http://169.254.169.254/computeMetadata/v1/
+        \item [ ] Azure: http://169.254.169.254/metadata/instance
+        \item [ ] DigitalOcean: http://169.254.169.254/metadata/v1/
+        \item [ ] Alibaba Cloud: http://100.100.100.200/latest/meta-data/
+    \end{itemize}
+    
+    \item \textbf{IP Format Bypasses}
+    \begin{itemize}
+        \item [ ] Decimal: 2130706433
+        \item [ ] Octal: 017700000001
+        \item [ ] Hex: 0x7f000001
+        \item [ ] Short: 127.1
+        \item [ ] CIDR variations: 127.127.127.127
+        \item [ ] IPv6: [::1]
+        \item [ ] IPv6 to IPv4 mapping: [::ffff:7f00:1]
+    \end{itemize}
+    
+\end{enumerate}
+\end{tcolorbox} 
+    
+\begin{tcolorbox}[colback=white!95!black,colframe=black,title=Comprehensive SSRF Checklist]
+\begin{enumerate}[label=\textbf{[\arabic*]}]    
+    \item \textbf{DNS-Based Bypasses}
+    \begin{itemize}
+        \item [ ] localhost domains: localtest.me, localh.st
+        \item [ ] Custom domain pointing to 127.0.0.1
+        \item [ ] Subdomain tricks: evil.com resolving to 127.0.0.1
+        \item [ ] DNS rebinding attacks
+    \end{itemize}
+    
+    \item \textbf{Encoding Bypasses}
+    \begin{itemize}
+        \item [ ] URL encoding
+        \item [ ] Double encoding
+        \item [ ] Unicode encoding
+        \item [ ] Mixed case (AdMiN)
+        \item [ ] Null byte injection
+    \end{itemize}
+    
+    \item \textbf{Protocol Testing}
+    \begin{itemize}
+        \item [ ] file:///etc/passwd
+        \item [ ] file:///c:/windows/win.ini
+        \item [ ] gopher://localhost:6379/
+        \item [ ] dict://localhost:11211/
+        \item [ ] ftp://localhost:21/
+        \item [ ] ldap://localhost:389/
+        \item [ ] smb://localhost:445/
+    \end{itemize}
+    
+    \item \textbf{Blind SSRF Detection}
+    \begin{itemize}
+        \item [ ] Burp Collaborator injection
+        \item [ ] Response time analysis
+        \item [ ] Error message differences
+        \item [ ] HTTP header injection (Referer, User-Agent)
+        \item [ ] Collaborator Everywhere extension
+    \end{itemize}
+    
+    \item \textbf{Advanced Exploitation}
+    \begin{itemize}
+        \item [ ] Shellshock via headers
+        \item [ ] Redis RCE via gopher
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+
+\section*{Prevention Checklist}
+\begin{tcolorbox}[colback=white!95!black,colframe=dangerred,title=SSRF Prevention Measures]
+\begin{enumerate}
+    \item \textbf{Allowlist Approach}
+    \begin{itemize}
+        \item [ ] Whitelist allowed domains/IPs
+        \item [ ] Reject all by default
+        \item [ ] Strict protocol restriction (HTTP/HTTPS only)
+    \end{itemize}
+    
+    \item \textbf{Network Isolation}
+    \begin{itemize}
+        \item [ ] Firewall egress filtering
+        \item [ ] Block access to internal IP ranges
+        \item [ ] Disable cloud metadata access
+        \item [ ] Network segmentation
+    \end{itemize}
+    
+    \item \textbf{URL Handling}
+    \begin{itemize}
+        \item [ ] Resolve hostname once, validate IP
+        \item [ ] Connect directly to validated IP
+        \item [ ] Set Host header manually
+        \item [ ] Disable redirect following
+    \end{itemize}
+    
+    \item \textbf{Input Validation}
+    \begin{itemize}
+        \item [ ] Validate URL format
+        \item [ ] Reject private IP ranges
+        \item [ ] URL parsing with proper libraries
+        \item [ ] No blacklisting (easily bypassed)
+    \end{itemize}
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{center}
+\textbf{--- End of SSRF Testing Methodology \& Checklist ---}
+\end{center}
+
+\end{document}
