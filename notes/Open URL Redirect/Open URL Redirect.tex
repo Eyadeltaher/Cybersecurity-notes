@@ -1,0 +1,454 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{longtable}
+\usepackage[most]{tcolorbox}
+
+\lstset{numbers=none, basicstyle=\ttfamily}
+\renewcommand{\lstlistingname}
+
+\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=20mm}
+
+
+% ==========================================
+% Colors
+% ==========================================
+
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codegreen}{RGB}{0,120,0}
+\definecolor{codeblue}{RGB}{0,0,180}
+\definecolor{codered}{RGB}{180,0,0}
+
+% ==========================================
+% Listings Configuration
+% ==========================================
+
+\lstset{
+backgroundcolor=\color{codebg},
+basicstyle=\ttfamily\small,
+breaklines=true,
+frame=single,
+columns=fullflexible,
+keywordstyle=\color{codeblue}\bfseries,
+commentstyle=\color{codegreen},
+stringstyle=\color{codered},
+showstringspaces=false
+}
+
+% ==========================================
+% Custom Boxes
+% ==========================================
+
+\newtcolorbox{tipbox}{
+colback=green!5,
+colframe=green!60!black,
+title=Tip
+}
+
+\newtcolorbox{warningbox}{
+colback=red!5,
+colframe=red!60!black,
+title=Important
+}
+
+\newtcolorbox{notebox}{
+colback=blue!5,
+colframe=blue!60!black,
+title=Note
+}
+
+% ==========================================
+% Document
+% ==========================================
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+
+\author{Eyad Islam El-Taher}
+{\Huge\bfseries Open URL Redirect Notes \par}
+
+\vspace{0.5cm} 
+
+{\Large Author: Eyad Islam El-Taher \par}
+
+\vspace{0.5cm}
+
+{\large \today \par}
+
+\vfill
+
+\end{titlepage}
+
+
+
+
+
+% ============================================================
+% Introduction
+% ============================================================
+
+\section{Introduction}
+
+Open URL Redirect (also known as Open Redirect or Unvalidated Redirect) is a web application vulnerability that occurs when an application accepts user-controlled input and uses it as the destination of a redirect without proper validation.
+
+This vulnerability allows attackers to craft URLs that appear to belong to a trusted domain while redirecting victims to attacker-controlled websites. Open Redirect vulnerabilities are commonly abused in phishing attacks, OAuth attacks, token theft scenarios, and as part of larger attack chains.
+
+\begin{notebox}
+Although Open Redirect is often classified as a low-severity vulnerability, its impact can become critical when chained with authentication mechanisms, OAuth flows, or social engineering attacks.
+\end{notebox}
+
+% ============================================================
+% HTTP Redirection Status Codes
+% ============================================================
+
+\section{HTTP Redirection Status Codes}
+
+HTTP redirection responses belong to the 3xx class of status codes.
+
+\begin{longtable}{p{2cm}p{11cm}}
+\toprule
+\textbf{Code} & \textbf{Description} \\
+\midrule
+300 & Multiple Choices \\
+301 & Moved Permanently \\
+302 & Found (Temporary Redirect) \\
+303 & See Other \\
+304 & Not Modified \\
+305 & Use Proxy \\
+307 & Temporary Redirect \\
+308 & Permanent Redirect \\
+\bottomrule
+\end{longtable}
+
+\begin{notebox}
+Open Redirect vulnerabilities are most commonly observed in HTTP responses returning status codes 301, 302, 307, and 308 with a user-controlled \texttt{Location} header.
+\end{notebox}
+
+% ============================================================
+% Redirect Methods
+% ============================================================
+
+\section{Redirect Methods}
+
+Applications may implement redirection using several methods.
+
+\subsection{HTTP Header Redirect}
+
+\begin{lstlisting}[language=PHP]
+header("Location: https://example.com");
+exit();
+\end{lstlisting}
+
+\subsection{Path-Based Redirect}
+
+\begin{lstlisting}
+https://example.com/redirect/http://evil.com
+https://example.com/redirect/../http://evil.com
+\end{lstlisting}
+
+\subsection{JavaScript-Based Redirect}
+
+\begin{lstlisting}
+window.location = redirectUrl;
+\end{lstlisting}
+
+\subsection{Meta Refresh Redirect}
+
+\begin{lstlisting}[language=HTML] <meta http-equiv="refresh"
+content="0;url=https://example.com">
+\end{lstlisting}
+
+% ============================================================
+% Why Open Redirect Happens
+% ============================================================
+
+\section{Why Open Redirect Happens}
+
+Open Redirect vulnerabilities occur when developers trust user-controlled input and use it directly in redirection logic.
+
+Common causes include:
+
+\begin{itemize}
+\item Lack of URL validation.
+\item Missing allowlists.
+\item Weak regular expressions.
+\item OAuth misconfigurations.
+\item Trusting GET or POST parameters.
+\item Client-side JavaScript redirects.
+\end{itemize}
+
+% ============================================================
+% Vulnerable Code Examples
+% ============================================================
+
+\section{Vulnerable Code Examples}
+
+\subsection{PHP Native}
+
+\begin{lstlisting}
+
+<?php
+
+$url = $_GET['url'];
+
+header("Location: " . $url);
+exit();
+
+?>
+
+\end{lstlisting}
+
+\subsection{Laravel}
+
+\begin{lstlisting}
+public function redirect(Request $request)
+{
+return redirect($request->url);
+}
+\end{lstlisting}
+
+\subsection{JavaScript}
+
+\begin{lstlisting}
+const redirectUrl =
+new URLSearchParams(window.location.search)
+.get("url");
+
+window.location.href = redirectUrl;
+\end{lstlisting}
+
+\begin{warningbox}
+Never use user-controlled input directly in redirect functions.
+\end{warningbox}
+
+% ============================================================
+% Where To Find Open Redirects
+% ============================================================
+
+\section{Where to Find Open Redirects}
+
+Common locations include:
+
+\begin{itemize}
+\item Login pages
+\item Logout pages
+\item OAuth implementations
+\item SSO systems
+\item Password reset workflows
+\item Email verification pages
+\item Checkout systems
+\item Payment gateways
+\item Affiliate programs
+\item Tracking links
+\item Redirect endpoints
+\item Mobile deep links
+\end{itemize}
+
+% ============================================================
+% Common Parameter Names
+% ============================================================
+
+\section{Common Parameter Names}
+
+\begin{lstlisting}
+url=
+redirect=
+redirect_url=
+redirect_uri=
+redir=
+next=
+continue=
+return=
+return_to=
+returnTo=
+destination=
+dest=
+target=
+go=
+rurl=
+checkout_url=
+view=
+\end{lstlisting}
+
+% ============================================================
+% Payloads
+% ============================================================
+
+\section{Payloads}
+
+Common testing payloads:
+
+\begin{lstlisting}
+https://evil.com
+http://evil.com
+//evil.com
+////evil.com
+https:evil.com
+//evil.com
+/%2f%2fevil.com
+https://attacker.com
+\end{lstlisting}
+
+% ============================================================
+% DOM-Based Open Redirect Example
+% ============================================================
+
+\section{DOM-Based Open Redirect Example}
+
+Consider the following vulnerable JavaScript code:
+
+\begin{lstlisting}
+<a href='#' onclick='returnURL =
+/url=(https?://.+)/.exec(location);
+
+if(returnUrl)
+location.href = returnUrl[1];
+else
+location.href = "/"'>
+Back to Blog </a>
+\end{lstlisting}
+
+The application extracts the value of the \texttt{url} parameter from the current URL and directly assigns it to \texttt{location.href}.
+
+Example:
+
+\begin{lstlisting}
+https://victim.com/post?postId=4&
+url=https://evil.com
+\end{lstlisting}
+
+When the victim clicks \texttt{Back to Blog}, the browser redirects to the attacker-controlled website.
+
+\begin{notebox}
+This vulnerability exists entirely on the client side and is therefore classified as a DOM-Based Open Redirect.
+\end{notebox}
+
+% ============================================================
+% Methodology
+% ============================================================
+
+\section{Methodology}
+
+\begin{enumerate}
+\item Identify parameters that influence navigation.
+\item Replace values with an external domain.
+\item Observe redirection behavior.
+\item Analyze HTTP response headers.
+\item Test protocol-relative URLs.
+\item Test encoded payloads.
+\item Test JavaScript-based redirects.
+\item Test OAuth redirect URIs.
+\item Attempt filter bypass techniques.
+\end{enumerate}
+
+% ============================================================
+% Filter Bypass Techniques
+% ============================================================
+
+\section{Filter Bypass Techniques}
+
+\subsection{Whitelisted Domain Bypass}
+
+\begin{lstlisting}
+[www.whitelisted.com.evil.com](http://www.whitelisted.com.evil.com)
+\end{lstlisting}
+
+\subsection{Protocol Relative URLs}
+
+\begin{lstlisting}
+//evil.com
+////evil.com
+\end{lstlisting}
+
+\subsection{Bypass Blacklisted Slash}
+
+\begin{lstlisting}
+https:evil.com
+\end{lstlisting}
+
+\subsection{Escaped Slash Bypass}
+
+\begin{lstlisting}
+//evil.com
+//evil.com
+\end{lstlisting}
+
+\subsection{Null Byte Injection}
+
+\begin{lstlisting}
+[https://evil.com%00](https://evil.com%00)
+\end{lstlisting}
+
+\subsection{HTTP Parameter Pollution}
+
+\begin{lstlisting}
+?next=trusted.com&next=evil.com
+\end{lstlisting}
+
+\subsection{Username@Host Trick}
+
+\begin{lstlisting}
+https://trusted.com@evil.com
+\end{lstlisting}
+
+\subsection{Unicode Normalization}
+
+\begin{lstlisting}
+https://evil.c[U+2100].example.com
+\end{lstlisting}
+
+% ============================================================
+% Impact
+% ============================================================
+
+\section{Impact}
+
+Possible impacts include:
+
+\begin{itemize}
+\item Phishing attacks
+\item Credential theft
+\item OAuth token theft
+\item Access control bypass
+\item Session theft
+\item Malware distribution
+\item Security filter bypass
+\item Brand reputation damage
+\end{itemize}
+
+% ============================================================
+% Remediation
+% ============================================================
+
+\section{Remediation}
+
+Recommended mitigations:
+
+\begin{itemize}
+\item Use allowlists for redirect destinations.
+\item Restrict redirects to internal paths.
+\item Validate hosts and schemes.
+\item Reject protocol-relative URLs.
+\item Validate OAuth redirect URIs exactly.
+\item Avoid user-controlled redirects whenever possible.
+\item Use indirect reference identifiers.
+\end{itemize}
+
+% ============================================================
+% References
+% ============================================================
+
+\end{document}
