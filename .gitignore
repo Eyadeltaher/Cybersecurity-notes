@@ -8,6 +8,7 @@
 *.synctex.gz
 *.toc
 *.fls
+*.listing
 *.fdb_latexmk
 
 # Ignore OS-specific junk
