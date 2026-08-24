@@ -461,3 +461,62 @@ Potential OS-level privilege escalation
 ```
 
 **Finding:** The combination of **exposed maintenance credentials**, **high MySQL privileges**, and a **MySQL daemon running as root** creates a significant privilege-escalation risk.
+
+---
+
+# SUID/SGID + exim-4.84-3
+
+ we find:
+```text
+/usr/sbin/exim-4.84-3
+```
+
+Now don't immediately exploit it.
+Ask:
+
+> **Why is this interesting?**
+
+Because:
+1. It is an executable with SUID/SGID privileges.
+2. It is a specific, relatively old version of **Exim**.
+3. A vulnerability may exist specifically for that version.
+
+###  Research the version
+Search for:
+```text
+Exim 4.84-3 privilege escalation
+```
+or:
+```text
+Exim 4.84-3 CVE
+```
+
+The relevant vulnerability is **CVE-2016-1531**, which has a local privilege-escalation exploit for affected Exim versions.
+
+In the lab, the exploit is already provided:
+```text
+/home/user/tools/suid/exim/cve-2016-1531.sh
+```
+
+### 4. Execute the exploit
+```bash
+/home/user/tools/suid/exim/cve-2016-1531.sh
+```
+
+If successful, the exploit gives us a root shell.
+
+The attack chain is:
+```text
+SUID/SGID enumeration
+        ↓
+/usr/sbin/exim-4.84-3
+        ↓
+Identify Exim + version
+        ↓
+Research CVE-2016-1531
+        ↓
+Local privilege-escalation exploit
+        ↓
+Root shell
+```
+

