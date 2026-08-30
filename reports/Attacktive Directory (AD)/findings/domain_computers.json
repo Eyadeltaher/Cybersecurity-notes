@@ -1,0 +1,151 @@
+[{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "ATTACKTIVEDIREC"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dNSHostName": [
+            "AttacktiveDirectory.spookysec.local"
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "distinguishedName": [
+            "CN=ATTACKTIVEDIREC,OU=Domain Controllers,DC=spookysec,DC=local"
+        ],
+        "instanceType": [
+            4
+        ],
+        "isCriticalSystemObject": [
+            true
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "2026-08-29 15:47:15.906700+00:00"
+        ],
+        "lastLogonTimestamp": [
+            "2026-08-29 15:45:29.375439+00:00"
+        ],
+        "localPolicyFlags": [
+            0
+        ],
+        "logonCount": [
+            44
+        ],
+        "msDFSR-ComputerReferenceBL": [
+            "CN=ATTACKTIVEDIREC,CN=Topology,CN=Domain System Volume,CN=DFSR-GlobalSettings,CN=System,DC=spookysec,DC=local"
+        ],
+        "msDS-GenerationId": [
+            {
+                "encoded": "Kfon7PfM/B0=",
+                "encoding": "base64"
+            }
+        ],
+        "msDS-SupportedEncryptionTypes": [
+            28
+        ],
+        "name": [
+            "ATTACKTIVEDIREC"
+        ],
+        "objectCategory": [
+            "CN=Computer,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user",
+            "computer"
+        ],
+        "objectGUID": [
+            "{57ee0846-b255-42bb-84d3-ba32b266e1e5}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1000"
+        ],
+        "operatingSystem": [
+            "Windows Server 2019 Standard"
+        ],
+        "operatingSystemVersion": [
+            "10.0 (17763)"
+        ],
+        "primaryGroupID": [
+            516
+        ],
+        "pwdLastSet": [
+            "2026-08-29 15:45:00.062937+00:00"
+        ],
+        "rIDSetReferences": [
+            "CN=RID Set,CN=ATTACKTIVEDIREC,OU=Domain Controllers,DC=spookysec,DC=local"
+        ],
+        "sAMAccountName": [
+            "ATTACKTIVEDIREC$"
+        ],
+        "sAMAccountType": [
+            805306369
+        ],
+        "serverReferenceBL": [
+            "CN=ATTACKTIVEDIREC,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "servicePrincipalName": [
+            "Dfsr-12F9A27C-BF97-4787-9364-D31B6C55EB04/AttacktiveDirectory.spookysec.local",
+            "ldap/AttacktiveDirectory.spookysec.local/ForestDnsZones.spookysec.local",
+            "ldap/AttacktiveDirectory.spookysec.local/DomainDnsZones.spookysec.local",
+            "TERMSRV/ATTACKTIVEDIREC",
+            "TERMSRV/AttacktiveDirectory.spookysec.local",
+            "DNS/AttacktiveDirectory.spookysec.local",
+            "GC/AttacktiveDirectory.spookysec.local/spookysec.local",
+            "RestrictedKrbHost/AttacktiveDirectory.spookysec.local",
+            "RestrictedKrbHost/ATTACKTIVEDIREC",
+            "RPC/22efa0ac-0a79-44f5-a04f-4caf1260c1ad._msdcs.spookysec.local",
+            "HOST/ATTACKTIVEDIREC/THM-AD",
+            "HOST/AttacktiveDirectory.spookysec.local/THM-AD",
+            "HOST/ATTACKTIVEDIREC",
+            "HOST/AttacktiveDirectory.spookysec.local",
+            "HOST/AttacktiveDirectory.spookysec.local/spookysec.local",
+            "E3514235-4B06-11D1-AB04-00C04FC2DCD2/22efa0ac-0a79-44f5-a04f-4caf1260c1ad/spookysec.local",
+            "ldap/ATTACKTIVEDIREC/THM-AD",
+            "ldap/22efa0ac-0a79-44f5-a04f-4caf1260c1ad._msdcs.spookysec.local",
+            "ldap/AttacktiveDirectory.spookysec.local/THM-AD",
+            "ldap/ATTACKTIVEDIREC",
+            "ldap/AttacktiveDirectory.spookysec.local",
+            "ldap/AttacktiveDirectory.spookysec.local/spookysec.local"
+        ],
+        "uSNChanged": [
+            57373
+        ],
+        "uSNCreated": [
+            12293
+        ],
+        "userAccountControl": [
+            532480
+        ],
+        "whenChanged": [
+            "2026-08-29 15:45:29+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:40:08+00:00"
+        ]
+    },
+    "dn": "CN=ATTACKTIVEDIREC,OU=Domain Controllers,DC=spookysec,DC=local"
+}]

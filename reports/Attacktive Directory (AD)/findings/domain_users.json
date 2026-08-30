@@ -1,0 +1,1780 @@
+[{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "adminCount": [
+            1
+        ],
+        "badPasswordTime": [
+            "2020-09-17 23:42:35.731056+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Admin Spooks"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-09-17 23:26:47+00:00",
+            "2020-09-17 23:02:20+00:00",
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "displayName": [
+            "Admin Spooks"
+        ],
+        "distinguishedName": [
+            "CN=Admin Spooks,OU=Administrator,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Admin"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "2020-09-18 00:07:49.821470+00:00"
+        ],
+        "lastLogonTimestamp": [
+            "2020-09-17 23:03:58.807491+00:00"
+        ],
+        "logonCount": [
+            6
+        ],
+        "memberOf": [
+            "CN=Domain Admins,CN=Users,DC=spookysec,DC=local",
+            "CN=Enterprise Admins,CN=Users,DC=spookysec,DC=local",
+            "CN=Remote Desktop Users,CN=Builtin,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Admin Spooks"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{7fea576d-68aa-4ccb-b09a-264580589bd7}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1601"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-09-17 23:02:20.264454+00:00"
+        ],
+        "sAMAccountName": [
+            "a-spooks"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "Spooks"
+        ],
+        "uSNChanged": [
+            36890
+        ],
+        "uSNCreated": [
+            32792
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "a-spooks@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-09-17 23:26:47+00:00"
+        ],
+        "whenCreated": [
+            "2020-09-17 23:02:12+00:00"
+        ]
+    },
+    "dn": "CN=Admin Spooks,OU=Administrator,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "2026-08-29 16:31:42.507088+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "backup"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "1601-01-01 18:16:33+00:00"
+        ],
+        "displayName": [
+            "backup"
+        ],
+        "distinguishedName": [
+            "CN=backup,OU=Administrator,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "backup"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "2026-08-29 16:54:25.681780+00:00"
+        ],
+        "lastLogonTimestamp": [
+            "2026-08-29 16:54:25.681780+00:00"
+        ],
+        "logonCount": [
+            1
+        ],
+        "name": [
+            "backup"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{92e326a7-1a92-43f9-aa2b-9aa51ba955e6}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1118"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 19:57:05.720037+00:00"
+        ],
+        "sAMAccountName": [
+            "backup"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "uSNChanged": [
+            57398
+        ],
+        "uSNCreated": [
+            16426
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "backup@spookysec.local"
+        ],
+        "whenChanged": [
+            "2026-08-29 16:54:25+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 19:57:04+00:00"
+        ]
+    },
+    "dn": "CN=backup,OU=Administrator,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "2026-08-29 16:32:06.710846+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "svc admin"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "svc admin"
+        ],
+        "distinguishedName": [
+            "CN=svc admin,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "svc"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "2026-08-29 16:32:07.165384+00:00"
+        ],
+        "lastLogonTimestamp": [
+            "2026-08-29 16:11:20.774302+00:00"
+        ],
+        "logonCount": [
+            6
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local",
+            "CN=Remote Desktop Users,CN=Builtin,DC=spookysec,DC=local"
+        ],
+        "msDS-SupportedEncryptionTypes": [
+            0
+        ],
+        "name": [
+            "svc admin"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{d2fe7d1f-cb38-43db-a905-984b1bc99c23}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1114"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:57:56.747414+00:00"
+        ],
+        "sAMAccountName": [
+            "svc-admin"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "admin"
+        ],
+        "uSNChanged": [
+            57386
+        ],
+        "uSNCreated": [
+            12928
+        ],
+        "userAccountControl": [
+            4260352
+        ],
+        "userPrincipalName": [
+            "svc-admin@spookysec.local"
+        ],
+        "whenChanged": [
+            "2026-08-29 16:11:20+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:57:55+00:00"
+        ]
+    },
+    "dn": "CN=svc admin,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "horshark"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "horshark"
+        ],
+        "distinguishedName": [
+            "CN=horshark,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "horshark"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "horshark"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{8b6b3421-630c-4a2c-bf2b-4e7a802ae2c4}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1113"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:55:29.744431+00:00"
+        ],
+        "sAMAccountName": [
+            "horshark"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "uSNChanged": [
+            12926
+        ],
+        "uSNCreated": [
+            12921
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "horshark@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:55:29+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:55:28+00:00"
+        ]
+    },
+    "dn": "CN=horshark,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Muirland Oracle"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "Muirland Oracle"
+        ],
+        "distinguishedName": [
+            "CN=Muirland Oracle,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Muirland"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Muirland Oracle"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{fa4d0281-9bcd-4c45-905d-3c33f732d61b}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1112"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:55:01.324253+00:00"
+        ],
+        "sAMAccountName": [
+            "Muirland"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "Oracle"
+        ],
+        "uSNChanged": [
+            12895
+        ],
+        "uSNCreated": [
+            12890
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "Muirland@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:55:01+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:55:00+00:00"
+        ]
+    },
+    "dn": "CN=Muirland Oracle,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Par Adox"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "Par Adox"
+        ],
+        "distinguishedName": [
+            "CN=Par Adox,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Par"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Par Adox"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{db714d30-f002-471f-b4dd-12951c71019d}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1111"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:54:29.433718+00:00"
+        ],
+        "sAMAccountName": [
+            "paradox"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "Adox"
+        ],
+        "uSNChanged": [
+            12888
+        ],
+        "uSNCreated": [
+            12883
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "paradox@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:54:29+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:54:28+00:00"
+        ]
+    },
+    "dn": "CN=Par Adox,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Robin"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "Robin"
+        ],
+        "distinguishedName": [
+            "CN=Robin,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Robin"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Robin"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{6baf6e7c-f036-47c9-a540-dfa8c85f859b}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1110"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:54:08.074139+00:00"
+        ],
+        "sAMAccountName": [
+            "robin"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "uSNChanged": [
+            12881
+        ],
+        "uSNCreated": [
+            12876
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "robin@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:54:08+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:54:07+00:00"
+        ]
+    },
+    "dn": "CN=Robin,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Ori"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "Ori"
+        ],
+        "distinguishedName": [
+            "CN=Ori,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Ori"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Ori"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{a2d8c962-1b9e-42bb-8566-2cd53e27513b}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1109"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:53:46.854889+00:00"
+        ],
+        "sAMAccountName": [
+            "Ori"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "uSNChanged": [
+            12874
+        ],
+        "uSNCreated": [
+            12869
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "Ori@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:53:46+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:53:45+00:00"
+        ]
+    },
+    "dn": "CN=Ori,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Jon Darkstar"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "Jon Darkstar"
+        ],
+        "distinguishedName": [
+            "CN=Jon Darkstar,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Jon"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Jon Darkstar"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{8f2e5f80-bafe-43ff-bd96-71032ec353cc}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1108"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:53:17.120737+00:00"
+        ],
+        "sAMAccountName": [
+            "darkstar"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "Darkstar"
+        ],
+        "uSNChanged": [
+            12867
+        ],
+        "uSNCreated": [
+            12862
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "darkstar@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:53:17+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:53:16+00:00"
+        ]
+    },
+    "dn": "CN=Jon Darkstar,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Dan SherlockSec"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "Dan SherlockSec"
+        ],
+        "distinguishedName": [
+            "CN=Dan SherlockSec,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Dan"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Dan SherlockSec"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{33062557-3737-439c-b3e9-0fe084a85185}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1107"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:52:56.620745+00:00"
+        ],
+        "sAMAccountName": [
+            "sherlocksec"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "SherlockSec"
+        ],
+        "uSNChanged": [
+            12860
+        ],
+        "uSNCreated": [
+            12855
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "sherlocksec@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:52:56+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:52:55+00:00"
+        ]
+    },
+    "dn": "CN=Dan SherlockSec,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "root optional"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "root optional"
+        ],
+        "distinguishedName": [
+            "CN=root optional,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "root"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "root optional"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{e43491a1-07e2-4854-97c0-8c583c128293}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1106"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:52:32.481886+00:00"
+        ],
+        "sAMAccountName": [
+            "optional"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "optional"
+        ],
+        "uSNChanged": [
+            12853
+        ],
+        "uSNCreated": [
+            12848
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "optional@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:52:32+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:52:31+00:00"
+        ]
+    },
+    "dn": "CN=root optional,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "James Ninja"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "James Ninja"
+        ],
+        "distinguishedName": [
+            "CN=James Ninja,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "James"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "James Ninja"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{7acdd757-ce5a-4ceb-9a9f-c82e70f964d1}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1105"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:51:53.103756+00:00"
+        ],
+        "sAMAccountName": [
+            "james"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "Ninja"
+        ],
+        "uSNChanged": [
+            12846
+        ],
+        "uSNCreated": [
+            12841
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "james@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:51:53+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:51:52+00:00"
+        ]
+    },
+    "dn": "CN=James Ninja,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Ashu BreakerOfThings"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "Ashu BreakerOfThings"
+        ],
+        "distinguishedName": [
+            "CN=Ashu BreakerOfThings,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Ashu"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Ashu BreakerOfThings"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{908915a4-ab78-468b-83f6-a91afb74c317}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1104"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:51:31.448608+00:00"
+        ],
+        "sAMAccountName": [
+            "breakerofthings"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "BreakerOfThings"
+        ],
+        "uSNChanged": [
+            12839
+        ],
+        "uSNCreated": [
+            12834
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "breakerofthings@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:51:31+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:51:30+00:00"
+        ]
+    },
+    "dn": "CN=Ashu BreakerOfThings,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Ben Skidy"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "displayName": [
+            "Ben Skidy"
+        ],
+        "distinguishedName": [
+            "CN=Ben Skidy,OU=Staff,DC=spookysec,DC=local"
+        ],
+        "givenName": [
+            "Ben"
+        ],
+        "instanceType": [
+            4
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=CompStaff,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Ben Skidy"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{e6f6420b-6760-44b2-aa8f-0a07839b6205}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-1103"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:44:07.006718+00:00"
+        ],
+        "sAMAccountName": [
+            "skidy"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "sn": [
+            "Skidy"
+        ],
+        "uSNChanged": [
+            12759
+        ],
+        "uSNCreated": [
+            12754
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "userPrincipalName": [
+            "skidy@spookysec.local"
+        ],
+        "whenChanged": [
+            "2020-04-04 18:44:07+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:44:05+00:00"
+        ]
+    },
+    "dn": "CN=Ben Skidy,OU=Staff,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "adminCount": [
+            1
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "krbtgt"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "description": [
+            "Key Distribution Center Service Account"
+        ],
+        "distinguishedName": [
+            "CN=krbtgt,CN=Users,DC=spookysec,DC=local"
+        ],
+        "instanceType": [
+            4
+        ],
+        "isCriticalSystemObject": [
+            true
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=Denied RODC Password Replication Group,CN=Users,DC=spookysec,DC=local"
+        ],
+        "msDS-SupportedEncryptionTypes": [
+            0
+        ],
+        "name": [
+            "krbtgt"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{2040ce37-11c7-4433-87ab-a712a8d0dfb7}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-502"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-04-04 18:40:08.989418+00:00"
+        ],
+        "sAMAccountName": [
+            "krbtgt"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "servicePrincipalName": [
+            "kadmin/changepw"
+        ],
+        "showInAdvancedViewOnly": [
+            true
+        ],
+        "uSNChanged": [
+            12916
+        ],
+        "uSNCreated": [
+            12324
+        ],
+        "userAccountControl": [
+            514
+        ],
+        "whenChanged": [
+            "2020-04-04 18:55:18+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:40:08+00:00"
+        ]
+    },
+    "dn": "CN=krbtgt,CN=Users,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Guest"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-07-14 22:36:49+00:00"
+        ],
+        "description": [
+            "Built-in account for guest access to the computer/domain"
+        ],
+        "distinguishedName": [
+            "CN=Guest,CN=Users,DC=spookysec,DC=local"
+        ],
+        "instanceType": [
+            4
+        ],
+        "isCriticalSystemObject": [
+            true
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "logonCount": [
+            0
+        ],
+        "memberOf": [
+            "CN=Guests,CN=Builtin,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Guest"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{8c844443-775d-4d76-b8dd-484cf10db617}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-501"
+        ],
+        "primaryGroupID": [
+            514
+        ],
+        "pwdLastSet": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "sAMAccountName": [
+            "Guest"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "uSNChanged": [
+            8197
+        ],
+        "uSNCreated": [
+            8197
+        ],
+        "userAccountControl": [
+            66082
+        ],
+        "whenChanged": [
+            "2020-04-04 18:39:30+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:39:30+00:00"
+        ]
+    },
+    "dn": "CN=Guest,CN=Users,DC=spookysec,DC=local"
+},{
+    "attributes": {
+        "accountExpires": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "adminCount": [
+            1
+        ],
+        "badPasswordTime": [
+            "2020-04-04 18:42:58.039593+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "Administrator"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "2020-04-04 20:04:15+00:00",
+            "2020-04-04 20:01:23+00:00",
+            "2020-04-04 19:58:09+00:00",
+            "2020-04-04 19:45:45+00:00",
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "description": [
+            "Built-in account for administering the computer/domain"
+        ],
+        "distinguishedName": [
+            "CN=Administrator,CN=Users,DC=spookysec,DC=local"
+        ],
+        "instanceType": [
+            4
+        ],
+        "isCriticalSystemObject": [
+            true
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "2020-09-17 23:03:37.467566+00:00"
+        ],
+        "lastLogonTimestamp": [
+            "2026-08-29 16:59:25.722378+00:00"
+        ],
+        "logonCount": [
+            15
+        ],
+        "logonHours": [
+            {
+                "encoded": "////////////////////////////",
+                "encoding": "base64"
+            }
+        ],
+        "memberOf": [
+            "CN=Group Policy Creator Owners,CN=Users,DC=spookysec,DC=local",
+            "CN=Domain Admins,CN=Users,DC=spookysec,DC=local",
+            "CN=Enterprise Admins,CN=Users,DC=spookysec,DC=local",
+            "CN=Schema Admins,CN=Users,DC=spookysec,DC=local",
+            "CN=Remote Desktop Users,CN=Builtin,DC=spookysec,DC=local",
+            "CN=Administrators,CN=Builtin,DC=spookysec,DC=local"
+        ],
+        "name": [
+            "Administrator"
+        ],
+        "objectCategory": [
+            "CN=Person,CN=Schema,CN=Configuration,DC=spookysec,DC=local"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user"
+        ],
+        "objectGUID": [
+            "{d34f1ef6-64a7-4c8b-94a3-f568d91b390f}"
+        ],
+        "objectSid": [
+            "S-1-5-21-3591857110-2884097990-301047963-500"
+        ],
+        "primaryGroupID": [
+            513
+        ],
+        "pwdLastSet": [
+            "2020-09-17 22:53:28.851412+00:00"
+        ],
+        "sAMAccountName": [
+            "Administrator"
+        ],
+        "sAMAccountType": [
+            805306368
+        ],
+        "uSNChanged": [
+            57399
+        ],
+        "uSNCreated": [
+            8196
+        ],
+        "userAccountControl": [
+            66048
+        ],
+        "whenChanged": [
+            "2026-08-29 16:59:25+00:00"
+        ],
+        "whenCreated": [
+            "2020-04-04 18:39:30+00:00"
+        ]
+    },
+    "dn": "CN=Administrator,CN=Users,DC=spookysec,DC=local"
+}]

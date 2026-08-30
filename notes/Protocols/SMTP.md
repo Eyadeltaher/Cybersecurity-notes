@@ -242,3 +242,13 @@ run
 Metasploit will test usernames from the wordlist against the SMTP server and report usernames that appear to be valid.
 
 **Important:** Don't use `exploit` here. These are **auxiliary scanner modules**, so `run` is the appropriate command.
+
+
+test usernames with other tool
+```bash
+smtp-user-enum -U /opt/metasploit/data/wordlists/unix_users.txt 192.168.56.101  25 
+```
+
+```bash
+smtp-user-enum -m RCPT -U /opt/metasploit/data/wordlists/unix_users.txt 192.168.56.101  25    
+```

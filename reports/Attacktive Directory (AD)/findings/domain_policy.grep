@@ -1,0 +1,2 @@
+distinguishedName	lockOutObservationWindow	lockoutDuration	lockoutThreshold	maxPwdAge	minPwdAge	minPwdLength	pwdHistoryLength	pwdProperties	ms-DS-MachineAccountQuota
+DC=spookysec,DC=local	30.0 minutes	30.0 minutes	0	42.00 days	1.00 days	0	0		10
