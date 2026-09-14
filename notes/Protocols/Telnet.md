@@ -11,7 +11,6 @@ Telnet sends all messages in clear text and has no specific security mechanisms.
  `telnet ip port`                ex `telnet 10.10.10.3 23`
 
 
-
 # Exploit
 ### 1. Test whether the Telnet input does anything
 

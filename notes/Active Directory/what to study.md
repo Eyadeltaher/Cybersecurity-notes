@@ -2,31 +2,31 @@ https://youtube.com/playlist?list=PLEx3X4axAW0TUBerU2T70-tWnapGKE6rp&si=FPy3C5j7
 
 ###  Already covered in my notes
 
-|Topic|Status|
-|---|---|
-|AD Basics|✅|
-|Kerberos authentication|✅|
-|User enumeration|✅|
-|Kerberos user enumeration / Kerbrute|✅|
-|AS-REP Roasting|✅|
-|SMB enumeration|✅|
-|LDAP enumeration|✅|
-|Domain SID enumeration|✅|
-|SMB share/permission enumeration|✅|
-|BloodHound / AD relationships|✅|
-|Impacket basics|✅|
-|DCSync|✅|
-|NTDS.dit dumping|✅|
-|Pass-the-Hash|✅|
-|PsExec / Remote Service Execution|✅|
-|Password cracking|✅|
+| Topic                                | Status |
+| ------------------------------------ | ------ |
+| AD Basics                            | ✅      |
+| Kerberos authentication              | ✅      |
+| User enumeration                     | ✅      |
+| Kerberos user enumeration / Kerbrute | ✅      |
+| AS-REP Roasting                      | ✅      |
+| SMB enumeration                      | ✅      |
+| LDAP enumeration                     | ✅      |
+| Domain SID enumeration               | ✅      |
+| SMB share/permission enumeration     | ✅      |
+| BloodHound / AD relationships        | ✅      |
+| Impacket basics                      | ✅      |
+| DCSync                               | ✅      |
+| NTDS.dit dumping                     | ✅      |
+| Pass-the-Hash                        | ✅      |
+| PsExec / Remote Service Execution    | ✅      |
+| Password cracking                    | ✅      |
 
 ###  Started / need deeper study
 
 These appeared in my material, but I'd study them more:
-- **Kerberoasting**
-- **Password Spraying**
-- **NTLM authentication**
+- **Kerberoasting**   ✅
+- **Password Spraying**  ✅
+- **NTLM authentication**  ✅
 - **Pass-the-Ticket**
 - **Overpass-the-Hash**
 - **Golden Ticket**

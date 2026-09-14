@@ -1,4 +1,4 @@
-The **Metasploit Framework** is the most widely used open-source exploitation framework in the penetration testing industry. Originally created by H.D. Moore in 2003 as a portable networking tool, Metasploit was acquired by Rapid7 in 2009 and has grown into an ecosystem containing over 2,600 exploits and more than 6,100 modules in total.
+The **Metasploit Framework** is the most widely used open-source exploitation framework in the penetration testing industry.
 ### Metasploit supports the full penetration testing lifecycle:
 - **Information gathering**: Scanning targets and fingerprinting services
 - **Vulnerability identification**: Detecting known flaws in target systems
@@ -14,42 +14,42 @@ The **Metasploit Framework** is the most widely used open-source exploitation fr
 `msfconsole` is the primary command-line interface for the Metasploit Framework. you can search for modules, configure parameters, launch exploits, and manage sessions on compromised targets.
 
 **2. Modules**
-Modules are the building blocks of Metasploit. Each module is a self-contained piece of code designed to perform a specific task. There are seven categories of modules ==(exploits, auxiliary, payloads, post-exploitation, encoders, NOPs, and evasion)==.
+Modules are the building blocks of Metasploit. Each module is a self-contained piece of code designed to perform a specific task. There are seven categories of modules (exploits, auxiliary, payloads, post-exploitation, encoders, NOPs, and evasion).
 
 **3. Tools**
-the framework ships with a set of standalone command-line tools. The most important one for this module is `msfvenom`, which generates payloads outside of `msfconsole` for use in scenarios where you need a standalone file (an executable, a web shell, or raw shellcode). We will cover `msfvenom` in depth in the fourth room of this module. Other tools like `pattern_create` and `pattern_offset` are used in exploit development.
+the framework ships with a set of standalone command-line tools. The most important one for this module is `msfvenom`, which generates payloads outside of `msfconsole` for use in scenarios where you need a standalone file (an executable, a web shell, or raw shellcode).
 
 ---
 ## The Seven Module Categories
 Metasploit organizes its entire library into seven categories of modules. Each category serves a distinct role in the penetration testing workflow.
 
 **Exploits**
-Exploit modules target a specific vulnerability on a specific platform. They are organized by target operating system and service (e.g., `exploits/windows/smb/`, `exploits/linux/http/`).
+Exploit modules target a specific vulnerability on a specific platform.
 
 **Auxiliary**
-Auxiliary modules handle everything that is _not_ direct exploitation. This includes port scanners, service fingerprinters, brute-force login modules, fuzzers, and network sniffers. If you need to gather information about a target or test credentials without delivering an exploit, you are looking for an auxiliary module.
+Auxiliary modules handle everything that is _not_ direct exploitation. This includes port scanners, service fingerprinters, brute-force login modules, fuzzers, and network sniffers.
 
 **Payloads**
-Payload modules contain the code that executes on the target after a successful exploit. Metasploit ships nearly 1,700 payload modules covering a wide range of operating systems, architectures, and connection methods.
+Payload modules contain the code that executes on the target after a successful exploit. 
 
 **Post-Exploitation**
-Post modules run _after_ you have already gained access to a target through an active session. They automate common post-exploitation tasks: dumping password hashes, enumerating system information, capturing screenshots, pivoting to other network segments, and more. These modules are organized by target OS (e.g., `post/windows/gather/`, `post/linux/manage/`).
+Post modules run _after_ you have already gained access to a target through an active session. They automate common post-exploitation tasks: dumping password hashes, enumerating system information, capturing screenshots, pivoting to other network segments, and more.
 
 **Encoders**
-Encoder modules transform payload data into a different format. The most well-known encoder is `x86/shikata_ga_nai`, which applies polymorphic XOR encoding. An important clarification: encoding is _not_ encryption, and it is _not_ a reliable antivirus evasion technique on its own. Modern endpoint detection solutions look far beyond simple signature matching. Encoders still have legitimate uses (removing bad characters from shellcode, for example), but treating them as a stealth mechanism is a common beginner misconception.
+Encoder modules transform payload data into a different format. The most well-known encoder is `x86/shikata_ga_nai`, which applies polymorphic XOR encoding. It is _not_ a reliable antivirus evasion technique on its own. Modern endpoint detection solutions look far beyond simple signature matching. 
 
 **NOPs**
-**NOP** (No Operation) modules generate NOP sleds, sequences of instructions that do nothing. On x86 processors, the classic NOP instruction is `0x90`, which tells the CPU to skip to the next instruction. sleds serve as padding to ensure payloads land at predictable memory addresses during buffer overflow exploitation. You will rarely interact with NOP modules directly; Metasploit handles NOP sled generation automatically when needed.
+You will rarely interact with NOP modules directly; Metasploit handles NOP sled generation automatically when needed.
 
 **Evasion**
-Evasion modules are purpose-built attempts to bypass specific security controls, such as Windows Defender or AppLocker. Unlike encoders (which simply re-encode data), evasion modules implement actual evasion techniques like process herpaderping or living-off-the-land binary abuse. This is the smallest module category, currently containing around a dozen modules. Their effectiveness varies and depends heavily on the target environment's security configuration.
+Evasion modules are purpose-built attempts to bypass specific security controls, such as Windows Defender or AppLockerd.
 
 ---
 ## Payload Types: Singles, Stagers, and Stages
 
 Within the payload category, Metasploit distinguishes between three types.
 
-**Singles** (also called **inline** payloads) are self-contained. The entire payload is delivered in a single package. A single payload might add a user account, execute a system command, or open a bind shell. Because everything is in one piece, singles tend to be larger but more reliable; there is no second download that could fail or be blocked.
+**Singles** are self-contained. The entire payload is delivered in a single package. A single payload might add a user account, execute a system command, or open a bind shell. Because everything is in one piece, singles tend to be larger but more reliable; there is no second download that could fail or be blocked.
 
 **Stagers** are small, lightweight payloads whose only job is to establish a communication channel between the attacker and the target. Once connected, the stager downloads the second component.
 
@@ -125,19 +125,6 @@ Pay attention to a few key fields:
 - **Available targets**: Some modules support multiple target configurations. The default is usually sufficient, but in some cases you may need to select a specific target (e.g., a particular Windows service pack or application version).
 
 ---
-## Know Your Prompt
-
-Before we touch any configuration commands, let's establish a reference you will come back to repeatedly. When working with Metasploit, you will encounter five distinct prompts. Each one tells you _where_ you are and _what commands are available_ to you:
-
-|Prompt|Context|What You Can Do|
-|---|---|---|
-|`root@CONNECTION_IP~#`|Regular Linux terminal|Standard Linux commands only. is not running.|
-|`msf6 >`|Msfconsole, no module selected|Global Metasploit commands: `search`, `use`, `sessions`, `setg`. You cannot run `exploit` or set module-specific options here.|
-|`msf6 exploit(windows/smb/ms17_010_eternalblue) >`|Module context|Full module commands: `set`, `show options`, `exploit`, `run`, `check`, `back`. The prompt displays which module is loaded.|
-|`meterpreter >`|Active session|Meterpreter commands: `sysinfo`, `getuid`, `hashdump`, `shell`, `background`. You are interacting with the target system.|
-|`C:\Windows\system32>`|OS shell on the target|Regular operating system commands. Every command you type executes on the _target_, not on your machine.|
-
-
 # Dealing with Modules
 
 The `use` command loads a module into your current context

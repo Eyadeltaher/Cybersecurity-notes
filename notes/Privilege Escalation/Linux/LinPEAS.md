@@ -1,4 +1,4 @@
-**LinPEAS** (Linux Privilege Escalation Awesome Script) is a comprehensive tool that scans for privilege escalation vectors. It color-codes output (red for critical, yellow for interesting) to help identify attack vectors quickly.
+d**LinPEAS** (Linux Privilege Escalation Awesome Script) is a comprehensive tool that scans for privilege escalation vectors. It color-codes output (red for critical, yellow for interesting) to help identify attack vectors quickly.
 
 Instead of manually checking:
 ```text

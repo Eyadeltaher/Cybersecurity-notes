@@ -853,9 +853,9 @@ The important question is:
 
 A **wildcard injection** vulnerability can occur when a cron script passes a wildcard such as `*` to a command without properly handling filenames.
 
-Example:
+Example vulnerable cron
 ```bash
-tar -czf backup.tar.gz *
+SHELL=/bin/bash PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin * * * * * root cd /opt/backups && tar czf /var/backups/uploads.tgz *
 ```
 
 The shell expands `*` **before** executing `tar`.
