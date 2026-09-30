@@ -1,0 +1,440 @@
+[{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "http_svc"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "distinguishedName": [
+            "CN=http_svc,CN=Managed Service Accounts,DC=cs,DC=org"
+        ],
+        "instanceType": [
+            4
+        ],
+        "isCriticalSystemObject": [
+            false
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "localPolicyFlags": [
+            0
+        ],
+        "logonCount": [
+            0
+        ],
+        "msDS-SupportedEncryptionTypes": [
+            28
+        ],
+        "name": [
+            "http_svc"
+        ],
+        "objectCategory": [
+            "CN=ms-DS-Managed-Service-Account,CN=Schema,CN=Configuration,DC=cs,DC=org"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user",
+            "computer",
+            "msDS-ManagedServiceAccount"
+        ],
+        "objectGUID": [
+            "{29ffb2f8-583c-4b6c-b2b4-b8f34a42e47d}"
+        ],
+        "objectSid": [
+            "S-1-5-21-79771789-2455041398-3787107133-1213"
+        ],
+        "primaryGroupID": [
+            515
+        ],
+        "pwdLastSet": [
+            "2026-09-26 20:28:23.880596+00:00"
+        ],
+        "sAMAccountName": [
+            "http_svc$"
+        ],
+        "sAMAccountType": [
+            805306369
+        ],
+        "servicePrincipalName": [
+            "http_svc/httpserver.cs.org"
+        ],
+        "uSNChanged": [
+            13532
+        ],
+        "uSNCreated": [
+            13528
+        ],
+        "userAccountControl": [
+            4096
+        ],
+        "whenChanged": [
+            "2026-09-26 20:28:23+00:00"
+        ],
+        "whenCreated": [
+            "2026-09-26 20:28:23+00:00"
+        ]
+    },
+    "dn": "CN=http_svc,CN=Managed Service Accounts,DC=cs,DC=org"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "mssql_svc"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "distinguishedName": [
+            "CN=mssql_svc,CN=Managed Service Accounts,DC=cs,DC=org"
+        ],
+        "instanceType": [
+            4
+        ],
+        "isCriticalSystemObject": [
+            false
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "localPolicyFlags": [
+            0
+        ],
+        "logonCount": [
+            0
+        ],
+        "msDS-SupportedEncryptionTypes": [
+            28
+        ],
+        "name": [
+            "mssql_svc"
+        ],
+        "objectCategory": [
+            "CN=ms-DS-Managed-Service-Account,CN=Schema,CN=Configuration,DC=cs,DC=org"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user",
+            "computer",
+            "msDS-ManagedServiceAccount"
+        ],
+        "objectGUID": [
+            "{34799450-588a-4556-b83b-950053715376}"
+        ],
+        "objectSid": [
+            "S-1-5-21-79771789-2455041398-3787107133-1212"
+        ],
+        "primaryGroupID": [
+            515
+        ],
+        "pwdLastSet": [
+            "2026-09-26 20:28:23.746050+00:00"
+        ],
+        "sAMAccountName": [
+            "mssql_svc$"
+        ],
+        "sAMAccountType": [
+            805306369
+        ],
+        "servicePrincipalName": [
+            "mssql_svc/mssqlserver.cs.org"
+        ],
+        "uSNChanged": [
+            13526
+        ],
+        "uSNCreated": [
+            13522
+        ],
+        "userAccountControl": [
+            4096
+        ],
+        "whenChanged": [
+            "2026-09-26 20:28:23+00:00"
+        ],
+        "whenCreated": [
+            "2026-09-26 20:28:23+00:00"
+        ]
+    },
+    "dn": "CN=mssql_svc,CN=Managed Service Accounts,DC=cs,DC=org"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "exchange_svc"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dSCorePropagationData": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "distinguishedName": [
+            "CN=exchange_svc,CN=Managed Service Accounts,DC=cs,DC=org"
+        ],
+        "instanceType": [
+            4
+        ],
+        "isCriticalSystemObject": [
+            false
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogonTimestamp": [
+            "2026-09-27 17:43:20.546442+00:00"
+        ],
+        "localPolicyFlags": [
+            0
+        ],
+        "logonCount": [
+            0
+        ],
+        "msDS-SupportedEncryptionTypes": [
+            28
+        ],
+        "name": [
+            "exchange_svc"
+        ],
+        "objectCategory": [
+            "CN=ms-DS-Managed-Service-Account,CN=Schema,CN=Configuration,DC=cs,DC=org"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user",
+            "computer",
+            "msDS-ManagedServiceAccount"
+        ],
+        "objectGUID": [
+            "{df29ac4a-3cf6-4bfa-bf5c-24f7cb585f8c}"
+        ],
+        "objectSid": [
+            "S-1-5-21-79771789-2455041398-3787107133-1211"
+        ],
+        "primaryGroupID": [
+            515
+        ],
+        "pwdLastSet": [
+            "2026-09-26 20:28:23.561871+00:00"
+        ],
+        "sAMAccountName": [
+            "exchange_svc$"
+        ],
+        "sAMAccountType": [
+            805306369
+        ],
+        "servicePrincipalName": [
+            "exchange_svc/exserver.cs.org"
+        ],
+        "uSNChanged": [
+            33128
+        ],
+        "uSNCreated": [
+            13516
+        ],
+        "userAccountControl": [
+            4096
+        ],
+        "whenChanged": [
+            "2026-09-27 17:43:20+00:00"
+        ],
+        "whenCreated": [
+            "2026-09-26 20:28:23+00:00"
+        ]
+    },
+    "dn": "CN=exchange_svc,CN=Managed Service Accounts,DC=cs,DC=org"
+},{
+    "attributes": {
+        "accountExpires": [
+            "9999-12-31 23:59:59.999999+00:00"
+        ],
+        "badPasswordTime": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "badPwdCount": [
+            0
+        ],
+        "cn": [
+            "DC01"
+        ],
+        "codePage": [
+            0
+        ],
+        "countryCode": [
+            0
+        ],
+        "dNSHostName": [
+            "DC01.cs.org"
+        ],
+        "dSCorePropagationData": [
+            "2026-09-26 20:15:07+00:00",
+            "1601-01-01 00:00:01+00:00"
+        ],
+        "distinguishedName": [
+            "CN=DC01,OU=Domain Controllers,DC=cs,DC=org"
+        ],
+        "instanceType": [
+            4
+        ],
+        "isCriticalSystemObject": [
+            true
+        ],
+        "lastLogoff": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "lastLogon": [
+            "2026-09-27 17:03:57.628738+00:00"
+        ],
+        "lastLogonTimestamp": [
+            "2026-09-26 20:15:45.987173+00:00"
+        ],
+        "localPolicyFlags": [
+            0
+        ],
+        "logonCount": [
+            22
+        ],
+        "msDFSR-ComputerReferenceBL": [
+            "CN=DC01,CN=Topology,CN=Domain System Volume,CN=DFSR-GlobalSettings,CN=System,DC=cs,DC=org"
+        ],
+        "msDS-SupportedEncryptionTypes": [
+            28
+        ],
+        "name": [
+            "DC01"
+        ],
+        "objectCategory": [
+            "CN=Computer,CN=Schema,CN=Configuration,DC=cs,DC=org"
+        ],
+        "objectClass": [
+            "top",
+            "person",
+            "organizationalPerson",
+            "user",
+            "computer"
+        ],
+        "objectGUID": [
+            "{ee534878-6046-404c-a912-b83adf939e5e}"
+        ],
+        "objectSid": [
+            "S-1-5-21-79771789-2455041398-3787107133-1000"
+        ],
+        "operatingSystem": [
+            "Windows Server 2022 Standard Evaluation"
+        ],
+        "operatingSystemVersion": [
+            "10.0 (20348)"
+        ],
+        "primaryGroupID": [
+            516
+        ],
+        "pwdLastSet": [
+            "2026-09-26 20:15:32.535934+00:00"
+        ],
+        "rIDSetReferences": [
+            "CN=RID Set,CN=DC01,OU=Domain Controllers,DC=cs,DC=org"
+        ],
+        "sAMAccountName": [
+            "DC01$"
+        ],
+        "sAMAccountType": [
+            805306369
+        ],
+        "serverReferenceBL": [
+            "CN=DC01,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=cs,DC=org"
+        ],
+        "servicePrincipalName": [
+            "Dfsr-12F9A27C-BF97-4787-9364-D31B6C55EB04/DC01.cs.org",
+            "ldap/DC01.cs.org/ForestDnsZones.cs.org",
+            "ldap/DC01.cs.org/DomainDnsZones.cs.org",
+            "DNS/DC01.cs.org",
+            "GC/DC01.cs.org/cs.org",
+            "RestrictedKrbHost/DC01.cs.org",
+            "RestrictedKrbHost/DC01",
+            "RPC/9a3c1a81-a8a9-41a9-9fc3-3346eedc0936._msdcs.cs.org",
+            "HOST/DC01/cs",
+            "HOST/DC01.cs.org/cs",
+            "HOST/DC01",
+            "HOST/DC01.cs.org",
+            "HOST/DC01.cs.org/cs.org",
+            "E3514235-4B06-11D1-AB04-00C04FC2DCD2/9a3c1a81-a8a9-41a9-9fc3-3346eedc0936/cs.org",
+            "ldap/DC01/cs",
+            "ldap/9a3c1a81-a8a9-41a9-9fc3-3346eedc0936._msdcs.cs.org",
+            "ldap/DC01.cs.org/cs",
+            "ldap/DC01",
+            "ldap/DC01.cs.org",
+            "ldap/DC01.cs.org/cs.org"
+        ],
+        "uSNChanged": [
+            12745
+        ],
+        "uSNCreated": [
+            12293
+        ],
+        "userAccountControl": [
+            532480
+        ],
+        "whenChanged": [
+            "2026-09-26 20:21:39+00:00"
+        ],
+        "whenCreated": [
+            "2026-09-26 20:14:56+00:00"
+        ]
+    },
+    "dn": "CN=DC01,OU=Domain Controllers,DC=cs,DC=org"
+}]

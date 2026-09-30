@@ -1,0 +1,170 @@
+[{
+    "attributes": {
+        "auditingPolicy": [
+            "\u0000\u0001"
+        ],
+        "creationTime": [
+            "2026-09-27 16:03:44.869965+00:00"
+        ],
+        "dSASignature": [
+            {
+                "encoded": "AQAAACgAAAAAAAAAAAAAAAAAAAAAAAAAgRo8mqmoqUGfwzNG7twJNg==",
+                "encoding": "base64"
+            }
+        ],
+        "dSCorePropagationData": [
+            "1601-01-01 00:00:00+00:00"
+        ],
+        "dc": [
+            "cs"
+        ],
+        "distinguishedName": [
+            "DC=cs,DC=org"
+        ],
+        "fSMORoleOwner": [
+            "CN=NTDS Settings,CN=DC01,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=cs,DC=org"
+        ],
+        "forceLogoff": [
+            -9223372036854775808
+        ],
+        "gPLink": [
+            "[LDAP://CN={31B2F340-016D-11D2-945F-00C04FB984F9},CN=Policies,CN=System,DC=cs,DC=org;0]"
+        ],
+        "instanceType": [
+            5
+        ],
+        "isCriticalSystemObject": [
+            true
+        ],
+        "lockOutObservationWindow": [
+            "0:01:00"
+        ],
+        "lockoutDuration": [
+            "0:01:00"
+        ],
+        "lockoutThreshold": [
+            0
+        ],
+        "masteredBy": [
+            "CN=NTDS Settings,CN=DC01,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=cs,DC=org"
+        ],
+        "maxPwdAge": [
+            "42 days, 0:00:00"
+        ],
+        "minPwdAge": [
+            "1 day, 0:00:00"
+        ],
+        "minPwdLength": [
+            4
+        ],
+        "modifiedCount": [
+            1
+        ],
+        "modifiedCountAtLastProm": [
+            0
+        ],
+        "ms-DS-MachineAccountQuota": [
+            10
+        ],
+        "msDS-AllUsersTrustQuota": [
+            1000
+        ],
+        "msDS-Behavior-Version": [
+            7
+        ],
+        "msDS-ExpirePasswordsOnSmartCardOnlyAccounts": [
+            true
+        ],
+        "msDS-IsDomainFor": [
+            "CN=NTDS Settings,CN=DC01,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=cs,DC=org"
+        ],
+        "msDS-NcType": [
+            0
+        ],
+        "msDS-PerUserTrustQuota": [
+            1
+        ],
+        "msDS-PerUserTrustTombstonesQuota": [
+            10
+        ],
+        "msDs-masteredBy": [
+            "CN=NTDS Settings,CN=DC01,CN=Servers,CN=Default-First-Site-Name,CN=Sites,CN=Configuration,DC=cs,DC=org"
+        ],
+        "nTMixedDomain": [
+            0
+        ],
+        "name": [
+            "cs"
+        ],
+        "nextRid": [
+            1000
+        ],
+        "objectCategory": [
+            "CN=Domain-DNS,CN=Schema,CN=Configuration,DC=cs,DC=org"
+        ],
+        "objectClass": [
+            "top",
+            "domain",
+            "domainDNS"
+        ],
+        "objectGUID": [
+            "{0101ab1e-63f0-4946-8bb0-6a2c8d280d40}"
+        ],
+        "objectSid": [
+            "S-1-5-21-79771789-2455041398-3787107133"
+        ],
+        "otherWellKnownObjects": [
+            "B:32:683A24E2E8164BD3AF86AC3C2CF3F981:CN=Keys,DC=cs,DC=org",
+            "B:32:1EB93889E40C45DF9F0C64D23BBB6237:CN=Managed Service Accounts,DC=cs,DC=org"
+        ],
+        "pwdHistoryLength": [
+            24
+        ],
+        "pwdProperties": [
+            0
+        ],
+        "rIDManagerReference": [
+            "CN=RID Manager$,CN=System,DC=cs,DC=org"
+        ],
+        "serverState": [
+            1
+        ],
+        "subRefs": [
+            "DC=ForestDnsZones,DC=cs,DC=org",
+            "DC=DomainDnsZones,DC=cs,DC=org",
+            "CN=Configuration,DC=cs,DC=org"
+        ],
+        "systemFlags": [
+            -1946157056
+        ],
+        "uASCompat": [
+            0
+        ],
+        "uSNChanged": [
+            32775
+        ],
+        "uSNCreated": [
+            4099
+        ],
+        "wellKnownObjects": [
+            "B:32:6227F0AF1FC2410D8E3BB10615BB5B0F:CN=NTDS Quotas,DC=cs,DC=org",
+            "B:32:F4BE92A4C777485E878E9421D53087DB:CN=Microsoft,CN=Program Data,DC=cs,DC=org",
+            "B:32:09460C08AE1E4A4EA0F64AEE7DAA1E5A:CN=Program Data,DC=cs,DC=org",
+            "B:32:22B70C67D56E4EFB91E9300FCA3DC1AA:CN=ForeignSecurityPrincipals,DC=cs,DC=org",
+            "B:32:18E2EA80684F11D2B9AA00C04F79F805:CN=Deleted Objects,DC=cs,DC=org",
+            "B:32:2FBAC1870ADE11D297C400C04FD8D5CD:CN=Infrastructure,DC=cs,DC=org",
+            "B:32:AB8153B7768811D1ADED00C04FD8D5CD:CN=LostAndFound,DC=cs,DC=org",
+            "B:32:AB1D30F3768811D1ADED00C04FD8D5CD:CN=System,DC=cs,DC=org",
+            "B:32:A361B2FFFFD211D1AA4B00C04FD7D83A:OU=Domain Controllers,DC=cs,DC=org",
+            "B:32:AA312825768811D1ADED00C04FD8D5CD:CN=Computers,DC=cs,DC=org",
+            "B:32:A9D1CA15768811D1ADED00C04FD8D5CD:CN=Users,DC=cs,DC=org"
+        ],
+        "whenChanged": [
+            "2026-09-27 16:03:44+00:00"
+        ],
+        "whenCreated": [
+            "2026-09-26 20:12:35+00:00"
+        ]
+    },
+    "dn": "DC=cs,DC=org"
+}]

