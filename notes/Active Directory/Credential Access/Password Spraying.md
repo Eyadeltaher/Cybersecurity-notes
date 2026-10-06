@@ -4,10 +4,10 @@
 
 ```text
 Brute Force:
-1 user → many passwords ❌
+1 user → many passwords 
 
 Password Spray:
-many users → 1 common password ✅
+many users → 1 common password 
 ```
 
 The goal is to find users who have weak/common passwords while reducing the chance of triggering account lockout.
@@ -42,7 +42,6 @@ password_properties: 0x00000001
 ```
 
 - `min_password_length` → minimum password length
-    
 - `DOMAIN_PASSWORD_COMPLEX` → password complexity is enabled
 
 You can also try:

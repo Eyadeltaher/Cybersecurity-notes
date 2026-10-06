@@ -30,6 +30,17 @@ What attack path leads to Domain Admin?
 cd ~/BloodHound
 docker compose up -d
 ```
+or
+```bash
+docker start bloodhound-graph-db-1
+docker start bloodhound-app-db-1
+docker start bloodhound-bloodhound-1
+```
+
+then check using
+```bash
+ docker ps
+```
 
 Open the web interface:
 ```bash
@@ -45,7 +56,7 @@ docker compose ps
 
 # 2. Collect AD Data
 
-### Tool: `bloodhound-python`
+## Tool: `bloodhound-python`
 
 Collects information from Active Directory and produces files that can be imported into BloodHound.
 
@@ -99,6 +110,24 @@ Containers
 
 The output is usually several `.json` files.
 
+## Tool: `SharpHound`
+
+```cmd
+SharpHound.exe --CollectionMethods All               # Full sweep (noisy)
+SharpHound.exe --CollectionMethods Group,LocalAdmin,Session,Trusts,ACL
+SharpHound.exe --Stealth --LDAP                      # Low noise LDAP only
+```
+
+#### SharpHound from a non-domain-joined Windows host
+
+If your operator VM is not joined to the target domain, point DNS to a DC, start a **network-only** shell, verify you can see `SYSVOL`/`NETLOGON` on a DC, and then collect against the remote domain:
+
+```cmd
+runas /netonly /user:CORP\svc_bh cmd.exe
+net view \\dc01.corp.local
+SharpHound.exe -d corp.local --CollectionMethods Group,LocalAdmin,Session,Trusts,ACL
+
+```
 ---
 
 # 3. Import the Data
@@ -267,6 +296,8 @@ These indicate potentially powerful control over AD objects.
 ```bash
 cd ~/BloodHound
 docker compose down
+#or
+docker stop bloodhound-bloodhound-1 bloodhound-app-db-1 bloodhound-graph-db-1
 ```
 
 This stops the containers **without deleting the persistent Docker volumes/data**.

